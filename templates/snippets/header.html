@@ -26,6 +26,8 @@
 		<h5 class="mr-3 font-weight-normal justify-content-start">
 			{% if request.user.is_authenticated %}
 				<a class="p-2 text-dark" href="{% url 'account:account' %}">show pic</a>
+			{% else %}
+			<a class="p-2 text-dark" href="{% url 'home' %}">Home</a>
 			{% endif %}
 		</h5>
 		<form class="search-bar justify-content-start" onsubmit="return executeQuery();">
@@ -35,10 +37,8 @@
 	  	<div class="d-flex flex-row-reverse flex-grow-1">
 			<nav class="">
 				{% if request.user.is_authenticated %}
-					<a class="p-2 text-dark" href="{% url 'home' %}">Home</a>
 					<a class="p-2 text-dark" href="{% url 'account:logout' %}">Logout</a>
 				{% else %}
-					<a class="p-2 text-dark" href="{% url 'home' %}">Home</a>
 					<a class="p-2 text-dark" href="{% url 'account:login' %}">Login</a>
 					<a class="btn btn-outline-primary" href="{% url 'account:register' %}">Register</a>
 				{% endif %}	
@@ -49,9 +49,11 @@
 
 	<!-- SMALL SCREENS -->
 	<div class="d-flex d-lg-none flex-column my-auto align-items-center">
-		<h5 class="mr-3 font-weight-normal">
+		<h5 class="font-weight-normal">
 		{% if request.user.is_authenticated %}
 		<a class="p-2 text-dark" href="{% url 'account:account' %}">show pic</a>
+		{% else %}
+		<a class="p-2 text-dark" href="{% url 'home' %}">Home</a>
 		{% endif %}
 		</h5>
 		<form class="search-bar flex-grow-1" onsubmit="return executeQuery();">
@@ -60,12 +62,10 @@
 		<div class="flex-grow-1">
 			<nav class="">
 				{% if request.user.is_authenticated %}
-					<a class="p-2 text-dark" href="{% url 'home' %}">Home</a>
 					<a class="p-2 text-dark" href="{% url 'account:logout' %}">Logout</a>
 				{% else %}
-					<a class="p-2 text-dark" href="{% url 'home' %}">Home</a>
 					<a class="p-2 text-dark" href="{% url 'account:login' %}">Login</a>
-					<a class="btn btn-outline-primary" href="{% url 'account:register' %}">Register</a>
+					<a class="btn btn-outline-primary m-2" href="{% url 'account:register' %}">Register</a>
 				{% endif %}	
 			</nav>
 	  	</div>

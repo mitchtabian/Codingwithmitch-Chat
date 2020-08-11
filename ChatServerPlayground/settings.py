@@ -27,6 +27,9 @@ DEBUG = True
 
 ALLOWED_HOSTS = ["127.0.0.1", "*"]
 
+if DEBUG:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' # During development only
+
 
 # Application definition
 
@@ -101,7 +104,7 @@ CHANNEL_LAYERS = {
 
 DB_NAME = "codingwithmitch_chat"
 DB_USER = "django"
-DB_PASSWORD = "G6_-VeS$k6.a[@)g"
+DB_PASSWORD = "password"
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
