@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+{% if request.user.is_authenticated %}
+<h2>Welcome to your account {{request.user.username}}</h2>
+{% else %}
+<a href="#">Login</a>
+{% endif %}
+
+
+{% endblock content %}
+
+
+
+
+
+

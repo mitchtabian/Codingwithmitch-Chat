@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+{% if request.user.is_authenticated %}
+<h2>You are already logged in as {{request.user.username}}.</h2>
+{% else %}
+<p>Do login stuff</p>
+{% endif %}
+
+
+{% endblock content %}
+
+
+
+
+
+
