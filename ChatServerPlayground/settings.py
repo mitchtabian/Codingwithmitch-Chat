@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     "chat",
     "account",
 
+
     # Django and third party apps
     'django.contrib.admin',
     'django.contrib.auth',
@@ -49,6 +50,7 @@ INSTALLED_APPS = [
     'channels',
     'bootstrap',
     'fontawesome',
+    'cropperjs',
 ]
 
 AUTH_USER_MODEL = 'account.Account'

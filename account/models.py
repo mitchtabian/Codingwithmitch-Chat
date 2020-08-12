@@ -31,6 +31,12 @@ class MyAccountManager(BaseUserManager):
 		return user
 
 
+def get_profile_image_filepath(self, filename):
+	return 'profile_images/' + str(self.pk) + '/' + filename
+
+def get_default_profile_image():
+	return "profile_images/logo_1080_1080.png"
+
 class Account(AbstractBaseUser):
 	email 					= models.EmailField(verbose_name="email", max_length=60, unique=True)
 	username 				= models.CharField(max_length=30, unique=True)
@@ -40,6 +46,7 @@ class Account(AbstractBaseUser):
 	is_active				= models.BooleanField(default=True)
 	is_staff				= models.BooleanField(default=False)
 	is_superuser			= models.BooleanField(default=False)
+	profile_image			= models.ImageField(upload_to=get_profile_image_filepath, null=True, blank=True, default=get_default_profile_image)
 
 
 	USERNAME_FIELD = 'email'
