@@ -12,11 +12,14 @@ cryptography==3.0
 daphne==2.5.0
 Django==2.2.15
 django-bootstrap-static==4.2.1
+django-cropperjs==0.0.5
 hiredis==1.1.0
 hyperlink==20.0.1
 idna==2.10
 incremental==17.5.0
 msgpack==1.0.0
+numpy==1.19.1
+opencv-python==4.4.0.40
 optional-django==0.1.0
 Pillow==7.2.0
 psycopg2==2.8.5

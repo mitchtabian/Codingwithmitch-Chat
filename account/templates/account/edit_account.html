@@ -4,8 +4,6 @@
 {% block content %}
 
 
-
-
 <style type="text/css">
 	.image-container{
 		max-width: 250px;
@@ -17,6 +15,12 @@
 	}
 	#id_confirm{
 		color: green;
+	}
+	#id_confirm:hover {
+		opacity: 0.3;
+	}
+	#id_cancel:hover {
+		opacity: 0.3;
 	}
 	#id_cancel{
 		color: red;
@@ -79,7 +83,16 @@
 	</div>
 </div>
 
+
 <script type="text/javascript">
+
+	var cropper;
+	var imageFile;
+	var base64ImageString;
+	var cropX;
+	var cropX;
+	var cropWidth;
+	var cropHeight;
 
 	enableImageOverlay()
 
@@ -121,11 +134,19 @@
 
 		var confirm = document.getElementById("id_confirm")
 		confirm.addEventListener("click", function(event){
-			// render preview with cropped image
+			console.log("Sending crop data for processing...")
+			cropImage(
+				imageFile, 
+				cropX, 
+				cropY, 
+				cropWidth,
+				cropHeight
+			)
 		})
 
 		var cancel = document.getElementById("id_cancel")
 		cancel.addEventListener("click", function(event){
+			console.log("CANCELING image crop process...")
 			window.location.reload();
 		})
 	}
@@ -176,22 +197,89 @@
 		
 	}
 
+	/* return null if invalid or base64String if valid */
+	function isImageSizeValid(image){
+		console.log("max size: {{DATA_UPLOAD_MAX_MEMORY_SIZE}}")
+		var base64str = image.substr(22);
+		var decoded = atob(base64str);
+		console.log("FileSize: " + decoded.length);
+		if(decoded.length>= "{{DATA_UPLOAD_MAX_MEMORY_SIZE}}"){
+			return null
+		}
+		return base64str
+	}
+
+	function cropImage(image, x, y, width, height){
+		base64ImageString = isImageSizeValid(image)
+
+		if(base64ImageString != null){
+			// console.log("CROP START")
+			// console.log("x: " + x);
+			// console.log("y: " + y);
+			// console.log("width: " + width);
+			// console.log("height: " + height);
+			var requestData = {
+				"csrfmiddlewaretoken": "{{ csrf_token }}",
+				"image": base64ImageString,
+				"cropX": cropX,
+				"cropY": cropY,
+				"cropWidth": cropWidth,
+				"cropHeight": cropHeight
+			}
+			$.ajax({
+				type: 'POST',
+				dataType: "json",
+				url: "{% url 'account:crop_image' username=form.initial.username %}",
+				data: requestData,
+				timeout: 5000,
+				success: function(data) {
+					const croppedImageUrl = data.cropped_image_url
+					console.log("SUCCESS!", croppedImageUrl)
+				},
+				error: function(data) {
+					console.error("ERROR...", data)
+				},
+			});
+		}
+		else{
+			alert("Upload an image smaller than 10 MB");
+			document.getElementById("id_cancel").click()
+		}
+	}
+
+	function setImageCropProperties(image, x, y, width, height){
+		imageFile = image
+		cropX = x
+		cropY = y
+		cropWidth = width
+		cropHeight = height
+	}
+	
 	function readURL(input) {
         if (input.files && input.files[0]) {
             var reader = new FileReader();
 
             reader.onload = function (e) {
             	disableImageOverlay()
-            	var image = document.getElementById('id_profile_image')
-                image.src = e.target.result
-				const cropper = new Cropper(image, {
+            	var image = e.target.result
+            	var imageField = document.getElementById('id_profile_image')
+                imageField.src = image
+				cropper = new Cropper(imageField, {
 					aspectRatio: 1/1,
 					crop(event) {
-						console.log("crop event", event)
+						// console.log("CROP START")
+						// console.log("x: " + event.detail.x);
+						// console.log("y: " + event.detail.y);
+						// console.log("width: " + event.detail.width);
+						// console.log("height: " + event.detail.height);
+						setImageCropProperties(
+							image,
+							event.detail.x,
+							event.detail.y,
+							event.detail.width,
+							event.detail.height
+						)
 					},
-					getData(event){
-						console.log("getData event", event)
-					}
 				});
             };
 
