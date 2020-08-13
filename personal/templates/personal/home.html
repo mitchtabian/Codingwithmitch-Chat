@@ -3,9 +3,92 @@
 
 {% block content %}
 <div class="container">
-<div class="row">
-	<h1>Home</h1>
+	<div class="d-flex flex-column">
+		<textarea id="chat-log" cols="100" rows="15"></textarea><br>
+		<input id="chat-message-input" type="text" size="100"><br>
+		<input id="chat-message-submit" type="button" value="Send">
+	</div>
 </div>
+
+<script>
+
+	const socket = new WebSocket(
+		'ws://'
+		+ window.location.host
+		+ '/ws/{{chat_name}}/'
+	);
+
+	socket.onmessage = function(e) {
+		const data = JSON.parse(e.data);
+		console.log(data)
+		document.querySelector('#chat-log').value += (data.user + ": " +data.message + '\n');
+		// document.querySelector('#chat-log').value += (data.message + '\n');
+	};
+
+	socket.onclose = function(e) {
+		console.error('Chat socket closed unexpectedly');
+	};
+
+	socket.onOpen = function(e){
+		console.log("onOpen", e)
+	}
+
+	socket.onerror = function(e){
+        console.log('error', e)
+    }
+
+    if (socket.readyState == WebSocket.OPEN) {
+
+    } else if (socket.readyState == WebSocket.CONNECTING){
+        console.log("connecting..")
+    }
+
+    
+	document.querySelector('#chat-message-input').focus();
+	document.querySelector('#chat-message-input').onkeyup = function(e) {
+		if (e.keyCode === 13) {  // enter, return
+			if("{{request.user.is_authenticated}}" == "True"){
+				document.querySelector('#chat-message-submit').click();
+			}
+			else{
+				document.getElementById("id_trigger_must_login_modal").click()
+			}
+		}
+	};
+	
+
+	document.querySelector('#chat-message-submit').onclick = function(e) {
+		const messageInputDom = document.querySelector('#chat-message-input');
+		const message = messageInputDom.value;
+		socket.send(JSON.stringify({
+			'message': message
+		}));
+		messageInputDom.value = '';
+	};
+</script>
+
+<!-- Must Login MODAL -->
+<button type="button" id="id_trigger_must_login_modal" class="d-none btn btn-primary" data-toggle="modal" data-target="#id_must_login_modal">
+</button>
+<div class="modal fade" id="id_must_login_modal" tabindex="-1" role="dialog">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Log in</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p>You must log in to chat.</p>
+      </div>
+      <div class="modal-footer">
+        <a href="{% url 'login' %}" class="btn btn-primary">Log in</a>
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
 </div>
+<!-- END Must Login MODAL -->
 
 {% endblock content %}

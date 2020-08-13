@@ -8,6 +8,9 @@ import os
 import cv2
 import json
 import base64
+import requests
+import tempfile
+from django.core import files
 
 from account.models import Account, get_profile_image_filepath
 from account.forms import RegistrationForm, AccountAuthenticationForm, AccountUpdateForm
@@ -19,10 +22,7 @@ TEMP_PROFILE_IMAGE_NAME = "temp_profile_image.png"
 # load image with cv2
 # crop image with cv2
 # save image to /temp/
-# return cropped imageUrl in payload
-import requests
-import tempfile
-from django.core import files
+
 def crop_image(request, *args, **kwargs):
 	payload = {}
 	user = request.user
@@ -42,11 +42,9 @@ def crop_image(request, *args, **kwargs):
 				cropY = 0
 			crop_img = img[cropY:cropY+cropHeight, cropX:cropX+cropWidth]
 
-			print("url: " + str(url))
 			cv2.imwrite(url, crop_img)
 			filename = os.path.basename(url)
 			mediaUrl = settings.BASE_URL + "/media/temp/" + str(user.pk) + "/" + filename
-			print(mediaUrl)
 
 			request = requests.get(mediaUrl, stream=True)
 
@@ -109,6 +107,7 @@ def account_view(request, *args, **kwargs):
 		context['username'] = account.username
 		context['email'] = account.email
 		context['profile_image'] = account.profile_image
+		context['hide_email'] = account.hide_email
 	else:
 		return HttpResponse("Something went wrong.")
 	return render(request, "account/account.html", context)
@@ -150,10 +149,6 @@ def edit_account_view(request, *args, **kwargs):
 	return render(request, "account/edit_account.html", context)
 
 
-def login_view(request):
-	return render(request, "account/login.html", {})
-
-
 def register_view(request):
 	user = request.user
 	if user.is_authenticated: 
@@ -168,6 +163,9 @@ def register_view(request):
 			raw_password = form.cleaned_data.get('password1')
 			account = authenticate(email=email, password=raw_password)
 			login(request, account)
+			destination = kwargs.get("next")
+			if destination:
+				return redirect(destination)
 			return redirect('home')
 		else:
 			context['registration_form'] = form
@@ -184,7 +182,7 @@ def logout_view(request):
 	return redirect("home")
 
 
-def login_view(request):
+def login_view(request, *args, **kwargs):
 	context = {}
 
 	user = request.user
@@ -206,8 +204,6 @@ def login_view(request):
 		form = AccountAuthenticationForm()
 
 	context['login_form'] = form
-
-	# print(form)
 	return render(request, "account/login.html", context)
 
 

@@ -34,7 +34,6 @@ from personal.views import (
 urlpatterns = [
     path('', home_screen_view, name='home'),
     path('account/', include('account.urls', namespace='account')),
-    # path('account/', include('account.urls')),
     path('admin/', admin.site.urls),
     path('chat/', include('chat.urls', namespace='chat')),
     path('login/', login_view, name="login"),
