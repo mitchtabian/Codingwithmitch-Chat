@@ -9,10 +9,10 @@ import cv2
 import json
 import base64
 
-from account.models import Account
+from account.models import Account, get_profile_image_filepath
 from account.forms import RegistrationForm, AccountAuthenticationForm, AccountUpdateForm
+TEMP_PROFILE_IMAGE_NAME = "temp_profile_image.png"
 
-TEMP_PROFILE_IMAGE_NAME = "_temp_profile_image.png"
 
 
 # save image to /temp/
@@ -20,33 +20,73 @@ TEMP_PROFILE_IMAGE_NAME = "_temp_profile_image.png"
 # crop image with cv2
 # save image to /temp/
 # return cropped imageUrl in payload
+import requests
+import tempfile
+from django.core import files
 def crop_image(request, *args, **kwargs):
 	payload = {}
-	if request.POST:
+	user = request.user
+	if request.POST and user.is_authenticated:
 		try:
 			imageString = request.POST.get("image")
-			username = kwargs.get("username")
-			url = save_temp_profile_image_from_base64String(imageString, username)
+			url = save_temp_profile_image_from_base64String(imageString, user)
 			img = cv2.imread(url)
 
 			cropX = int(float(str(request.POST.get("cropX"))))
 			cropY = int(float(str(request.POST.get("cropY"))))
 			cropWidth = int(float(str(request.POST.get("cropWidth"))))
 			cropHeight = int(float(str(request.POST.get("cropHeight"))))
+			if cropX < 0:
+				cropX = 0
+			if cropY < 0: # There is a bug with cropperjs. y can be negative.
+				cropY = 0
 			crop_img = img[cropY:cropY+cropHeight, cropX:cropX+cropWidth]
+
+			print("url: " + str(url))
 			cv2.imwrite(url, crop_img)
-			payload['success'] = True
-			payload['cropped_image_url'] = url
+			filename = os.path.basename(url)
+			mediaUrl = settings.BASE_URL + "/media/temp/" + str(user.pk) + "/" + filename
+			print(mediaUrl)
+
+			request = requests.get(mediaUrl, stream=True)
+
+			# Was the request OK?
+			if request.status_code != requests.codes.ok:
+				raise Exception("Something went wrong. Try another image.")
+
+			# Create a temporary file
+			lf = tempfile.NamedTemporaryFile()
+			# Read the streamed image in sections
+			for block in request.iter_content(1024 * 8):
+				# If no more file then stop
+				if not block:
+					break
+
+				# Write image block to temporary file
+				lf.write(block)
+
+			# Save the temporary image to the model#
+			# This saves the model so be sure that is it valid
+			user.profile_image.save("profile_image.png", files.File(lf))
+
+			payload['result'] = "success"
+			payload['cropped_profile_image'] = mediaUrl
+			
 		except Exception as e:
-			payload['success'] = False
-			payload['exception'] = e
+			print("exception: " + str(e))
+			payload['result'] = "error"
+			payload['exception'] = str(e)
 	return HttpResponse(json.dumps(payload), content_type="application/json")
 
 
-def save_temp_profile_image_from_base64String(imageString, username):
+def save_temp_profile_image_from_base64String(imageString, user):
 	INCORRECT_PADDING_EXCEPTION = "Incorrect padding"
 	try:
-		url = os.path.join(settings.TEMP , username + TEMP_PROFILE_IMAGE_NAME)
+		if not os.path.exists(settings.TEMP):
+			os.mkdir(settings.TEMP)
+		if not os.path.exists(settings.TEMP + "/" + str(user.pk)):
+			os.mkdir(settings.TEMP + "/" + str(user.pk))
+		url = os.path.join(settings.TEMP + "/" + str(user.pk),TEMP_PROFILE_IMAGE_NAME)
 		storage = FileSystemStorage(location=url)
 		image = base64.b64decode(imageString)
 		with storage.open('', 'wb+') as destination:
@@ -57,7 +97,7 @@ def save_temp_profile_image_from_base64String(imageString, username):
 		print("exception: " + str(e))
 		if str(e) == INCORRECT_PADDING_EXCEPTION:
 			imageString += "=" * ((4 - len(imageString) % 4) % 4)
-			return save_temp_profile_image_from_base64String(imageString, username)
+			return save_temp_profile_image_from_base64String(imageString, user)
 	return None
 
 
@@ -76,7 +116,7 @@ def account_view(request, *args, **kwargs):
 
 def edit_account_view(request, *args, **kwargs):
 	if not request.user.is_authenticated:
-		return redirect("/login/")
+		return redirect("login")
 	username = kwargs.get("username")
 	account = Account.objects.filter(username=username).first()
 	if account.pk != request.user.pk:
@@ -87,12 +127,13 @@ def edit_account_view(request, *args, **kwargs):
 			if form.is_valid():
 				form.save()
 				new_username = form.cleaned_data['username']
-				return redirect("account:account", username=new_username)
+				return redirect("account:view", username=new_username)
 			else:
 				form = AccountUpdateForm(request.POST, instance=request.user,
 					initial={
 						"email": account.email, 
 						"username": account.username,
+						"profile_image": account.profile_image,
 					}
 				)
 				context['form'] = form
@@ -101,6 +142,7 @@ def edit_account_view(request, *args, **kwargs):
 			initial={
 					"email": account.email, 
 					"username": account.username,
+					"profile_image": account.profile_image,
 				}
 			)
 		context['form'] = form
@@ -113,6 +155,10 @@ def login_view(request):
 
 
 def register_view(request):
+	user = request.user
+	if user.is_authenticated: 
+		return HttpResponse("You are already authenticate as " + str(user.email))
+
 	context = {}
 	if request.POST:
 		form = RegistrationForm(request.POST)
@@ -133,8 +179,9 @@ def register_view(request):
 
 
 def logout_view(request):
+	print("LOGGING OUT")
 	logout(request)
-	return redirect('/')
+	return redirect("home")
 
 
 def login_view(request):

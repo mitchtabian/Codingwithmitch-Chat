@@ -21,6 +21,12 @@ from django.urls import path
 from django.conf.urls import include
 
 
+from account.views import (
+    login_view,
+    register_view,
+    logout_view,
+)
+
 from personal.views import (
 	home_screen_view
 )
@@ -28,8 +34,12 @@ from personal.views import (
 urlpatterns = [
     path('', home_screen_view, name='home'),
     path('account/', include('account.urls', namespace='account')),
+    # path('account/', include('account.urls')),
     path('admin/', admin.site.urls),
     path('chat/', include('chat.urls', namespace='chat')),
+    path('login/', login_view, name="login"),
+    path('logout/', logout_view, name="logout"),
+    path('register/', register_view, name="register"),
 
     # Password reset links (ref: https://github.com/django/django/blob/master/django/contrib/auth/views.py)
     path('password_change/done/', auth_views.PasswordChangeDoneView.as_view(template_name='password_reset/password_change_done.html'), 

@@ -19,7 +19,7 @@
 		  <div class="card-body">
 		  	<div class="d-flex flex-column justify-content-center p-4">
 		  		<div class="image-container mx-auto mb-4">
-		  			<img class="border border-dark rounded-circle img-fluid mx-auto d-block profile-image" src="{% static 'codingwithmitch/logo_1080_1080.png' %}" alt="codingwithmitch logo">
+		  			<img class="border border-dark rounded-circle img-fluid mx-auto d-block profile-image" src="{{profile_image.url}}" alt="codingwithmitch logo">
 		  		</div>
 		  		<h6 class="mt-4 field-heading">Email</h6>
 		  		<h5>{{email}}</h5>
@@ -27,7 +27,7 @@
 		  		<h5>{{username}}</h5>
 
 		  		{% if request.user.email == email %}
-		  		<a  class="mt-4 btn btn-primary" href="{% url 'account:edit_account' username=username %}">Update</a>
+		  		<a  class="mt-4 btn btn-primary" href="{% url 'account:edit' username=username %}">Update</a>
 				<div class="d-flex flex-column mt-4">
 					<a class="m-auto" href="{% url 'password_change' %}">Change password</a>
 				</div>

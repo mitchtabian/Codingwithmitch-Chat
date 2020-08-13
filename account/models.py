@@ -1,5 +1,9 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
+from django.core.files.storage import FileSystemStorage
+from django.conf import settings
+import os
+
 
 
 class MyAccountManager(BaseUserManager):
@@ -37,6 +41,14 @@ def get_profile_image_filepath(self, filename):
 def get_default_profile_image():
 	return "profile_images/logo_1080_1080.png"
 
+
+class OverwriteStorage(FileSystemStorage):
+
+    def get_available_name(self, name, max_length=None):
+        if self.exists(name):
+            os.remove(os.path.join(settings.MEDIA_ROOT, name))
+        return name
+
 class Account(AbstractBaseUser):
 	email 					= models.EmailField(verbose_name="email", max_length=60, unique=True)
 	username 				= models.CharField(max_length=30, unique=True)
@@ -46,7 +58,7 @@ class Account(AbstractBaseUser):
 	is_active				= models.BooleanField(default=True)
 	is_staff				= models.BooleanField(default=False)
 	is_superuser			= models.BooleanField(default=False)
-	profile_image			= models.ImageField(upload_to=get_profile_image_filepath, null=True, blank=True, default=get_default_profile_image)
+	profile_image			= models.ImageField(upload_to=get_profile_image_filepath, null=True, blank=True, default=get_default_profile_image, storage=OverwriteStorage(), max_length=50)
 
 
 	USERNAME_FIELD = 'email'
@@ -56,6 +68,9 @@ class Account(AbstractBaseUser):
 
 	def __str__(self):
 		return self.email
+
+	def get_profile_image_filename(self):
+		return str(self.profile_image)[str(self.profile_image).index('profile_images/' + str(self.pk) + "/"):]
 
 	# For checking permissions. to keep it simple all admin have ALL permissons
 	def has_perm(self, perm, obj=None):

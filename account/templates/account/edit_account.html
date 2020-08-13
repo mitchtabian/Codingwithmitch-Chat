@@ -43,7 +43,7 @@
 		  			<span id="id_confirm" class="material-icons">check</span>
 		  		</div>
 		  		<div class="image-container" id="id_image_container">
-	  				<img class="border border-dark rounded-circle img-fluid mx-auto profile-image" id="id_profile_image" src="{% static 'codingwithmitch/logo_1080_1080.png' %}" alt="codingwithmitch logo">
+	  				<img class="border border-dark rounded-circle img-fluid mx-auto profile-image" id="id_profile_image" src="{{form.initial.profile_image.url}}" alt="codingwithmitch logo">
 					<div class="middle" id="id_middle_container">
 						<div class="text" id="id_text">Edit</div>
 					</div>
@@ -189,6 +189,10 @@
 			middleContainer.style.opacity = "0"
 		})
 
+		imageContainer.addEventListener("click", function(event){
+			document.getElementById('id_profile_image_file_selector').click();
+		});
+
 		var cropConfirm = document.getElementById("id_image_crop_confirm")
 		cropConfirm.classList.remove("d-flex")
 		cropConfirm.classList.remove("flex-row")
@@ -200,7 +204,9 @@
 	/* return null if invalid or base64String if valid */
 	function isImageSizeValid(image){
 		console.log("max size: {{DATA_UPLOAD_MAX_MEMORY_SIZE}}")
-		var base64str = image.substr(22);
+		// console.log(image)
+		var startIndex = image.indexOf("base64,") + 7;
+		var base64str = image.substr(startIndex);
 		var decoded = atob(base64str);
 		console.log("FileSize: " + decoded.length);
 		if(decoded.length>= "{{DATA_UPLOAD_MAX_MEMORY_SIZE}}"){
@@ -213,11 +219,6 @@
 		base64ImageString = isImageSizeValid(image)
 
 		if(base64ImageString != null){
-			// console.log("CROP START")
-			// console.log("x: " + x);
-			// console.log("y: " + y);
-			// console.log("width: " + width);
-			// console.log("height: " + height);
 			var requestData = {
 				"csrfmiddlewaretoken": "{{ csrf_token }}",
 				"image": base64ImageString,
@@ -226,6 +227,7 @@
 				"cropWidth": cropWidth,
 				"cropHeight": cropHeight
 			}
+			displayLoadingSpinner(true)
 			$.ajax({
 				type: 'POST',
 				dataType: "json",
@@ -233,12 +235,20 @@
 				data: requestData,
 				timeout: 5000,
 				success: function(data) {
-					const croppedImageUrl = data.cropped_image_url
-					console.log("SUCCESS!", croppedImageUrl)
+					if(data.result == "success"){
+						document.getElementById("id_cancel").click()
+					}
+					else if(data.result == "error"){
+						alert(data.exception)
+						document.getElementById("id_cancel").click()
+					}
 				},
 				error: function(data) {
 					console.error("ERROR...", data)
 				},
+				complete: function(data){
+					displayLoadingSpinner(false)
+				}
 			});
 		}
 		else{
@@ -254,7 +264,7 @@
 		cropWidth = width
 		cropHeight = height
 	}
-	
+
 	function readURL(input) {
         if (input.files && input.files[0]) {
             var reader = new FileReader();
@@ -287,9 +297,7 @@
             reader.readAsDataURL(input.files[0]);
         }
     };
-	document.getElementById('id_image_container').addEventListener("click", function(event){
-    	document.getElementById('id_profile_image_file_selector').click();
-    });
+	
 
 
 </script>
