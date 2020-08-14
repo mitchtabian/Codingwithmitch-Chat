@@ -189,6 +189,9 @@ def login_view(request, *args, **kwargs):
 	if user.is_authenticated: 
 		return redirect("home")
 
+	destination = get_redirect_if_exists(request)
+	print("destination: " + str(destination))
+
 	if request.POST:
 		form = AccountAuthenticationForm(request.POST)
 		if form.is_valid():
@@ -198,17 +201,24 @@ def login_view(request, *args, **kwargs):
 
 			if user:
 				login(request, user)
+				if destination:
+					return redirect(destination)
 				return redirect("home")
 
 	else:
 		form = AccountAuthenticationForm()
 
 	context['login_form'] = form
+
 	return render(request, "account/login.html", context)
 
 
-
-
+def get_redirect_if_exists(request):
+	redirect = None
+	if request.GET:
+		if request.GET.get("next"):
+			redirect = str(request.GET.get("next"))
+	return redirect
 
 
 

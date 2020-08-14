@@ -1,85 +1,192 @@
-<!-- chat/templates/chat/room.html -->
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8"/>
-    <title>Chat Room</title>
-</head>
-<body>
-    <textarea id="chat-log" cols="100" rows="20"></textarea><br>
-    <textarea id="chat-message-input" type="text" cols="100" rows="1"></textarea><br>
-    <!-- <input id="chat-message-input" type="text" size="100"><br> -->
-    <input id="chat-message-submit" type="button" value="Send">
-    {{ room_name|json_script:"room-name" }}
-    <script>
+{% extends 'base.html' %}
+{% load static %}
 
-        const roomName = JSON.parse(document.getElementById('room-name').textContent);
+{% block content %}
+<div class="container">
+	<div class="d-flex flex-column">
+		<textarea id="chat-log" cols="100" rows="15"></textarea><br>
+		<input id="chat-message-input" type="text" size="100"><br>
+		<input id="chat-message-submit" type="button" value="Send">
+	</div>
+</div>
 
-        const chatSocket = new WebSocket(
-            'ws://'
-            + window.location.host
-            + '/ws/chat/'
-            + roomName
-            + '/'
-        );
+<script>
 
-        chatSocket.onopen = function(e){
-            console.log("chat socket open. ", e);
-        }
+	// Correctly decide between ws:// and wss://
+	var ws_scheme = window.location.protocol == "https:" ? "wss" : "ws";
+	var ws_path = ws_scheme + '://' + window.location.host + "/chat/{{room_id}}/";
+	console.log("Connecting to " + ws_path);
+	var socket = new WebSocket(ws_path);
 
-        chatSocket.onmessage = function(e) {
-            console.log("incoming message", e);
-            var msgData = JSON.parse(e.data);
-            console.log("msgData text: " + msgData.user)
-            document.querySelector('#chat-log').append(msgData.user + ": " + msgData.message + "\n")
-        };
+	// Handle incoming messages
+	socket.onmessage = function(message) {
+		// Decode the JSON
+		console.log("Got websocket message " + message.data);
+		var data = JSON.parse(message.data);
+		// Handle errors (ClientError)
+		if (data.error) {
+			console.error(data.error + ": " + data.message)
+			showClientErrorModal(data.message)
+			return;
+		}
+		 // Handle joining
+		if (data.join) {
+			console.log("Joining room " + data.join);
+			// a new user has joined
+			// load 20 most recent messages?
+		}
+		// Handle leaving
+		else if (data.leave) {
+			console.log("Leaving room " + data.leave);
+			// Do nothing...?
+		}
+		// Handle getting a message
+		else if (data.message || data.msg_type != 0) {
+			var msg = "";
+			switch (data.msg_type) {
+				case 0:
+					msg = (data.username + ": " + data.message + '\n')
+					break;
+				case 1:
+					// Warning / Advice messages
+					msg = ("WARNING: " + data.message + '\n')
+					break;
+				case 2:
+					// Alert / Danger messages
+					msg = ("ALERT: " + data.message + '\n')
+					break;
+				case 3:
+					// "Muted" messages
+					msg = ("Muted: " + data.message + '\n')
+					break;
+				case 4:
+					// User joined room
+					ok_msg = "<div class='contextual-message text-muted'>" + data.username +
+					" joined the room!" +
+					"</div>";
+					msg = (data.username + " connected.\n")
+					break;
+				case 5:
+					// User left room
+					msg = (data.username + " disconnected.\n")
+					break;
+				default:
+					console.log("Unsupported message type!");
+					return;
+			}
+			document.querySelector('#chat-log').value += msg;
+		}
+		else {
+			console.log("Cannot handle message!");
+		}
+
+	};
+
+	socket.addEventListener("open", function(e){
+		console.log("OPEN")
+		// join chat room
+		if("{{request.user.is_authenticated}}"){
+			socket.send(JSON.stringify({
+				"command": "join",
+				"room": "{{room_id}}"
+			}));
+		}
+	})
+
+	socket.onclose = function(e) {
+		console.error('Chat socket closed unexpectedly');
+	};
+
+	socket.onOpen = function(e){
+		console.log("onOpen", e)
+	}
+
+	socket.onerror = function(e){
+        console.log('error', e)
+    }
+
+    if (socket.readyState == WebSocket.OPEN) {
+    	console.log("OPEN")
+    } else if (socket.readyState == WebSocket.CONNECTING){
+        console.log("connecting..")
+    }
+
+    
+	document.querySelector('#chat-message-input').focus();
+	document.querySelector('#chat-message-input').onkeyup = function(e) {
+		if (e.keyCode === 13) {  // enter, return
+			if("{{request.user.is_authenticated}}" == "True"){
+				document.querySelector('#chat-message-submit').click();
+			}
+			else{
+				document.getElementById("id_trigger_must_login_modal").click()
+			}
+		}
+	};
+	
+	document.querySelector('#chat-message-submit').onclick = function(e) {
+		const messageInputDom = document.querySelector('#chat-message-input');
+		const message = messageInputDom.value;
+		socket.send(JSON.stringify({
+			"command": "send",
+			"room": "{{room_id}}",
+			"message": message
+			}));
+		messageInputDom.value = '';
+	};
+
+	function showClientErrorModal(message){
+		document.getElementById("id_client_error_modal_body").innerHTML = message
+		document.getElementById("id_trigger_client_error_modal").click()
+	}
+</script>
+
+<!-- Must Login MODAL -->
+<button type="button" id="id_trigger_must_login_modal" class="d-none btn btn-primary" data-toggle="modal" data-target="#id_must_login_modal">
+</button>
+<div class="modal fade" id="id_must_login_modal" tabindex="-1" role="dialog">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Log in</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p>You must log in to chat.</p>
+      </div>
+      <div class="modal-footer">
+        <a href="{% url 'login' %}?next=/chat/{{room_id}}/" class="btn btn-primary">Log in</a>
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- END Must Login MODAL -->
 
 
-        chatSocket.onerror = function(e){
-            console.error("Chat socket error", e);
-        }
+<!-- Client Error MODAL -->
+<button type="button" id="id_trigger_client_error_modal" class="d-none btn btn-primary" data-toggle="modal" data-target="#id_client_error_modal">
+</button>
+<div class="modal fade" id="id_client_error_modal" tabindex="-1" role="dialog">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Socket Client Error</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p id="id_client_error_modal_body">Something went wrong.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Client Error MODAL -->
 
-        chatSocket.onclose = function(e) {
-            console.error('Chat socket closed.', e);
-        };
-
-        document.querySelector('#chat-message-input').focus();
-        document.querySelector('#chat-message-input').onkeyup = function(e) {
-            if(e.shiftKey){
-                if(e.keyCode === 13){
-                    var rows = this.rows
-                    rows = (rows + 1).toString()
-                    this.rows = rows
-                }
-            }
-            else{
-                if(e.keyCode === 13){
-                    document.querySelector('#chat-message-submit').click();
-                }
-            }
-        };
-
-        document.querySelector('#chat-message-submit').onclick = function(e) {
-            {% if user.is_authenticated %}
-                sendMessage()
-            {% else %}
-                showNotAuthenticatedAlert()
-            {% endif %}
-        };
-
-        function sendMessage(){
-            const messageInputDom = document.querySelector('#chat-message-input');
-            const message = messageInputDom.value;
-            chatSocket.send(JSON.stringify({
-                message: message
-            }))
-            messageInputDom.value = '';
-            document.querySelector('#chat-message-input').rows = (1).toString()
-        }
-
-        function showNotAuthenticatedAlert(){
-            alert("You must be authenticated to chat.")
-        }
-    </script>
-</body>
-</html>
+{% endblock content %}

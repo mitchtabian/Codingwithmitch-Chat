@@ -1,13 +1,19 @@
 from django.shortcuts import render
+from django.conf import settings
 
-def index(request):
-	return render(request, 'chat/index.html', {})
+from chat.models import Room
 
-def room(request, room_name):
-	return render(request, 'chat/room.html', {
-		'room_name': room_name
-	})
 
+def room_view(request, *args, **kwargs):
+	context = {}
+	context["BASE_URL"] = settings.BASE_URL
+
+	room_id = kwargs.get("room_id")
+	context["room_id"] = room_id
+	context["room_title"] = Room.objects.get(pk=room_id)
+
+
+	return render(request, "chat/room.html", context)
 
 
 

@@ -1,63 +1,221 @@
 from django.contrib.auth import get_user_model
-from channels.consumer import AsyncConsumer
+from django.conf import settings
+from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from channels.db import database_sync_to_async
 import json
 
+from chat.exceptions import ClientError
+from chat.utils import get_room_or_error
+
 User = get_user_model()
 
-# Order of operations:
-# send from html template using socket.send(JSON.stringify({....
-# Receive msg in websocket_receive
-# websocket_receive sends message to channel "group" using custom type ("cwm_chat_message")
-# cwm_chat_message sends message to template
-# template receives message in onmessage
-class ChatConsumer(AsyncConsumer):
+# Example taken from:
+# https://github.com/andrewgodwin/channels-examples/blob/master/multichat/chat/consumers.py
+class ChatConsumer(AsyncJsonWebsocketConsumer):
 
-    async def websocket_connect(self, event):
-        print("websocket_connect: " + str(event))
-        chat_name = str(self.scope['url_route']['kwargs']['chat_name'])
-        print("websocket_connect: chat_name: " + chat_name)
-        self.room_name = chat_name
-        self.room_group_name = f"chat_{self.room_name}"
+
+    async def connect(self):
+        """
+        Called when the websocket is handshaking as part of initial connection.
+        """
+        print("ChatConsumer: connect: " + str(self.scope["user"]))
+
+        # if not self.scope["user"].is_authenticated:
+        #     await self.close()
+        # else:
+        #     # Accept the connection
+        #     await self.accept()
+        #     # Store which rooms the user has joined on this connection
+        #     self.rooms = set()
+
+        # let everyone connect. But limit read/write to authenticated users
+        await self.accept()
+        self.rooms = set()
+
+
+    async def receive_json(self, content):
+        """
+        Called when we get a text frame. Channels will JSON-decode the payload
+        for us and pass it as the first argument.
+        """
+        # Messages will have a "command" key we can switch on
+        print("ChatConsumer: receive_json")
+        command = content.get("command", None)
+        try:
+            if command == "join":
+                # Make them join the room
+                await self.join_room(content["room"])
+            elif command == "leave":
+                # Leave the room
+                await self.leave_room(content["room"])
+            elif command == "send":
+                await self.send_room(content["room"], content["message"])
+        except ClientError as e:
+            # Catch any errors and send it back
+            errorData = {}
+            errorData['error'] = e.code
+            if e.message:
+                errorData['message'] = e.message
+            await self.send_json(errorData)
+
+
+    async def disconnect(self, code):
+        """
+        Called when the WebSocket closes for any reason.
+        """
+        # Leave all the rooms we are still in
+        print("ChatConsumer: disconnect")
+        try:
+            for room_id in list(self.rooms):
+                await self.leave_room(room_id)
+        except Exception:
+            pass
+
+
+    async def join_room(self, room_id):
+        """
+        Called by receive_json when someone sent a join command.
+        """
+        # The logged-in user is in our scope thanks to the authentication ASGI middleware (AuthMiddlewareStack)
+        
+        print("ChatConsumer: join_room")
+        try:
+            room = await get_room_or_error(room_id, self.scope["user"])
+        except ClientError as e:
+            errorData = {}
+            errorData['error'] = e.code
+            if e.message:
+                errorData['message'] = e.message
+            await self.send_json(errorData)
+            return
+        
+
+        if settings.NOTIFY_USERS_ON_ENTER_OR_LEAVE_ROOMS:
+            # Notify the group that someone joined
+            await self.channel_layer.group_send(
+                room.group_name,
+                {
+                    "type": "chat.join",
+                    "room_id": room_id,
+                    "username": self.scope["user"].username,
+                }
+            )
+        # Store that we're in the room
+        self.rooms.add(room_id)
+        # Add them to the group so they get room messages
         await self.channel_layer.group_add(
-            self.room_group_name,
-            self.channel_name
+            room.group_name,
+            self.channel_name,
         )
-        await self.send({
-            "type": "websocket.accept"
+        # Instruct their client to finish opening the room
+        await self.send_json({
+            "join": str(room.id),
+            "title": room.title,
         })
 
 
-    async def websocket_receive(self, event):
-        print("websocket_receive: " + str(event))
-        user = self.scope['user']
-        username = user.username
-        message_data = {}
-        message_data["message"] = json.loads(event['text'])['message']
-        message_data["user"] = username
-        final_message_data = json.dumps(message_data)
+    async def leave_room(self, room_id):
+        """
+        Called by receive_json when someone sent a leave command.
+        """
+        # The logged-in user is in our scope thanks to the authentication ASGI middleware
+        print("ChatConsumer: leave_room")
+        room = await get_room_or_error(room_id, self.scope["user"])
+
+        if settings.NOTIFY_USERS_ON_ENTER_OR_LEAVE_ROOMS:
+            # Notify the group that someone left
+            await self.channel_layer.group_send(
+                room.group_name,
+                {
+                    "type": "chat.leave",
+                    "room_id": room_id,
+                    "username": self.scope["user"].username,
+                }
+            )
+
+        # Remove that we're in the room
+        self.rooms.discard(room_id)
+        # Remove them from the group so they no longer get room messages
+        await self.channel_layer.group_discard(
+            room.group_name,
+            self.channel_name,
+        )
+        # Instruct their client to finish closing the room
+        await self.send_json({
+            "leave": str(room.id),
+        })
+
+
+    async def send_room(self, room_id, message):
+        """
+        Called by receive_json when someone sends a message to a room.
+        """
+        # Check they are in this room
+        print("ChatConsumer: send_room")
+        if room_id not in self.rooms:
+            raise ClientError("ROOM_ACCESS_DENIED", "Room access denied")
+        # Get the room and send to the group about it
+        room = await get_room_or_error(room_id, self.scope["user"])
         await self.channel_layer.group_send(
-            self.room_group_name,
+            room.group_name,
             {
-                "type": "cmw_chat_message",
-                "message": final_message_data
+                "type": "chat.message",
+                "room_id": room_id,
+                "username": self.scope["user"].username,
+                "message": message,
             }
         )
 
-    async def cmw_chat_message(self, event):
-        print("cmw_chat_message: " + str(event))
-        await self.send({
-            "type": "websocket.send",
-            "text": event['message']
-        })
 
-
-    async def websocket_disconnect(self, event):
-        print("websocket_disconnect: " + str(event))
-        await self.channel_layer.group_discard(
-            self.room_group_name,
-            self.channel_name
+    # These helper methods are named by the types we send - so chat.join becomes chat_join
+    async def chat_join(self, event):
+        """
+        Called when someone has joined our chat.
+        """
+        # Send a message down to the client
+        print("ChatConsumer: chat_join")
+        await self.send_json(
+            {
+                "msg_type": settings.MSG_TYPE_ENTER,
+                "room": event["room_id"],
+                "username": event["username"],
+            },
         )
+
+
+    async def chat_leave(self, event):
+        """
+        Called when someone has left our chat.
+        """
+        # Send a message down to the client
+        print("ChatConsumer: chat_leave")
+        await self.send_json(
+            {
+                "msg_type": settings.MSG_TYPE_LEAVE,
+                "room": event["room_id"],
+                "username": event["username"],
+            },
+        )
+
+
+    async def chat_message(self, event):
+        """
+        Called when someone has messaged our chat.
+        """
+        # Send a message down to the client
+        print("ChatConsumer: chat_message")
+        await self.send_json(
+            {
+                "msg_type": settings.MSG_TYPE_MESSAGE,
+                "room": event["room_id"],
+                "username": event["username"],
+                "message": event["message"],
+            },
+        )
+
+
+
+
 
 
 
