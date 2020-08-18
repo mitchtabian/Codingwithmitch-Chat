@@ -2,15 +2,239 @@
 {% load static %}
 
 {% block content %}
+
+<style type="text/css">
+	.chat-log {
+		height: 300px;
+		border: 1px solid #000;
+		overflow-x: hidden;
+		overflow-y: auto;
+		padding: 10px;
+		background-color: #fff;
+		font-size: 0.9em;
+		flex-direction: column-reverse;
+
+	}
+	#id_chatroom_loading_spinner{
+		position: absolute;
+		margin-top: 20px;
+	}
+	#chat-log-container {
+		height: 300px;
+	}
+	.chat-message-input-container{
+		border: 1px solid #000;
+	}
+	.chat-message-input{
+		outline: none;
+	}
+	.username-span{
+		font-weight: 600;
+		margin-top: 0px;
+		margin-bottom: auto;
+		margin-left: 5px;
+		margin-right: 5px;
+	}
+	.msg-span{
+		font-weight: 450;
+		margin-top: 0px;
+		margin-bottom: auto;
+		white-space: normal;
+	}
+	.message-container{
+		margin-top: 10px;
+		justify-content: start;
+	}
+	.profile-image{
+		width: 33px;
+		height: 33px;
+		margin-top: 0px;
+		margin-bottom: auto;
+	}
+	.profile-image:hover{
+		cursor: pointer;
+	}
+	.username-span:hover{
+		cursor: pointer;
+	}
+	.material-icons:hover{
+		cursor: pointer;
+	}
+	
+</style>
+
 <div class="container">
 	<div class="d-flex flex-column">
-		<textarea id="chat-log" cols="100" rows="15"></textarea><br>
-		<input id="chat-message-input" type="text" size="100"><br>
-		<input id="chat-message-submit" type="button" value="Send">
+		<h3 id="id_room_title">{{room_title}}</h3>
+		<div id="id_chat_log_container">
+			<div class="container" id="id_chatroom_loading_spinner" style="display: none">
+				<div class="d-flex flex-row justify-content-center">
+					<div class="spinner-border text-primary" role="status">
+					<span class="sr-only">Loading...</span>
+				</div>
+				</div>
+			</div>
+			<div class="d-flex chat-log" id="id_chat_log">
+			</div>
+		</div>
+		
+		<span class="{% if not debug %}d-none{% endif %} page-number" id="id_page_number">1</span>
+		<span class="{% if not debug %}d-none{% endif %} has-joined-room" id="id_has_joined_room">False</span>
+		
+		<div class="d-flex flex-row chat-message-input-container">
+			<input class="flex-grow-1 chat-message-input" id="id_chat_message_input" type="text">
+			<button class="btn btn-primary chat-message-submit-button">
+				<span id="id_chat_message_submit" class="material-icons">send
+				</span>
+			</button>
+			
+		</div>
 	</div>
 </div>
 
 <script>
+
+	function setPaginationExhausted(){
+		setPageNumber("-1")
+	}
+
+	function setHasJoinedRoom(hasJoinedRoom){
+		document.getElementById("id_has_joined_room").innerHTML = hasJoinedRoom
+	}
+
+	function getRoomChatMessages(){
+		console.log("getRoomChatMessages called.")
+		var pageNumber = document.getElementById("id_page_number").innerHTML
+		var hasJoinedRoom = document.getElementById("id_has_joined_room").innerHTML
+		var requestData = {
+			"page_number": pageNumber,
+			"room_id": "{{room_id}}",
+			"has_joined_room": hasJoinedRoom,
+		}
+		console.log("page number: " + pageNumber)
+		if(pageNumber != "-1"){
+			displayChatroomLoadingSpinner(true)
+			setPageNumber("-1") // loading in progress
+			$.ajax({
+					type: 'GET',
+					dataType: "json",
+					url: "{% url 'chat:get-room-chat-messages' room_id=room_id %}",
+					data: requestData,
+					timeout: 5000,
+					success: function(data) {
+						console.log("SUCCESS", data)
+						var newMessages = data['messages']
+						if (newMessages != "None"){
+							newMessages.forEach(message => appendChatMessage(0, message['message'], message['username'], message['profile_image'], true))
+							var newPageNumber = data['page_number']
+							setPageNumber(newPageNumber)
+						}
+						else{
+							setPaginationExhausted() // no more messages
+						}
+					},
+					error: function(data) {
+						console.error("ERROR...", data)
+					},
+					complete: function(data){
+						console.log("on complete")
+						displayChatroomLoadingSpinner(false)
+					}
+				});
+		}
+		
+	}
+
+	function setPageNumber(pageNumber){
+		document.getElementById("id_page_number").innerHTML = pageNumber
+	}
+
+	document.getElementById("id_chat_log").addEventListener("scroll", function(e){
+		var position = document.getElementById("id_chat_log").scrollTop
+		if(position == 0){
+			getRoomChatMessages()
+		}
+		// getRoomChatMessages()
+	})
+
+	function appendChatMessage(messageType, message, uName, pImage, maintainPosition){
+		var chatLog = document.getElementById("id_chat_log")
+		var msg = "";
+		var username = ""
+		var profile_image = "{% static 'media/profile_images/logo_1080_1080.png' %}";
+		switch (messageType) {
+			case 0:
+				profile_image = pImage
+				username = uName + ": "
+				msg = message + '\n'
+				break;
+			case 1:
+				// Warning / Advice messages
+				msg = "WARNING: " + message + '\n'
+				break;
+			case 2:
+				// Alert / Danger messages
+				msg = "ALERT: " + message + '\n'
+				break;
+			case 3:
+				// "Muted" messages
+				msg = "Muted: " + message + '\n'
+				break;
+			case 4:
+				// User joined room
+				// msg = (data.username + " connected.\n")
+				profile_image = pImage
+				username = uName + ": "
+				msg = " connected.\n"
+				break;
+			case 5:
+				// User left room
+				profile_image = pImage
+				username = uName + ": "
+				msg = " disconnected.\n"
+				break;
+			default:
+				console.log("Unsupported message type!");
+				return;
+		}
+		var newMessageDiv = document.createElement("div")
+		newMessageDiv.classList.add("d-flex")
+		newMessageDiv.classList.add("flex-row")
+		newMessageDiv.classList.add("message-container")
+
+		var profileImage = document.createElement("img")
+		profileImage.addEventListener("click", function(e){
+			if(uName != "{{request.user.username}}"){
+				selectUser(uName)
+			}
+		})
+		profileImage.classList.add("profile-image")
+		profileImage.classList.add("rounded-circle")
+		profileImage.classList.add("img-fluid")
+		profileImage.src = profile_image
+		profileImage.id = uName
+		newMessageDiv.appendChild(profileImage)
+
+		var usernameSpan = document.createElement("span")
+		usernameSpan.innerHTML = username
+		usernameSpan.classList.add("username-span")
+		usernameSpan.addEventListener("click", function(e){
+			if(uName != "{{request.user.username}}"){
+				selectUser(uName)
+			}
+		})
+		newMessageDiv.appendChild(usernameSpan)
+
+		var msgSpan = document.createElement("span")
+		msgSpan.innerHTML = msg
+		msgSpan.classList.add("msg-span")
+		newMessageDiv.appendChild(msgSpan)
+
+		chatLog.appendChild(newMessageDiv)
+		if(!maintainPosition){
+			chatLog.scrollTop = chatLog.scrollHeight
+		}
+	}
 
 	// Correctly decide between ws:// and wss://
 	var ws_scheme = window.location.protocol == "https:" ? "wss" : "ws";
@@ -21,7 +245,8 @@
 	// Handle incoming messages
 	socket.onmessage = function(message) {
 		// Decode the JSON
-		console.log("Got websocket message " + message.data);
+		// console.log("Got websocket message " + message.data);
+		console.log("Got websocket message.");
 		var data = JSON.parse(message.data);
 		// Handle errors (ClientError)
 		if (data.error) {
@@ -32,8 +257,8 @@
 		 // Handle joining
 		if (data.join) {
 			console.log("Joining room " + data.join);
-			// a new user has joined
-			// load 20 most recent messages?
+			setHasJoinedRoom("True")
+			getRoomChatMessages()
 		}
 		// Handle leaving
 		else if (data.leave) {
@@ -41,42 +266,11 @@
 			// Do nothing...?
 		}
 		// Handle getting a message
-		else if (data.message || data.msg_type != 0) {
-			var msg = "";
-			switch (data.msg_type) {
-				case 0:
-					msg = (data.username + ": " + data.message + '\n')
-					break;
-				case 1:
-					// Warning / Advice messages
-					msg = ("WARNING: " + data.message + '\n')
-					break;
-				case 2:
-					// Alert / Danger messages
-					msg = ("ALERT: " + data.message + '\n')
-					break;
-				case 3:
-					// "Muted" messages
-					msg = ("Muted: " + data.message + '\n')
-					break;
-				case 4:
-					// User joined room
-					ok_msg = "<div class='contextual-message text-muted'>" + data.username +
-					" joined the room!" +
-					"</div>";
-					msg = (data.username + " connected.\n")
-					break;
-				case 5:
-					// User left room
-					msg = (data.username + " disconnected.\n")
-					break;
-				default:
-					console.log("Unsupported message type!");
-					return;
-			}
-			document.querySelector('#chat-log').value += msg;
+		else if (data.message || data.msg_type != 0 && data.msg_type != 6) {
+			appendChatMessage(data.msg_type, data.message, data.username, data.profile_image, false)
 		}
 		else {
+			var textNode
 			console.log("Cannot handle message!");
 		}
 
@@ -112,11 +306,11 @@
     }
 
     
-	document.querySelector('#chat-message-input').focus();
-	document.querySelector('#chat-message-input').onkeyup = function(e) {
+	document.querySelector('#id_chat_message_input').focus();
+	document.querySelector('#id_chat_message_input').onkeyup = function(e) {
 		if (e.keyCode === 13) {  // enter, return
 			if("{{request.user.is_authenticated}}" == "True"){
-				document.querySelector('#chat-message-submit').click();
+				document.querySelector('#id_chat_message_submit').click();
 			}
 			else{
 				document.getElementById("id_trigger_must_login_modal").click()
@@ -124,8 +318,8 @@
 		}
 	};
 	
-	document.querySelector('#chat-message-submit').onclick = function(e) {
-		const messageInputDom = document.querySelector('#chat-message-input');
+	document.querySelector('#id_chat_message_submit').onclick = function(e) {
+		const messageInputDom = document.querySelector('#id_chat_message_input');
 		const message = messageInputDom.value;
 		socket.send(JSON.stringify({
 			"command": "send",
@@ -139,7 +333,28 @@
 		document.getElementById("id_client_error_modal_body").innerHTML = message
 		document.getElementById("id_trigger_client_error_modal").click()
 	}
+
+	function selectUser(uName){
+		console.log("username: " + uName)
+		var url = "{% url 'account:view' username=53252623623632623 %}".replace("53252623623632623", uName)
+		var win = window.open(url, "_blank")
+		win.focus()
+	}
 </script>
+
+<script type="text/javascript">
+	function displayChatroomLoadingSpinner(isDisplayed){
+		console.log("display spinner " + isDisplayed)
+		var spinner = document.getElementById("id_chatroom_loading_spinner")
+		if(isDisplayed){
+			spinner.style.display = "block"
+		}
+		else{
+			spinner.style.display = "none"
+		}
+	}
+</script>
+
 
 <!-- Must Login MODAL -->
 <button type="button" id="id_trigger_must_login_modal" class="d-none btn btn-primary" data-toggle="modal" data-target="#id_must_login_modal">

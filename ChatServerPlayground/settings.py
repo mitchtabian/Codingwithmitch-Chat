@@ -109,6 +109,7 @@ MSG_TYPE_ALERT = 2  # For red & dangerous alerts
 MSG_TYPE_MUTED = 3  # For just OK information that doesn't bother users
 MSG_TYPE_ENTER = 4  # Italic green
 MSG_TYPE_LEAVE = 5  # Italic grey
+MSG_TYPE_INCREMENT_PAGE = 6  # None
 
 MESSAGE_TYPES_CHOICES = (
     (MSG_TYPE_MESSAGE, 'MESSAGE'),
@@ -117,6 +118,7 @@ MESSAGE_TYPES_CHOICES = (
     (MSG_TYPE_MUTED, 'MUTED'),
     (MSG_TYPE_ENTER, 'ENTER'),
     (MSG_TYPE_LEAVE, 'LEAVE'),
+    (MSG_TYPE_INCREMENT_PAGE, 'INCREMENT_PAGE'),
 )
 
 MESSAGE_TYPES_LIST = [
@@ -126,6 +128,7 @@ MESSAGE_TYPES_LIST = [
     MSG_TYPE_MUTED,
     MSG_TYPE_ENTER,
     MSG_TYPE_LEAVE,
+    MSG_TYPE_INCREMENT_PAGE,
 ]
 
 

@@ -1,4 +1,7 @@
+from django.conf import settings
+
 from django.db import models
+
 
 
 class Room(models.Model):
@@ -22,3 +25,37 @@ class Room(models.Model):
         messages as they are generated.
         """
         return "room-%s" % self.id
+
+
+class RoomChatMessageManager(models.Manager):
+    def by_room(self, room):
+        qs = RoomChatMessage.objects.filter(room=room).order_by("-timestamp")
+        return qs
+
+class RoomChatMessage(models.Model):
+    """
+    Chat message created by a user inside a Room
+    """
+    user                = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    room                = models.ForeignKey(Room, on_delete=models.CASCADE)
+    timestamp           = models.DateTimeField(auto_now_add=True)
+    content             = models.CharField(max_length=255, unique=True, blank=False,)
+
+    objects = RoomChatMessageManager()
+
+    def __str__(self):
+        return self.content
+
+
+
+
+
+
+
+
+
+
+
+
+
+

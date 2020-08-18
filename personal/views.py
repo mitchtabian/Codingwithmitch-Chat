@@ -7,6 +7,7 @@ def home_screen_view(request):
 	context = {}
 
 	rooms = Room.objects.all()
+	print("rooms: " + str(rooms))
 	context['rooms'] = rooms
 
 	if request.method == "POST":
@@ -14,8 +15,8 @@ def home_screen_view(request):
 		staff_only = False
 		if request.POST.get("authorization_staff_only"):
 			staff_only = True
-		print(str(staff_only))
-		# room = Room(title=title, staff_only=staff_only)
+		room = Room(title=title, staff_only=staff_only)
+		room.save()
 		return redirect("home")
 
 	return render(request, "personal/home.html", context)

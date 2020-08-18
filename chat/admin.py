@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from chat.models import Room
+from chat.models import Room, RoomChatMessage
 
 class RoomAdmin(admin.ModelAdmin):
     list_filter = ['id', 'title', 'staff_only']
@@ -13,3 +13,32 @@ class RoomAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Room, RoomAdmin)
+
+
+
+
+class RoomChatMessageAdmin(admin.ModelAdmin):
+    list_filter = ['room',  'user', 'content',"timestamp"]
+    list_display = ['room',  'user', 'content',"timestamp"]
+    search_fields = ['room__title', 'user__username','content']
+    readonly_fields = ['id', "user", "room", "timestamp"]
+
+    class Meta:
+        model = RoomChatMessage
+
+
+admin.site.register(RoomChatMessage, RoomChatMessageAdmin)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
