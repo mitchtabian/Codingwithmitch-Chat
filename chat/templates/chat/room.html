@@ -15,9 +15,26 @@
 		flex-direction: column-reverse;
 
 	}
+	.connected-users{
+		height: 300px;
+		border: 1px solid #000;
+		overflow-x: hidden;
+		overflow-y: auto;
+		padding: 10px;
+		background-color: #fff;
+		font-size: 0.9em;
+
+	}
+	#id_connected_users_container{
+		flex-basis: 150px;
+	}
 	#id_chatroom_loading_spinner{
 		position: absolute;
-		margin-top: 20px;
+		margin-top: 40px;
+	}
+	#id_online_users_title{
+		font-weight: 550;
+		color: green;
 	}
 	#chat-log-container {
 		height: 300px;
@@ -60,35 +77,42 @@
 	.material-icons:hover{
 		cursor: pointer;
 	}
-	
 </style>
 
+
 <div class="container">
-	<div class="d-flex flex-column">
-		<h3 id="id_room_title">{{room_title}}</h3>
-		<div id="id_chat_log_container">
-			<div class="container" id="id_chatroom_loading_spinner" style="display: none">
-				<div class="d-flex flex-row justify-content-center">
-					<div class="spinner-border text-primary" role="status">
+	<h3 id="id_room_title">{{room_title}}</h3>
+	<div class="d-flex flex-row" >
+		<div class="d-flex flex-column flex-grow-1" id="id_chat_log_container">
+			
+			<div class="d-flex flex-row justify-content-center" id="id_chatroom_loading_spinner_container">
+				<div class="spinner-border text-primary"  id="id_chatroom_loading_spinner" role="status"  style="display: none; ">
 					<span class="sr-only">Loading...</span>
-				</div>
 				</div>
 			</div>
 			<div class="d-flex chat-log" id="id_chat_log">
+				
+			</div>
+			<span class="{% if not debug %}d-none{% endif %} page-number" id="id_page_number">1</span>
+			<span class="{% if not debug %}d-none{% endif %} has-joined-room" id="id_has_joined_room">False</span>
+			
+			<div class="d-flex flex-row chat-message-input-container">
+				<input class="flex-grow-1 chat-message-input" id="id_chat_message_input" type="text">
+				<button class="btn btn-primary chat-message-submit-button">
+					<span id="id_chat_message_submit" class="material-icons">send
+					</span>
+				</button>
+			</div>
+		</div>
+		<div class="d-flex flex-column" id="id_connected_users_container">
+			<div class="d-flex flex-column connected-users" id="id_connected_users">
+				<p id="id_online_users_title">Connected users</p>
+				{% for user in connected_users %}
+				<p id="id_connected_user_{{user.id}}">{{user.username}}</p>
+				{% endfor %}
 			</div>
 		</div>
 		
-		<span class="{% if not debug %}d-none{% endif %} page-number" id="id_page_number">1</span>
-		<span class="{% if not debug %}d-none{% endif %} has-joined-room" id="id_has_joined_room">False</span>
-		
-		<div class="d-flex flex-row chat-message-input-container">
-			<input class="flex-grow-1 chat-message-input" id="id_chat_message_input" type="text">
-			<button class="btn btn-primary chat-message-submit-button">
-				<span id="id_chat_message_submit" class="material-icons">send
-				</span>
-			</button>
-			
-		</div>
 	</div>
 </div>
 
@@ -125,7 +149,7 @@
 						console.log("SUCCESS", data)
 						var newMessages = data['messages']
 						if (newMessages != "None"){
-							newMessages.forEach(message => appendChatMessage(0, message['message'], message['username'], message['profile_image'], true))
+							newMessages.forEach(message => appendChatMessage(0, message['message'], message['username'], message['profile_image'], true, false))
 							var newPageNumber = data['page_number']
 							setPageNumber(newPageNumber)
 						}
@@ -154,10 +178,22 @@
 		if(position == 0){
 			getRoomChatMessages()
 		}
-		// getRoomChatMessages()
 	})
 
-	function appendChatMessage(messageType, message, uName, pImage, maintainPosition){
+	function appendConnectedUser(user_id, username){
+		element = document.getElementById("id_connected_users")
+		var p = document.createElement("p")
+		p.id = "id_connected_user_" + user_id
+		p.innerHTML = username
+		element.appendChild(p)
+	}
+
+	function removeConnectedUser(user_id){
+		var userElement = document.getElementById("id_connected_user_" + user_id)
+		userElement.parentNode.removeChild(userElement)
+	}
+
+	function appendChatMessage(messageType, message, uName, pImage, maintainPosition, isNewMessage){
 		var chatLog = document.getElementById("id_chat_log")
 		var msg = "";
 		var username = ""
@@ -182,7 +218,6 @@
 				break;
 			case 4:
 				// User joined room
-				// msg = (data.username + " connected.\n")
 				profile_image = pImage
 				username = uName + ": "
 				msg = " connected.\n"
@@ -230,7 +265,13 @@
 		msgSpan.classList.add("msg-span")
 		newMessageDiv.appendChild(msgSpan)
 
-		chatLog.appendChild(newMessageDiv)
+		if(isNewMessage){
+			chatLog.insertBefore(newMessageDiv, chatLog.firstChild)
+		}
+		else{
+			chatLog.appendChild(newMessageDiv)
+		}
+		
 		if(!maintainPosition){
 			chatLog.scrollTop = chatLog.scrollHeight
 		}
@@ -245,8 +286,8 @@
 	// Handle incoming messages
 	socket.onmessage = function(message) {
 		// Decode the JSON
-		// console.log("Got websocket message " + message.data);
-		console.log("Got websocket message.");
+		console.log("Got websocket message " + message.data);
+		// console.log("Got websocket message.");
 		var data = JSON.parse(message.data);
 		// Handle errors (ClientError)
 		if (data.error) {
@@ -260,14 +301,21 @@
 			setHasJoinedRoom("True")
 			getRoomChatMessages()
 		}
+		if(data.msg_type == 5){
+			console.log("remove user with id: " + data.user_id)
+			removeConnectedUser(data.user_id)
+		}
+		if(data.msg_type == 4){
+			console.log("add user with id: " + data.user_id)
+			appendConnectedUser(data.user_id, data.username)
+		}
 		// Handle leaving
 		else if (data.leave) {
 			console.log("Leaving room " + data.leave);
-			// Do nothing...?
 		}
 		// Handle getting a message
-		else if (data.message || data.msg_type != 0 && data.msg_type != 6) {
-			appendChatMessage(data.msg_type, data.message, data.username, data.profile_image, false)
+		else if (data.message || data.msg_type != 0) {
+			appendChatMessage(data.msg_type, data.message, data.username, data.profile_image, false, true)
 		}
 		else {
 			var textNode
@@ -336,6 +384,7 @@
 
 	function selectUser(uName){
 		console.log("username: " + uName)
+		// Weird work-around for passing arg to url
 		var url = "{% url 'account:view' username=53252623623632623 %}".replace("53252623623632623", uName)
 		var win = window.open(url, "_blank")
 		win.focus()

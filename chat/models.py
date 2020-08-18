@@ -1,6 +1,6 @@
 from django.conf import settings
-
 from django.db import models
+
 
 
 
@@ -10,13 +10,37 @@ class Room(models.Model):
     """
 
     # Room title
-    title = models.CharField(max_length=255, unique=True, blank=False,)
+    title               = models.CharField(max_length=255, unique=True, blank=False,)
 
     # If only "staff" users are allowed (is_staff on django's User)
-    staff_only = models.BooleanField(default=False)
+    staff_only          = models.BooleanField(default=False)
+
+    connected_users     = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True) 
 
     def __str__(self):
         return self.title
+
+    def add_user(self, user):
+        """
+        return true if user is added to the connected_users list
+        """
+        is_user_added = False
+        if user.is_authenticated:
+            if not user in self.connected_users.all():
+                self.connected_users.add(user)
+                is_user_added = True
+        return is_user_added
+
+    def remove_user(self, user):
+        """
+        return true if user is removed from the connected_users list
+        """
+        is_user_removed = False
+        if user.is_authenticated:
+            if user in self.connected_users.all():
+                self.connected_users.remove(user)
+                is_user_removed = True
+        return is_user_removed
 
     @property
     def group_name(self):

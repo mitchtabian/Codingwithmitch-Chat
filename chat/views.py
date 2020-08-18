@@ -2,9 +2,11 @@ from django.shortcuts import render
 from django.conf import settings
 from django.core.serializers import serialize
 from django.core.paginator import Paginator
-import json
 from django.http import HttpResponse
+import json
+from time import sleep
 
+from account.models import Account
 from chat.models import Room, RoomChatMessage
 from chat.utils import LazyRoomChatMessageEncoder
 
@@ -16,11 +18,14 @@ def room_view(request, *args, **kwargs):
 	context["BASE_URL"] = settings.BASE_URL
 	room_id = kwargs.get("room_id")
 	context["room_id"] = room_id
-	context["room_title"] = Room.objects.get(pk=room_id)
+	room = Room.objects.get(pk=room_id)
+	context["room_title"] = room.title
 	context['debug'] = DEBUG
+	context['connected_users'] = room.connected_users.all()
+	print("connected users: " + str(context['connected_users']))
+
 	return render(request, "chat/room.html", context)
 
-from time import sleep
 
 def get_room_chat_messages(request, *args, **kwargs):
 
@@ -34,7 +39,7 @@ def get_room_chat_messages(request, *args, **kwargs):
 			page_number = request.GET.get("page_number")
 			p = Paginator(qs, DEFAULT_ROOM_CHAT_MESSAGE_PAGE_SIZE)
 
-			sleep(1)
+			# sleep(1) # for testing
 			payload = {}
 			messages_data = None
 			new_page_number = int(page_number)	
@@ -48,5 +53,41 @@ def get_room_chat_messages(request, *args, **kwargs):
 			payload['page_number'] = new_page_number
 			return HttpResponse(json.dumps(payload), content_type="application/json")
 	return HttpResponse("Something went wrong.")
+
+
+
+
+
+
+import random
+import string
+
+def get_random_string(length):
+    letters = string.ascii_lowercase
+    result_str = ''.join(random.choice(letters) for i in range(length))
+    print("Random string of length", length, "is:", result_str)
+    return result_str
+
+def insert_room_chat_messages(num_messages):
+	mitch = Account.objects.get(pk=1)
+	jessica = Account.objects.get(pk=5)
+	room = Room.objects.get(pk=room_id)
+	for x in range(0, num_messages):
+		content = str(x) + " " + get_random_string(25)
+		if x % 2 == 0:
+			usr = mitch
+		else:
+			usr = jessica
+		message = RoomChatMessage(user=usr, room=room, content=content)
+		message.save()
+
+
+
+
+
+
+
+
+
 
 
