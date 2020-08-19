@@ -27,6 +27,7 @@ def room_view(request, *args, **kwargs):
 	return render(request, "chat/room.html", context)
 
 
+
 def get_room_chat_messages(request, *args, **kwargs):
 
 	if request.GET:

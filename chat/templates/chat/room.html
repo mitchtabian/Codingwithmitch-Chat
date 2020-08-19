@@ -110,6 +110,7 @@
 				{% for user in connected_users %}
 				<p id="id_connected_user_{{user.id}}">{{user.username}}</p>
 				{% endfor %}
+				
 			</div>
 		</div>
 		
@@ -117,6 +118,7 @@
 </div>
 
 <script>
+
 
 	function setPaginationExhausted(){
 		setPageNumber("-1")
@@ -190,7 +192,7 @@
 
 	function removeConnectedUser(user_id){
 		var userElement = document.getElementById("id_connected_user_" + user_id)
-		userElement.parentNode.removeChild(userElement)
+		userElement.remove()
 	}
 
 	function appendChatMessage(messageType, message, uName, pImage, maintainPosition, isNewMessage){
@@ -300,17 +302,11 @@
 			console.log("Joining room " + data.join);
 			setHasJoinedRoom("True")
 			getRoomChatMessages()
-		}
-		if(data.msg_type == 5){
-			console.log("remove user with id: " + data.user_id)
-			removeConnectedUser(data.user_id)
-		}
-		if(data.msg_type == 4){
-			console.log("add user with id: " + data.user_id)
 			appendConnectedUser(data.user_id, data.username)
 		}
-		// Handle leaving
+		// Handle leaving from client side
 		else if (data.leave) {
+			// do nothing
 			console.log("Leaving room " + data.leave);
 		}
 		// Handle getting a message
@@ -322,6 +318,15 @@
 			console.log("Cannot handle message!");
 		}
 
+		// Update the list of connected users
+		if(data.msg_type == 5){ 
+			console.log("remove user with id: " + data.user_id)
+			removeConnectedUser(data.user_id)
+		}
+		if(data.msg_type == 4){ 
+			console.log("add user with id: " + data.user_id)
+			appendConnectedUser(data.user_id, data.username)
+		}
 	};
 
 	socket.addEventListener("open", function(e){
