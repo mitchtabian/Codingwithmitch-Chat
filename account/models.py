@@ -1,8 +1,12 @@
 from django.db import models
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django.core.files.storage import FileSystemStorage
 from django.conf import settings
 import os
+
+from friend.models import FriendList
 
 
 
@@ -67,7 +71,7 @@ class Account(AbstractBaseUser):
 	objects = MyAccountManager()
 
 	def __str__(self):
-		return self.email
+		return self.username
 
 	def get_profile_image_filename(self):
 		return str(self.profile_image)[str(self.profile_image).index('profile_images/' + str(self.pk) + "/"):]
@@ -81,11 +85,9 @@ class Account(AbstractBaseUser):
 		return True
 
 
-
-
-
-
-
+@receiver(post_save, sender=Account)
+def user_save(sender, instance, **kwargs):
+    FriendList.objects.get_or_create(user=instance)
 
 
 

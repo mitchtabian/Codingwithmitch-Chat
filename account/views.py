@@ -12,69 +12,10 @@ import requests
 import tempfile
 from django.core import files
 
+from friend.models import FriendList, FriendRequest
 from account.models import Account, get_profile_image_filepath
 from account.forms import RegistrationForm, AccountAuthenticationForm, AccountUpdateForm
 TEMP_PROFILE_IMAGE_NAME = "temp_profile_image.png"
-
-
-
-# save image to /temp/
-# load image with cv2
-# crop image with cv2
-# save image to /temp/
-
-def crop_image(request, *args, **kwargs):
-	payload = {}
-	user = request.user
-	if request.POST and user.is_authenticated:
-		try:
-			imageString = request.POST.get("image")
-			url = save_temp_profile_image_from_base64String(imageString, user)
-			img = cv2.imread(url)
-
-			cropX = int(float(str(request.POST.get("cropX"))))
-			cropY = int(float(str(request.POST.get("cropY"))))
-			cropWidth = int(float(str(request.POST.get("cropWidth"))))
-			cropHeight = int(float(str(request.POST.get("cropHeight"))))
-			if cropX < 0:
-				cropX = 0
-			if cropY < 0: # There is a bug with cropperjs. y can be negative.
-				cropY = 0
-			crop_img = img[cropY:cropY+cropHeight, cropX:cropX+cropWidth]
-
-			cv2.imwrite(url, crop_img)
-			filename = os.path.basename(url)
-			mediaUrl = settings.BASE_URL + "/media/temp/" + str(user.pk) + "/" + filename
-
-			request = requests.get(mediaUrl, stream=True)
-
-			# Was the request OK?
-			if request.status_code != requests.codes.ok:
-				raise Exception("Something went wrong. Try another image.")
-
-			# Create a temporary file
-			lf = tempfile.NamedTemporaryFile()
-			# Read the streamed image in sections
-			for block in request.iter_content(1024 * 8):
-				# If no more file then stop
-				if not block:
-					break
-
-				# Write image block to temporary file
-				lf.write(block)
-
-			# Save the temporary image to the model#
-			# This saves the model so be sure that is it valid
-			user.profile_image.save("profile_image.png", files.File(lf))
-
-			payload['result'] = "success"
-			payload['cropped_profile_image'] = mediaUrl
-			
-		except Exception as e:
-			print("exception: " + str(e))
-			payload['result'] = "error"
-			payload['exception'] = str(e)
-	return HttpResponse(json.dumps(payload), content_type="application/json")
 
 
 def save_temp_profile_image_from_base64String(imageString, user):
@@ -104,10 +45,34 @@ def account_view(request, *args, **kwargs):
 	username = kwargs.get("username")
 	account = Account.objects.filter(username=username).first()
 	if account:
+		context['id'] = account.id
 		context['username'] = account.username
 		context['email'] = account.email
 		context['profile_image'] = account.profile_image
 		context['hide_email'] = account.hide_email
+
+		friend_list = FriendList.objects.get(user=account)
+		friends = friend_list.friends.all()
+		context['friends'] = friends
+		
+		friend_requests = FriendRequest.objects.filter(receiver=account)
+		user = request.user
+		if user.is_authenticated and user != account:
+			should_display_friend_request_button = False
+			if not friends.filter(pk=user.id):
+				should_display_friend_request_button = True
+				context['display_unfriend_btn'] = False
+			else:
+				context['display_unfriend_btn'] = True
+			context['display_friend_request_btn'] = should_display_friend_request_button
+			if should_display_friend_request_button:
+				if friend_requests.filter(sender=user):
+					context['is_friend_request_pending'] = True
+				else:
+					context['is_friend_request_pending'] = False
+		elif user == account:
+			context['friend_requests'] = friend_requests
+
 	else:
 		return HttpResponse("Something went wrong.")
 	return render(request, "account/account.html", context)
@@ -149,7 +114,7 @@ def edit_account_view(request, *args, **kwargs):
 	return render(request, "account/edit_account.html", context)
 
 
-def register_view(request):
+def register_view(request, *args, **kwargs):
 	user = request.user
 	if user.is_authenticated: 
 		return HttpResponse("You are already authenticate as " + str(user.email))
@@ -222,5 +187,61 @@ def get_redirect_if_exists(request):
 
 
 
+# save image to /temp/
+# load image with cv2
+# crop image with cv2
+# save image to /temp/
 
+def crop_image(request, *args, **kwargs):
+	payload = {}
+	user = request.user
+	if request.POST and user.is_authenticated:
+		try:
+			imageString = request.POST.get("image")
+			url = save_temp_profile_image_from_base64String(imageString, user)
+			img = cv2.imread(url)
+
+			cropX = int(float(str(request.POST.get("cropX"))))
+			cropY = int(float(str(request.POST.get("cropY"))))
+			cropWidth = int(float(str(request.POST.get("cropWidth"))))
+			cropHeight = int(float(str(request.POST.get("cropHeight"))))
+			if cropX < 0:
+				cropX = 0
+			if cropY < 0: # There is a bug with cropperjs. y can be negative.
+				cropY = 0
+			crop_img = img[cropY:cropY+cropHeight, cropX:cropX+cropWidth]
+
+			cv2.imwrite(url, crop_img)
+			filename = os.path.basename(url)
+			mediaUrl = settings.BASE_URL + "/media/temp/" + str(user.pk) + "/" + filename
+
+			request = requests.get(mediaUrl, stream=True)
+
+			# Was the request OK?
+			if request.status_code != requests.codes.ok:
+				raise Exception("Something went wrong. Try another image.")
+
+			# Create a temporary file
+			lf = tempfile.NamedTemporaryFile()
+			# Read the streamed image in sections
+			for block in request.iter_content(1024 * 8):
+				# If no more file then stop
+				if not block:
+					break
+
+				# Write image block to temporary file
+				lf.write(block)
+
+			# Save the temporary image to the model#
+			# This saves the model so be sure that is it valid
+			user.profile_image.save("profile_image.png", files.File(lf))
+
+			payload['result'] = "success"
+			payload['cropped_profile_image'] = mediaUrl
+			
+		except Exception as e:
+			print("exception: " + str(e))
+			payload['result'] = "error"
+			payload['exception'] = str(e)
+	return HttpResponse(json.dumps(payload), content_type="application/json")
 

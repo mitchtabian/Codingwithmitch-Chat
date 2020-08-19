@@ -63,7 +63,7 @@ class RoomChatMessage(models.Model):
     user                = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     room                = models.ForeignKey(Room, on_delete=models.CASCADE)
     timestamp           = models.DateTimeField(auto_now_add=True)
-    content             = models.CharField(max_length=255, unique=True, blank=False,)
+    content             = models.CharField(max_length=255, unique=False, blank=False,)
 
     objects = RoomChatMessageManager()
 

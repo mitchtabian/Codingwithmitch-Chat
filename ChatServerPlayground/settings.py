@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     "personal",
     "chat",
     "account",
+    "friend",
 
 
     # Django and third party apps

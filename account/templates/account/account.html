@@ -43,14 +43,106 @@
 		  </div>
 		</div>
 	</div>
+
+
+
+	<div class="d-flex flex-row">
+		<div>
+			{% if request.user.id == id %}
+				{% for friend in friends %}
+					<p><a href="{% url 'account:view' username=friend.username %}">{{friend}}</a></p>
+				{% endfor %}
+			{% endif %}
+		</div>
+		<div>
+			{% if display_friend_request_btn %}
+				{% if is_friend_request_pending %}
+					<button class="btn btn-danger" id="id_cancel_friend_request_btn">
+						Cancel Friend Request
+					</button>
+				{% else %}
+					<button class="btn btn-primary" id="id_send_friend_request_btn">
+						Send Friend Request
+					</button>
+				{% endif %}
+			{% else %}
+				{% if display_unfriend_btn %}
+					<button class="btn btn-warning" id="id_unfriend_btn">
+						Remove Friend
+					</button>
+				{% endif %}
+			{% endif %}
+			
+		</div>
+		
+	</div>
+	
 </div>
 
+<script type="text/javascript">
+
+	function onFriendRequestSent(){
+		location.reload();
+	}
+
+	function onFriendRequestCancelled(){
+		location.reload();
+	}
+
+	function onFriendRemoved(){
+		location.reload();
+	}
 
 
+	var sendFriendRequestBtn = document.getElementById("id_send_friend_request_btn")
+	if (sendFriendRequestBtn != null){
+		sendFriendRequestBtn.addEventListener("click", function(){
+			sendFriendRequest("{{id}}", onFriendRequestSent)
+		})
+	}
 
+	var cancelFriendRequestBtn = document.getElementById("id_cancel_friend_request_btn")
+	if(cancelFriendRequestBtn != null){
+		cancelFriendRequestBtn.addEventListener("click", function(){
+			cancelFriendRequest("{{id}}", onFriendRequestCancelled)
+		})
+	}
+
+	var removeFriendBtn = document.getElementById("id_unfriend_btn")
+	if (removeFriendBtn != null){
+		removeFriendBtn.addEventListener("click", function(){
+			removeFriend("{{id}}", onFriendRemoved)
+		})
+	}
+	
+</script>
+
+{% include 'snippets/send_friend_request.html' %}
+{% include 'snippets/cancel_friend_request.html' %}
+{% include 'snippets/remove_friend.html' %}
 
 
 
 {% endblock content %}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

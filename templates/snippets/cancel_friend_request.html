@@ -1,0 +1,71 @@
+
+
+<script type="text/javascript">
+	
+	function cancelFriendRequest(id, uiUpdateFunction){
+		$.ajax({
+			type: 'GET',
+			dataType: "json",
+			url: "{% url 'friend:friend-request-cancel' user_id=id %}",
+			timeout: 5000,
+			success: function(data) {
+				console.log("SUCCESS", data)
+				if(data['response'] == "Friend request canceled."){
+					uiUpdateFunction()
+				}
+				else if(data['response'] != null){
+					alert(data['response'])
+				}
+			},
+			error: function(data) {
+				console.error("ERROR...", data)
+				alert("Something went wrong.")
+			},
+			complete: function(data){
+
+			}
+		});
+	}
+	
+
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
