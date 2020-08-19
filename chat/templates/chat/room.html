@@ -15,7 +15,8 @@
 		flex-direction: column-reverse;
 
 	}
-	.connected-users{
+	#id_connected_users_container{
+		flex-basis: 150px;
 		height: 300px;
 		border: 1px solid #000;
 		overflow-x: hidden;
@@ -23,10 +24,6 @@
 		padding: 10px;
 		background-color: #fff;
 		font-size: 0.9em;
-
-	}
-	#id_connected_users_container{
-		flex-basis: 150px;
 	}
 	#id_chatroom_loading_spinner{
 		position: absolute;
@@ -68,6 +65,13 @@
 		margin-top: 0px;
 		margin-bottom: auto;
 	}
+	.profile-image-small{
+		width: 25px;
+		height: 25px;
+		margin-top: 0px;
+		margin-bottom: auto;
+		margin-right: 5px;
+	}
 	.profile-image:hover{
 		cursor: pointer;
 	}
@@ -105,12 +109,8 @@
 			</div>
 		</div>
 		<div class="d-flex flex-column" id="id_connected_users_container">
+			<p id="id_online_users_title">Connected users</p>
 			<div class="d-flex flex-column connected-users" id="id_connected_users">
-				<p id="id_online_users_title">Connected users</p>
-				{% for user in connected_users %}
-				<p id="id_connected_user_{{user.id}}">{{user.username}}</p>
-				{% endfor %}
-				
 			</div>
 		</div>
 		
@@ -126,6 +126,28 @@
 
 	function setHasJoinedRoom(hasJoinedRoom){
 		document.getElementById("id_has_joined_room").innerHTML = hasJoinedRoom
+	}
+
+	function getConnectedUsers(){
+		console.log("retrieving a list of connected users...")
+		$.ajax({
+			type: 'GET',
+			dataType: "json",
+			url: "{% url 'chat:get-room-connected-users' room_id=room_id %}",
+			timeout: 5000,
+			success: function(data) {
+				console.log("SUCCESS", data)
+				connected_users = data['connected_users']
+				console.log("CONNECTED USERS: " + connected_users)
+				setConnectedUsers(connected_users)
+			},
+			error: function(data) {
+				console.error("ERROR...", data)
+			},
+			complete: function(data){
+				console.log("on complete")
+			}
+		});
 	}
 
 	function getRoomChatMessages(){
@@ -168,7 +190,6 @@
 					}
 				});
 		}
-		
 	}
 
 	function setPageNumber(pageNumber){
@@ -182,17 +203,35 @@
 		}
 	})
 
-	function appendConnectedUser(user_id, username){
+	function setConnectedUsers(users){
+		// clear the list of connected users
+		var parent = document.getElementById("id_connected_users")
+		parent.innerHTML = ""
+
+		// append the connected users
+		users.forEach(user => appendConnectedUser(user['id'], user['username'], user['profile_image']))
+	}
+
+	function appendConnectedUser(user_id, uName, profile_image){
 		element = document.getElementById("id_connected_users")
 		var p = document.createElement("p")
 		p.id = "id_connected_user_" + user_id
-		p.innerHTML = username
-		element.appendChild(p)
-	}
 
-	function removeConnectedUser(user_id){
-		var userElement = document.getElementById("id_connected_user_" + user_id)
-		userElement.remove()
+		var a = document.createElement("a")
+		var url = "{% url 'account:view' username=53252623623632623 %}".replace("53252623623632623", uName)
+		a.href = url
+		a.innerHTML = uName
+		a.target ="_blank"
+		var img = document.createElement("img")
+		img.classList.add("profile-image-small")
+		img.classList.add("rounded-circle")
+		img.classList.add("img-fluid")
+		img.src = profile_image
+		
+		
+		p.appendChild(img)
+		p.appendChild(a)
+		element.appendChild(p)
 	}
 
 	function appendChatMessage(messageType, message, uName, pImage, maintainPosition, isNewMessage){
@@ -223,12 +262,14 @@
 				profile_image = pImage
 				username = uName + ": "
 				msg = " connected.\n"
+				getConnectedUsers()
 				break;
 			case 5:
 				// User left room
 				profile_image = pImage
 				username = uName + ": "
 				msg = " disconnected.\n"
+				getConnectedUsers()
 				break;
 			default:
 				console.log("Unsupported message type!");
@@ -282,7 +323,7 @@
 	// Correctly decide between ws:// and wss://
 	var ws_scheme = window.location.protocol == "https:" ? "wss" : "ws";
 	var ws_path = ws_scheme + '://' + window.location.host + "/chat/{{room_id}}/";
-	console.log("Connecting to " + ws_path);
+	// console.log("Connecting to " + ws_path);
 	var socket = new WebSocket(ws_path);
 
 	// Handle incoming messages
@@ -297,14 +338,14 @@
 			showClientErrorModal(data.message)
 			return;
 		}
-		 // Handle joining
+		// Handle joining (Client perspective)
 		if (data.join) {
 			console.log("Joining room " + data.join);
 			setHasJoinedRoom("True")
 			getRoomChatMessages()
-			appendConnectedUser(data.user_id, data.username)
+			getConnectedUsers()
 		}
-		// Handle leaving from client side
+		// Handle leaving (client perspective)
 		else if (data.leave) {
 			// do nothing
 			console.log("Leaving room " + data.leave);
@@ -316,16 +357,6 @@
 		else {
 			var textNode
 			console.log("Cannot handle message!");
-		}
-
-		// Update the list of connected users
-		if(data.msg_type == 5){ 
-			console.log("remove user with id: " + data.user_id)
-			removeConnectedUser(data.user_id)
-		}
-		if(data.msg_type == 4){ 
-			console.log("add user with id: " + data.user_id)
-			appendConnectedUser(data.user_id, data.username)
 		}
 	};
 

@@ -53,9 +53,6 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                 await self.leave_room(content["room"])
             elif command == "send":
                 await self.send_room(content["room"], content["message"])
-            # elif command == "increment_page":
-            #     # increment page number
-            #     await self.increment_page(content['page'], content['room_id'])
         except ClientError as e:
             # Catch any errors and send it back
             errorData = {}
@@ -95,6 +92,26 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             await self.send_json(errorData)
             return
 
+        # Store that we're in the room
+        self.rooms.add(room_id)
+        # Add them to the group so they get room messages
+        await self.channel_layer.group_add(
+            room.group_name,
+            self.channel_name,
+        )
+
+        await self.add_user_to_chatroom(room, self.scope["user"])
+
+        # Instruct their client to finish opening the room
+        print("JOIN: " + str(self.scope["user"].id)) 
+        await self.send_json({
+            "join": str(room.id),
+            "title": room.title,
+            "profile_image": self.scope["user"].profile_image.url,
+            "username": self.scope["user"].username,
+            "user_id": self.scope["user"].id,
+        })
+
         if self.scope["user"].is_authenticated:
             # if settings.NOTIFY_USERS_ON_ENTER_OR_LEAVE_ROOMS:
                 # Notify the group that someone joined
@@ -108,25 +125,6 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                     "user_id": self.scope["user"].id,
                 }
             )
-
-            # Store that we're in the room
-            self.rooms.add(room_id)
-            # Add them to the group so they get room messages
-            await self.channel_layer.group_add(
-                room.group_name,
-                self.channel_name,
-            )
-
-            # Instruct their client to finish opening the room
-            print("JOIN: " + str(self.scope["user"].id)) 
-            await self.send_json({
-                "join": str(room.id),
-                "title": room.title,
-                "username": self.scope["user"].username,
-                "user_id": self.scope["user"].id,
-            })
-
-            await self.add_user_to_chatroom(room, self.scope["user"])
 
 
     async def leave_room(self, room_id):

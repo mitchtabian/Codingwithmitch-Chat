@@ -1,5 +1,4 @@
 from channels.db import database_sync_to_async
-from django.core.serializers.json import DjangoJSONEncoder
 from django.core.serializers.python import Serializer
 from django.utils.encoding import smart_text 
 from django.conf import settings
@@ -38,6 +37,7 @@ class LazyRoomChatMessageEncoder(Serializer):
         dump_object.update({'message': smart_text(obj.content, strings_only=True)})
         dump_object.update({'profile_image': smart_text(obj.user.profile_image.url, strings_only=True)})
         return dump_object
+
 
 
 
