@@ -2,20 +2,20 @@
 
 <script type="text/javascript">
 	
-	function cancelFriendRequest(id, uiUpdateFunction){
+	function acceptFriendRequest(id, uiUpdateFunction){
 		payload = {
 			"csrfmiddlewaretoken": "{{ csrf_token }}",
-			"receiver_user_id": id,
+			"sender_user_id": id,
 		}
 		$.ajax({
 			type: 'POST',
 			dataType: "json",
-			url: "{% url 'friend:friend-request-cancel' %}",
-			data: payload,
+			url: "{% url 'friend:friend-request-accept'%}",
 			timeout: 5000,
+			data: payload,
 			success: function(data) {
 				console.log("SUCCESS", data)
-				if(data['response'] == "Friend request canceled."){
+				if(data['response'] == "Friend request accepted."){
 					// ui is updated
 				}
 				else if(data['response'] != null){

@@ -11,11 +11,57 @@
 	.field-heading{
 		color: #737373;
 	}
+	.confirm-friend-request{
+		color: green;
+	}
+	.confirm-friend-request:hover {
+		opacity: 0.3;
+	}
+	.decline-friend-request:hover {
+		opacity: 0.3;
+	}
+	.decline-friend-request{
+		color: red;
+	}
+	.material-icons{
+		font-size: 30px;
+	}
+	.material-icons:hover{
+		cursor: pointer;
+	}
+	.friends-icon-container:hover {
+		opacity: 0.3;
+		cursor: pointer;
+	}
+	.friends-icon-container{
+		color: #4287f5;
+		font-weight: 500;
+	}
+	.friends-icon{
+		font-size: 40px;
+	}
+	.friends-btn{
+		background-color: #cccccc;
+		border-color: #cccccc;
+		color: #000;
+		font-weight: 500;
+	}
+	.friends-btn:hover {
+		background-color: #bfbfbf;
+		border-color: #bfbfbf;
+	}
+	.dropdown-toggle::after { 
+		content: none; 
+	}
+	.card{
+		border-radius: 12px;
+	}
 </style>
 
 <div class="container-fluid">
-	<div class="row justify-content-center">
-		<div class="card profile-card">
+	<div class="d-flex flex-row justify-content-center flex-wrap align-items-start">
+
+		<div class="card profile-card m-2">
 		  <div class="card-body">
 		  	<div class="d-flex flex-column justify-content-center p-4">
 		  		<div class="image-container mx-auto mb-4">
@@ -33,6 +79,8 @@
 			  	{% endif %}
 		  		<h6 class="mt-4 field-heading">Username</h6>
 		  		<h5>{{username}}</h5>
+
+		  		<!-- If Auth user is viewing their own profile -->
 		  		{% if request.user.email == email %}
 		  		<a  class="mt-4 btn btn-primary" href="{% url 'account:edit' username=username %}">Update</a>
 				<div class="d-flex flex-column mt-4">
@@ -42,41 +90,66 @@
 		  	</div>
 		  </div>
 		</div>
-	</div>
 
-
-
-	<div class="d-flex flex-row">
-		<div>
-			{% if request.user.id == id %}
-				{% for friend in friends %}
-					<p><a href="{% url 'account:view' username=friend.username %}">{{friend}}</a></p>
-				{% endfor %}
-			{% endif %}
-		</div>
-		<div>
+		<div class="card m-2 px-4 pb-4">
+			<!-- Cancel Friend Request / Send Friend Request / Remove Friend -->
 			{% if display_friend_request_btn %}
-				{% if is_friend_request_pending %}
-					<button class="btn btn-danger" id="id_cancel_friend_request_btn">
-						Cancel Friend Request
-					</button>
-				{% else %}
-					<button class="btn btn-primary" id="id_send_friend_request_btn">
-						Send Friend Request
-					</button>
-				{% endif %}
+				<div class="d-flex flex-column align-items-center pt-4">
+					{% if is_friend_request_pending %}
+						<button class="btn btn-danger" id="id_cancel_friend_request_btn">
+							Cancel Friend Request
+						</button>
+					{% else %}
+						<button class="btn btn-primary" id="id_send_friend_request_btn">
+							Send Friend Request
+						</button>
+					{% endif %}
+				</div>
 			{% else %}
 				{% if display_unfriend_btn %}
-					<button class="btn btn-warning" id="id_unfriend_btn">
-						Remove Friend
-					</button>
+					<div class="dropdown pt-4 m-auto">
+						<button class="btn btn-secondary dropdown-toggle friends-btn" type="button" id="id_friends_toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+						Friends
+						</button>
+						<div class="dropdown-menu" aria-labelledby="id_friends_toggle">
+							<a class="dropdown-item" href="#" onclick="removeFriend('{{friend.id}}', onFriendRemoved)">Unfriend</a>
+						</div>
+					</div>
 				{% endif %}
 			{% endif %}
 			
+			<!-- Friend list link -->
+	  		<div class="d-flex flex-column pt-4">
+				<a href="{% url 'friend:list' username=username %}">
+					<div class="d-flex flex-row align-items-center justify-content-center friends-icon-container">
+						<span class="material-icons friends-icon">contact_page</span><span>Friends ({{friends|length}})</span>
+					</div>
+				</a>
+			</div>
+
+			
 		</div>
-		
 	</div>
-	
+
+
+
+	<div class="d-flex flex-column align-items-start">
+
+		<!-- List incoming friend requests -->
+		{% if friend_requests %}
+		<div class="f-flex flex-column m-2">
+			{% for request in friend_requests %}
+				<div class="card d-flex flex-row align-items-center">
+					<a class="p-3" href="{% url 'account:view' username=request.sender.username%}">{{request.sender.username}}</a>
+		  			<span id="id_cancel_{{request.sender.id}}" class="decline-friend-request material-icons p-1" onclick='triggerDeclineFriendRequest("{{request.sender.id}}")'>cancel</span>
+		  			<span id="id_confirm_{{request.sender.id}}" class="confirm-friend-request material-icons p-1" onclick='triggerAcceptFriendRequest("{{request.sender.id}}")'>check</span>
+				</div>
+			{% endfor %}
+		</div>
+		{% endif %}
+
+	</div>
+
 </div>
 
 <script type="text/javascript">
@@ -90,6 +163,10 @@
 	}
 
 	function onFriendRemoved(){
+		location.reload();
+	}
+
+	function onFriendRequestAccepted(){
 		location.reload();
 	}
 
@@ -114,10 +191,22 @@
 			removeFriend("{{id}}", onFriendRemoved)
 		})
 	}
+
+	function triggerAcceptFriendRequest(sender_id){
+		console.log("accepting friend request from: " + sender_id)
+		acceptFriendRequest(sender_id, onFriendRequestAccepted)
+	}
+
+	function triggerDeclineFriendRequest(sender_id){
+		console.log("declining friend request from: " + sender_id)
+		declineFriendRequest(sender_id, onFriendRequestAccepted)
+	}
 	
 </script>
 
 {% include 'snippets/send_friend_request.html' %}
+{% include 'snippets/accept_friend_request.html' %}
+{% include 'snippets/decline_friend_request.html' %}
 {% include 'snippets/cancel_friend_request.html' %}
 {% include 'snippets/remove_friend.html' %}
 

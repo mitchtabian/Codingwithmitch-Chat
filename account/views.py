@@ -57,22 +57,25 @@ def account_view(request, *args, **kwargs):
 		
 		friend_requests = FriendRequest.objects.filter(receiver=account)
 		user = request.user
+		should_display_friend_request_button = False
+		display_unfriend_btn = False
 		if user.is_authenticated and user != account:
-			should_display_friend_request_button = False
 			if not friends.filter(pk=user.id):
 				should_display_friend_request_button = True
-				context['display_unfriend_btn'] = False
+				display_unfriend_btn = False
 			else:
-				context['display_unfriend_btn'] = True
-			context['display_friend_request_btn'] = should_display_friend_request_button
+				display_unfriend_btn = True
 			if should_display_friend_request_button:
 				if friend_requests.filter(sender=user):
 					context['is_friend_request_pending'] = True
 				else:
 					context['is_friend_request_pending'] = False
 		elif user == account:
-			context['friend_requests'] = friend_requests
 
+			context['friend_requests'] = friend_requests
+		context['display_unfriend_btn'] = display_unfriend_btn
+		context['display_friend_request_btn'] = should_display_friend_request_button
+			
 	else:
 		return HttpResponse("Something went wrong.")
 	return render(request, "account/account.html", context)
@@ -176,6 +179,7 @@ def login_view(request, *args, **kwargs):
 	context['login_form'] = form
 
 	return render(request, "account/login.html", context)
+
 
 
 def get_redirect_if_exists(request):
