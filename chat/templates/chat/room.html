@@ -75,6 +75,9 @@
 	.profile-image:hover{
 		cursor: pointer;
 	}
+	.profile-image-small:hover{
+		cursor: pointer;
+	}
 	.username-span:hover{
 		cursor: pointer;
 	}
@@ -206,32 +209,40 @@
 	function setConnectedUsers(users){
 		// clear the list of connected users
 		var parent = document.getElementById("id_connected_users")
-		parent.innerHTML = ""
+
+		// parent.innerHTML = ""
+		while (parent.firstChild) {
+			parent.removeChild(parent.lastChild);
+		}
 
 		// append the connected users
 		users.forEach(user => appendConnectedUser(user['id'], user['username'], user['profile_image']))
 	}
 
 	function appendConnectedUser(user_id, uName, profile_image){
-		element = document.getElementById("id_connected_users")
+		parent = document.getElementById("id_connected_users")
 		var p = document.createElement("p")
 		p.id = "id_connected_user_" + user_id
 
-		var a = document.createElement("a")
-		var url = "{% url 'account:view' username=53252623623632623 %}".replace("53252623623632623", uName)
-		a.href = url
-		a.innerHTML = uName
-		a.target ="_blank"
+		var usernameSpan = document.createElement("span")
+		usernameSpan.classList.add("username-span")
+		usernameSpan.innerHTML = uName
+		usernameSpan.addEventListener("click", function(){
+			selectUser(uName);
+		})
 		var img = document.createElement("img")
 		img.classList.add("profile-image-small")
 		img.classList.add("rounded-circle")
 		img.classList.add("img-fluid")
 		img.src = profile_image
+		img.addEventListener("click", function(){
+			selectUser(uName)
+		})
 		
 		
 		p.appendChild(img)
-		p.appendChild(a)
-		element.appendChild(p)
+		p.appendChild(usernameSpan)
+		parent.appendChild(p)
 	}
 
 	function appendChatMessage(messageType, message, uName, pImage, maintainPosition, isNewMessage){

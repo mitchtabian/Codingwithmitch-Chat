@@ -17,6 +17,26 @@ from account.models import Account, get_profile_image_filepath
 from account.forms import RegistrationForm, AccountAuthenticationForm, AccountUpdateForm
 TEMP_PROFILE_IMAGE_NAME = "temp_profile_image.png"
 
+# This is basically almost exactly the same as friends/friend_list_view
+def account_search_view(request, *args, **kwargs):
+	context = {}
+	if request.method == "GET":
+		search_query = request.GET.get("q")
+		if len(search_query) > 0:
+			search_results = Account.objects.filter(email__icontains=search_query).filter(username__icontains=search_query).distinct()
+			user = request.user
+			if user.is_authenticated:
+				accounts = [] # [(account1, True), (account2, False), ...]
+				# get the authenticated users friend list
+				auth_user_friend_list = FriendList.objects.get(user=user)
+				for account in search_results:
+					accounts.append((account, auth_user_friend_list.is_mutual_friend(account)))
+				context['accounts'] = accounts
+			else:
+				context['accounts'] = search_results
+	return render(request, "account/search_results.html", context)
+
+
 
 def save_temp_profile_image_from_base64String(imageString, user):
 	INCORRECT_PADDING_EXCEPTION = "Incorrect padding"
@@ -58,10 +78,18 @@ def account_view(request, *args, **kwargs):
 		friend_requests = FriendRequest.objects.filter(receiver=account)
 		user = request.user
 		should_display_friend_request_button = False
+		should_display_accept_friend_request_button = False
 		display_unfriend_btn = False
 		if user.is_authenticated and user != account:
 			if not friends.filter(pk=user.id):
-				should_display_friend_request_button = True
+				# Did they send me a friend request?
+				try:
+					my_friend_requests = FriendRequest.objects.get(receiver=user, sender=account)
+					should_display_accept_friend_request_button = True
+					should_display_friend_request_button = False
+				except FriendRequest.DoesNotExist:
+					should_display_friend_request_button = True
+					pass
 				display_unfriend_btn = False
 			else:
 				display_unfriend_btn = True
@@ -71,10 +99,10 @@ def account_view(request, *args, **kwargs):
 				else:
 					context['is_friend_request_pending'] = False
 		elif user == account:
-
 			context['friend_requests'] = friend_requests
 		context['display_unfriend_btn'] = display_unfriend_btn
 		context['display_friend_request_btn'] = should_display_friend_request_button
+		context['should_display_accept_friend_request_button'] = should_display_accept_friend_request_button
 			
 	else:
 		return HttpResponse("Something went wrong.")

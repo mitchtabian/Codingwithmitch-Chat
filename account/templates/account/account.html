@@ -11,34 +11,21 @@
 	.field-heading{
 		color: #737373;
 	}
-	.confirm-friend-request{
-		color: green;
-	}
-	.confirm-friend-request:hover {
-		opacity: 0.3;
-	}
-	.decline-friend-request:hover {
-		opacity: 0.3;
-	}
-	.decline-friend-request{
-		color: red;
-	}
-	.material-icons{
-		font-size: 30px;
-	}
-	.material-icons:hover{
-		cursor: pointer;
-	}
-	.friends-icon-container:hover {
+	.icon-container:hover {
 		opacity: 0.3;
 		cursor: pointer;
-	}
-	.friends-icon-container{
-		color: #4287f5;
-		font-weight: 500;
 	}
 	.friends-icon{
+		color: #4287f5;
 		font-size: 40px;
+	}
+	.person-add-icon{
+		color: #4287f5;
+		font-size: 40px;
+	}
+	.friend-text{
+		font-weight: 500;
+		color: black;
 	}
 	.friends-btn{
 		background-color: #cccccc;
@@ -55,6 +42,24 @@
 	}
 	.card{
 		border-radius: 12px;
+	}
+	.material-icons{
+		font-size: 30px;
+	}
+	.material-icons:hover{
+		cursor: pointer;
+	}
+	.confirm-friend-request{
+		color: green;
+	}
+	.confirm-friend-request:hover {
+		opacity: 0.3;
+	}
+	.decline-friend-request:hover {
+		opacity: 0.3;
+	}
+	.decline-friend-request{
+		color: red;
 	}
 </style>
 
@@ -91,65 +96,72 @@
 		  </div>
 		</div>
 
-		<div class="card m-2 px-4 pb-4">
-			<!-- Cancel Friend Request / Send Friend Request / Remove Friend -->
-			{% if display_friend_request_btn %}
-				<div class="d-flex flex-column align-items-center pt-4">
-					{% if is_friend_request_pending %}
-						<button class="btn btn-danger" id="id_cancel_friend_request_btn">
-							Cancel Friend Request
-						</button>
-					{% else %}
-						<button class="btn btn-primary" id="id_send_friend_request_btn">
-							Send Friend Request
-						</button>
-					{% endif %}
+		<div class="d-flex flex-column mb-4">
+
+			{% if should_display_accept_friend_request_button %}
+			<div class="card m-2 p-4">
+				<div class="d-flex flex-row align-items-center">
+					<span class="friend-text align-items-center mr-2">Accept Friend Request</span>
+					<span id="id_cancel_{{id}}" class="decline-friend-request material-icons p-1" onclick='triggerDeclineFriendRequest("{{id}}")'>cancel</span>
+  					<span id="id_confirm_{{id}}" class="confirm-friend-request material-icons p-1" onclick='triggerAcceptFriendRequest("{{id}}")'>check</span>
 				</div>
-			{% else %}
-				{% if display_unfriend_btn %}
-					<div class="dropdown pt-4 m-auto">
-						<button class="btn btn-secondary dropdown-toggle friends-btn" type="button" id="id_friends_toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-						Friends
-						</button>
-						<div class="dropdown-menu" aria-labelledby="id_friends_toggle">
-							<a class="dropdown-item" href="#" onclick="removeFriend('{{friend.id}}', onFriendRemoved)">Unfriend</a>
-						</div>
-					</div>
-				{% endif %}
+			</div>
 			{% endif %}
-			
-			<!-- Friend list link -->
-	  		<div class="d-flex flex-column pt-4">
-				<a href="{% url 'friend:list' username=username %}">
-					<div class="d-flex flex-row align-items-center justify-content-center friends-icon-container">
-						<span class="material-icons friends-icon">contact_page</span><span>Friends ({{friends|length}})</span>
+
+			<div class="card m-2 px-4 pb-4">
+				<!-- Cancel Friend Request / Send Friend Request / Remove Friend -->
+				{% if display_friend_request_btn %}
+					<div class="d-flex flex-column align-items-center pt-4">
+						{% if is_friend_request_pending %}
+							<button class="btn btn-danger" id="id_cancel_friend_request_btn">
+								Cancel Friend Request
+							</button>
+						{% else %}
+							<button class="btn btn-primary" id="id_send_friend_request_btn">
+								Send Friend Request
+							</button>
+						{% endif %}
 					</div>
-				</a>
+				{% else %}
+					{% if display_unfriend_btn %}
+						<div class="dropdown pt-4 m-auto">
+							<button class="btn btn-secondary dropdown-toggle friends-btn" type="button" id="id_friends_toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+							Friends
+							</button>
+							<div class="dropdown-menu" aria-labelledby="id_friends_toggle">
+								<a class="dropdown-item" href="#" onclick="removeFriend('{{id}}', onFriendRemoved)">Unfriend</a>
+							</div>
+						</div>
+					{% endif %}
+				{% endif %}
+				
+				<!-- Friend list link -->
+		  		<div class="d-flex flex-column pt-4">
+					<a href="{% url 'friend:list' username=username %}">
+						<div class="d-flex flex-row align-items-center justify-content-center icon-container">
+							<span class="material-icons mr-2 friends-icon">contact_page</span><span class="friend-text">Friends ({{friends|length}})</span>
+						</div>
+					</a>
+				</div>
 			</div>
 
-			
-		</div>
-	</div>
-
-
-
-	<div class="d-flex flex-column align-items-start">
-
-		<!-- List incoming friend requests -->
-		{% if friend_requests %}
-		<div class="f-flex flex-column m-2">
-			{% for request in friend_requests %}
-				<div class="card d-flex flex-row align-items-center">
-					<a class="p-3" href="{% url 'account:view' username=request.sender.username%}">{{request.sender.username}}</a>
-		  			<span id="id_cancel_{{request.sender.id}}" class="decline-friend-request material-icons p-1" onclick='triggerDeclineFriendRequest("{{request.sender.id}}")'>cancel</span>
-		  			<span id="id_confirm_{{request.sender.id}}" class="confirm-friend-request material-icons p-1" onclick='triggerAcceptFriendRequest("{{request.sender.id}}")'>check</span>
+			{% if friend_requests %}
+			<div class="card m-2 px-4 pb-4">
+				<!-- Friend requests -->
+		  		<div class="d-flex flex-column pt-4">
+					<a href="{% url 'friend:friend-requests' user_id=id %}">
+						<div class="d-flex flex-row align-items-center justify-content-center icon-container">
+							<span class="material-icons mr-2 person-add-icon">person_add</span><span class="friend-text">Friend Requests ({{friend_requests|length}})</span>
+						</div>
+					</a>
 				</div>
-			{% endfor %}
+			</div>
+			{% endif %}
+
 		</div>
-		{% endif %}
 
+		
 	</div>
-
 </div>
 
 <script type="text/javascript">
@@ -167,6 +179,10 @@
 	}
 
 	function onFriendRequestAccepted(){
+		location.reload();
+	}
+
+	function onFriendRequestDeclined(){
 		location.reload();
 	}
 
@@ -199,7 +215,7 @@
 
 	function triggerDeclineFriendRequest(sender_id){
 		console.log("declining friend request from: " + sender_id)
-		declineFriendRequest(sender_id, onFriendRequestAccepted)
+		declineFriendRequest(sender_id, onFriendRequestDeclined)
 	}
 	
 </script>

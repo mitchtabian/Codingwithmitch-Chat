@@ -17,6 +17,7 @@ from chat.utils import LazyRoomChatMessageEncoder
 DEFAULT_ROOM_CHAT_MESSAGE_PAGE_SIZE = 20
 DEBUG = False
 
+
 def room_view(request, *args, **kwargs):
 	room_id = kwargs.get("room_id")
 	user = request.user
@@ -32,7 +33,6 @@ def room_view(request, *args, **kwargs):
 	context["room_title"] = room.title
 	context['debug'] = DEBUG
 	return render(request, "chat/room.html", context)
-
 
 
 def get_room_chat_messages(request, *args, **kwargs):

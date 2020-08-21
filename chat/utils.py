@@ -24,7 +24,8 @@ def get_room_or_error(room_id, user):
     except Room.DoesNotExist:
         raise ClientError("ROOM_INVALID", "Invalid room.")
     # Check permissions
-    if room.staff_only and not user.is_staff:
+
+    if not user in room.users.all():
         raise ClientError("ROOM_ACCESS_DENIED", "You do not have permission to join this room.")
     return room
 
@@ -39,6 +40,19 @@ class LazyRoomChatMessageEncoder(Serializer):
         return dump_object
 
 
+
+def create_new_room(title, private, owner, users):
+    room = Room(title=title, private=private)
+    room.save()
+    room.owners.add(owner)
+    room.admins.add(owner)
+    if users == None:
+        room.users.add(owner)
+    else:
+        users.add(owner)
+        room.users.add(users)
+    room.save()
+    return room
 
 
 

@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.http import HttpResponse
 import json
 
@@ -6,30 +6,20 @@ from friend.models import FriendRequest, FriendList
 from account.models import Account
 
 
-# def friends_list_view(request, *args, **kwargs):
-# 	context = {}
-# 	user = request.user
-# 	if user.is_authenticated:
-# 		username = kwargs.get("username")
-# 		if username:
-# 			try:
-# 				this_user = Account.objects.get(username=username)
-# 				context['this_user'] = this_user
-# 			except Account.DoesNotExist:
-# 				return HttpResponse("That user does not exist.")
-# 			try:
-# 				friend_list = FriendList.objects.get(user=this_user)
-# 			except FriendList.DoesNotExist:
-# 				return HttpResponse(f"Could not find a friends list for {this_user.username}")
-			
-# 			# Must be friends to view a friends list
-# 			if user != this_user:
-# 				if not user in friend_list.friends.all():
-# 					return HttpResponse("You must be friends to view their friends list.")
-# 			context['friends'] = friend_list.friends.all()
-# 	else:		
-# 		return HttpResponse("You must be friends to view their friends list.")
-# 	return render(request, "friend/friend_list.html", context)
+def friend_requests(request, *args, **kwargs):
+	context = {}
+	user = request.user
+	if user.is_authenticated:
+		user_id = kwargs.get("user_id")
+		account = Account.objects.get(pk=user_id)
+		if account == user:
+			friend_requests = FriendRequest.objects.filter(receiver=account)
+			context['friend_requests'] = friend_requests
+		else:
+			return HttpResponse("You can't view another users friend requets.")
+	else:
+		redirect("login")
+	return render(request, "friend/friend_requests.html", context)
 
 
 def friends_list_view(request, *args, **kwargs):
@@ -176,32 +166,6 @@ def decline_friend_request(request, *args, **kwargs):
 		# should never happen
 		payload['response'] = "You must be authenticated to decline a friend request."
 	return HttpResponse(json.dumps(payload), content_type="application/json")
-		
-
-
-
-# # Ajax call for determining if a particular user is a mutual friend
-# def is_mutual_friend(request, *args, **kwargs):
-# 	user = request.user
-# 	payload = {}
-# 	if request.method == "POST" and user.is_authenticated:
-# 		friend_user_id = request.POST.get("friend_user_id")
-# 		if friend_user_id:
-# 			try:
-# 				friend = Account.objects.get(pk=friend_user_id)
-# 			except Account.DoesNotExist:
-# 				payload['response'] = "That user does not exist."
-# 			if payload['response'] == None:
-# 				friend_list = FriendList.objects.get(user=user)
-# 				if friend in friend_list.friends.all():
-# 					payload['is_mutual_friend'] = True
-# 					payload['response'] = f"You are mutual friends with {friend.username}."
-# 				else:
-# 					payload['is_mutual_friend'] = False
-# 					payload['response'] = f"You are NOT mutual friends with {friend.username}."
-# 	if payload['response'] == None:
-# 		payload['response'] = "Something went wrong."	
-# 	return HttpResponse(json.dumps(payload), content_type="application/json")
 		
 
 

@@ -92,6 +92,8 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             await self.send_json(errorData)
             return
 
+        await self.connect_user(room, self.scope["user"])
+
         # Store that we're in the room
         self.rooms.add(room_id)
         # Add them to the group so they get room messages
@@ -99,8 +101,6 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             room.group_name,
             self.channel_name,
         )
-
-        await self.add_user_to_chatroom(room, self.scope["user"])
 
         # Instruct their client to finish opening the room
         print("JOIN: " + str(self.scope["user"].id)) 
@@ -135,6 +135,8 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         print("ChatConsumer: leave_room")
         room = await get_room_or_error(room_id, self.scope["user"])
 
+        await self.disconnect_user(room, self.scope["user"])
+
         #if settings.NOTIFY_USERS_ON_ENTER_OR_LEAVE_ROOMS:
         # Notify the group that someone left
         await self.channel_layer.group_send(
@@ -160,7 +162,6 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             "leave": str(room.id),
         })
 
-        await self.remove_user_from_chatroom(room, self.scope["user"])
 
 
     async def send_room(self, room_id, message):
@@ -243,18 +244,30 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
     def create_room_chat_message(self, room, user, message):
         return RoomChatMessage.objects.create(user=user, room=room, content=message)
 
+    # @database_sync_to_async
+    # def add_user_to_chatroom(self, room, user):
+    #     # add user to room list to show as "connected"
+    #     account = Account.objects.get(pk=user.id)
+    #     return room.add_user(account)
+
     @database_sync_to_async
-    def add_user_to_chatroom(self, room, user):
+    def connect_user(self, room, user):
         # add user to room list to show as "connected"
         account = Account.objects.get(pk=user.id)
-        return room.add_user(account)
+        return room.connect_user(account)
 
 
     @database_sync_to_async
-    def remove_user_from_chatroom(self, room, user):
+    def disconnect_user(self, room, user):
         # add user to room list to show as "connected"
         account = Account.objects.get(pk=user.id)
-        return room.remove_user(account)
+        return room.disconnect_user(account)
+
+    # @database_sync_to_async
+    # def remove_user_from_chatroom(self, room, user):
+    #     # add user to room list to show as "connected"
+    #     account = Account.objects.get(pk=user.id)
+    #     return room.remove_user(account)
 
 
 

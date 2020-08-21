@@ -20,7 +20,7 @@
 		{% endfor %}
 	</div>
 
-	{% if request.user.is_staff%}
+	{% if request.user.is_staff %}
 	<div class="d-flex flex-row">
 		<button type="button" id="id_trigger_create_room_modal" class=" btn btn-primary" data-toggle="modal" data-target="#id_create_room_modal">Create room
 		</button>
@@ -50,25 +50,15 @@
 			<div class="form-group" >
 				<div class="checkbox">
 				<label>
-					<input type="checkbox" id="id_authorization_public" name="authorization_public" checked>
-					Public
-				</label>
-				</div>
-				<div class="checkbox">
-					<label>
-						<input type="checkbox" id="id_authorization_staff_only" name="authorization_staff_only">
-					Staff Only
+					<input type="checkbox" id="id_authorization_private" name="authorization_private" checked>
+					Private
 				</label>
 				</div>
 
 			</div>
-			<div class="form-group">
-				<p id="id_checkbox_errors">You must choose at least one option.</p>
-			</div>
 		</div>
 		<div class="modal-footer">
-			<input class="btn btn-primary" value="Create" onclick="confirmRoomCreateCheckbox()">
-			<input type="submit"  class="d-none" id="id_submit_new_room_form">
+			<input class="btn btn-primary" value="Create" type="submit" >
 			<button type="button" class="btn btn-secondary" data-dismiss="modal" onclick="onCancelCreateRoomModal()">Cancel</button>
 		</div>
       </form>
@@ -77,45 +67,5 @@
 </div>
 <!-- END New room MODAL -->
 
-<script type="text/javascript">
-
-	addCheckboxListeners()
-
-	function uncheckPublic(){
-		console.log("toggleRoomCheckbox")
-		public = document.getElementById("id_authorization_public")
-		public.checked = false
-	}
-
-	function uncheckStaff(){
-		staff = document.getElementById("id_authorization_staff_only")
-		staff.checked = false
-	}
-
-
-	function addCheckboxListeners(){
-		document.getElementById("id_authorization_public").addEventListener("click", function(){
-				uncheckStaff()
-		})
-		document.getElementById("id_authorization_staff_only").addEventListener("click", function(){
-				uncheckPublic()
-		})
-	}
-	
-	function confirmRoomCreateCheckbox(){
-		checkbox1 = document.getElementById("id_authorization_public")
-		checkbox2 = document.getElementById("id_authorization_staff_only")
-		if(checkbox1.checked || checkbox2.checked){
-			document.getElementById("id_submit_new_room_form").click()
-		}
-		else{
-			document.getElementById("id_checkbox_errors").style.display = "block"
-		}
-	}
-
-	function onCancelCreateRoomModal(){
-		document.getElementById("id_checkbox_errors").style.display = "none"
-	}
-</script>
 
 {% endblock content %}

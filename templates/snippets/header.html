@@ -86,8 +86,7 @@
 <script>
 function executeQuery() {
     var query = document.getElementById('id_q').value;
-    window.location.replace("{{BASE_URL}}/?q=" + query)
-    // "https://open-api.xyz/?q=" + query;
+    window.location.replace("{% url 'search' %}?q=" + query)
     return false
 }
 

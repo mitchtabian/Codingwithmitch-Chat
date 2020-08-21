@@ -1,7 +1,10 @@
+<!-- This is basically exactly the same as friend_list.html -->
+
 {% extends 'base.html' %}
 {% load static %}
 
 {% block content %}
+
 
 <style type="text/css">
 	.profile-image{
@@ -43,26 +46,26 @@
 <div class="container">
 	<div class="card p-2">
 
-		{% if friends %}
+		{% if accounts %}
 		<div class="d-flex flex-row flex-wrap">
-		{% for friend in friends %}
+		{% for account in accounts %}
 		<div class="card flex-row flex-grow-1 p-2 mx-2 my-2 align-items-center">
-			<a class="profile-link" href="{% url 'account:view' username=friend.0.username %}">
+			<a class="profile-link" href="{% url 'account:view' username=account.0.username %}">
 				<div class="card-image m-2">
-					<img class="img-fluid profile-image" src="{{friend.0.profile_image.url}}" alt="">
+					<img class="img-fluid profile-image" src="{{account.0.profile_image.url}}" alt="">
 				</div>
 			</a>
-			<a class="profile-link" href="{% url 'account:view' username=friend.0.username %}">
+			<a class="profile-link" href="{% url 'account:view' username=account.0.username %}">
 				<div class="card-center px-2">
-					<h4 class="card-title">{{friend.0.username}}</h4>
-					{% if friend.1 %}
+					<h4 class="card-title">{{account.0.username}}</h4>
+					{% if account.1 %}
 					<p class="card-text"><a href="#">Send a message</a></p>
 					{% endif %}
 					
 				</div>
 			</a>
 			<div class="d-flex flex-row card-right flex-grow-1 justify-content-end mx-2">
-				{% if friend.1 %}
+				{% if account.1 %}
 					<div class="d-flex flex-row friends-text-container p-3">
 						<p class="friends-text m-auto">
 							Friends 
@@ -72,7 +75,7 @@
 						</span>
 					</div>
 				{% else %}
-					{% if friend.0 !=  request.user %}
+					{% if account.0 !=  request.user %}
 						<div class="d-flex flex-row friends-text-container p-3">
 							<p class="friends-text m-auto">
 								Not Friends 
@@ -81,7 +84,7 @@
 						</div>
 					{% endif %}
 				{% endif %}
-				{% if friend.0 == request.user %}
+				{% if account.0 == request.user %}
 					<div class="d-flex flex-row friends-text-container p-3">
 						<p class="friends-text m-auto">
 							This is you 
@@ -101,13 +104,16 @@
 		
 		{% else %} <!-- If no friends -->
 		<div class="d-flex flex-row flex-grow-1 justify-content-center align-items-center p-4">
-			<p>No friends :(</p>
+			<p>No results</p>
 		</div>
 		{% endif %}
 		</div>
 	</div>
 	
 </div>
+
+
+
 
 
 {% endblock content %}

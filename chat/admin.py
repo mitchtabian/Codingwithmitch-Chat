@@ -6,10 +6,10 @@ from django.db import models
 from chat.models import Room, RoomChatMessage
 
 class RoomAdmin(admin.ModelAdmin):
-    list_filter = ['id', 'title', 'staff_only', ]
-    list_display = ['id', 'title', 'staff_only']
-    search_fields = ['id', 'title']
-    readonly_fields = ['id','connected_users',]
+    list_filter = ['id', 'title', 'private', ]
+    list_display = ['id', 'title', 'private',]
+    search_fields = ['id', 'title', 'owners', 'admins',]
+    readonly_fields = ['id','connected_users','not_connected_users',]
 
     class Meta:
         model = Room
