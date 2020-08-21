@@ -30,8 +30,43 @@ def private_chat_room_room_view(request, *args, **kwargs):
 	context["BASE_URL"] = settings.BASE_URL
 	context["room_id"] = room_id
 	room = PrivateChatRoom.objects.get(pk=room_id)
+	context['user1'] = room.user1
+	context['user2'] = room.user2
 	context['debug'] = DEBUG
 	return render(request, "chat/room.html", context)
+
+
+# Ajax call to return a private chatroom or create one if does not exist
+def create_or_return_private_chat(request, *args, **kwargs):
+	print("create_or_return_private_chat")
+	user1 = request.user
+	payload = {}
+	if user1.is_authenticated:
+		if request.method == "POST":
+			user2_id = request.POST.get("user2_id")
+			try:
+				user2 = Account.objects.get(pk=user2_id)
+				chat = find_or_create_private_chat(user1, user2)
+				print("Successfully got the chat")
+				payload['response'] = "Successfully got the chat."
+				payload['chatroom_id'] = chat.id
+			except Account.DoesNotExist:
+				payload['response'] = "Unable to start a chat with that user."
+	else:
+		payload['response'] = "You can't start a chat if you are not authenticated."
+	return HttpResponse(json.dumps(payload), content_type="application/json")
+
+
+def find_or_create_private_chat(user1, user2):
+	try:
+		chat = PrivateChatRoom.objects.get(user1=user1, user2=user2)
+	except PrivateChatRoom.DoesNotExist:
+		try:
+			chat = PrivateChatRoom.objects.get(user1=user2, user2=user1)
+		except PrivateChatRoom.DoesNotExist:
+			chat = PrivateChatRoom(user1=user1, user2=user2)
+			chat.save()
+	return chat
 
 
 def get_room_chat_messages(request, *args, **kwargs):
@@ -62,21 +97,9 @@ def get_room_chat_messages(request, *args, **kwargs):
 	return HttpResponse("Something went wrong.")
 
 
-def get_room_connected_users(request, *args, **kwargs):
-	if request.method == "GET":
-		try:
-			room_id = kwargs.get("room_id")
-			room = Room.objects.get(pk=room_id)
-			connected_users = room.connected_users.all()
-			payload = {}
-			s = LazyAccountEncoder()
-			payload['connected_users'] = s.serialize(connected_users)
-			return HttpResponse(json.dumps(payload), content_type="application/json")
-		except Exception as e:
-			print(e)
-	return HttpResponse("Something went wrong.")
 
 
+# Testing
 import random
 import string
 

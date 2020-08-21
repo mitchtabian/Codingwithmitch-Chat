@@ -88,7 +88,15 @@
 
 
 <div class="container">
-	<h3 id="id_room_title">{{room_title}}</h3>
+	<h3 id="id_room_title">
+		Chatting with 
+		{% if request.user == user1 %}
+			<a href="{% url 'account:view' username=user2.username%}" target="_blank">{{user2}}
+		{% else %}
+			<a href="{% url 'account:view' username=user1.username%}" target="_blank">{{user1}}
+		{% endif %}
+		</a>
+	</h3>
 	<div class="d-flex flex-row" >
 		<div class="d-flex flex-column flex-grow-1" id="id_chat_log_container">
 			
@@ -111,12 +119,6 @@
 				</button>
 			</div>
 		</div>
-		<div class="d-flex flex-column" id="id_connected_users_container">
-			<p id="id_online_users_title">Connected users</p>
-			<div class="d-flex flex-column connected-users" id="id_connected_users">
-			</div>
-		</div>
-		
 	</div>
 </div>
 
@@ -129,28 +131,6 @@
 
 	function setHasJoinedRoom(hasJoinedRoom){
 		document.getElementById("id_has_joined_room").innerHTML = hasJoinedRoom
-	}
-
-	function getConnectedUsers(){
-		console.log("retrieving a list of connected users...")
-		$.ajax({
-			type: 'GET',
-			dataType: "json",
-			url: "{% url 'chat:get-room-connected-users' room_id=room_id %}",
-			timeout: 5000,
-			success: function(data) {
-				console.log("SUCCESS", data)
-				connected_users = data['connected_users']
-				console.log("CONNECTED USERS: " + connected_users)
-				setConnectedUsers(connected_users)
-			},
-			error: function(data) {
-				console.error("ERROR...", data)
-			},
-			complete: function(data){
-				console.log("on complete")
-			}
-		});
 	}
 
 	function getRoomChatMessages(){
@@ -206,45 +186,6 @@
 		}
 	})
 
-	function setConnectedUsers(users){
-		// clear the list of connected users
-		var parent = document.getElementById("id_connected_users")
-
-		// parent.innerHTML = ""
-		while (parent.firstChild) {
-			parent.removeChild(parent.lastChild);
-		}
-
-		// append the connected users
-		users.forEach(user => appendConnectedUser(user['id'], user['username'], user['profile_image']))
-	}
-
-	function appendConnectedUser(user_id, uName, profile_image){
-		parent = document.getElementById("id_connected_users")
-		var p = document.createElement("p")
-		p.id = "id_connected_user_" + user_id
-
-		var usernameSpan = document.createElement("span")
-		usernameSpan.classList.add("username-span")
-		usernameSpan.innerHTML = uName
-		usernameSpan.addEventListener("click", function(){
-			selectUser(uName);
-		})
-		var img = document.createElement("img")
-		img.classList.add("profile-image-small")
-		img.classList.add("rounded-circle")
-		img.classList.add("img-fluid")
-		img.src = profile_image
-		img.addEventListener("click", function(){
-			selectUser(uName)
-		})
-		
-		
-		p.appendChild(img)
-		p.appendChild(usernameSpan)
-		parent.appendChild(p)
-	}
-
 	function appendChatMessage(messageType, message, uName, pImage, maintainPosition, isNewMessage){
 		var chatLog = document.getElementById("id_chat_log")
 		var msg = "";
@@ -273,14 +214,12 @@
 				profile_image = pImage
 				username = uName + ": "
 				msg = " connected.\n"
-				getConnectedUsers()
 				break;
 			case 5:
 				// User left room
 				profile_image = pImage
 				username = uName + ": "
 				msg = " disconnected.\n"
-				getConnectedUsers()
 				break;
 			default:
 				console.log("Unsupported message type!");
@@ -354,7 +293,6 @@
 			console.log("Joining room " + data.join);
 			setHasJoinedRoom("True")
 			getRoomChatMessages()
-			getConnectedUsers()
 		}
 		// Handle leaving (client perspective)
 		else if (data.leave) {
@@ -431,26 +369,10 @@
 
 	function selectUser(uName){
 		console.log("username: " + uName)
-
-		// open menu
-
-		// all 
-		// 1. view profile (target=_blank) 
-
-		// if admin
-		// 1. remove
-		
-		// if owner
-		// 1. promote to admin
-		// 2. promote to owner
-
-		
-
-
-		// // Weird work-around for passing arg to url
-		// var url = "{% url 'account:view' username=53252623623632623 %}".replace("53252623623632623", uName)
-		// var win = window.open(url, "_blank")
-		// win.focus()
+		// Weird work-around for passing arg to url
+		var url = "{% url 'account:view' username=53252623623632623 %}".replace("53252623623632623", uName)
+		var win = window.open(url, "_blank")
+		win.focus()
 	}
 </script>
 

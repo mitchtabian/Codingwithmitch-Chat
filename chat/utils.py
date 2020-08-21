@@ -25,7 +25,7 @@ def get_room_or_error(room_id, user):
         raise ClientError("ROOM_INVALID", "Invalid room.")
     # Check permissions
 
-    if not user in room.users.all():
+    if user != room.user1 and user != room.user2:
         raise ClientError("ROOM_ACCESS_DENIED", "You do not have permission to join this room.")
     return room
 
@@ -38,9 +38,6 @@ class LazyRoomChatMessageEncoder(Serializer):
         dump_object.update({'message': smart_text(obj.content, strings_only=True)})
         dump_object.update({'profile_image': smart_text(obj.user.profile_image.url, strings_only=True)})
         return dump_object
-
-
-
 
 
 

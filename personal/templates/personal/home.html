@@ -4,68 +4,13 @@
 {% block content %}
 
 
-<style type="text/css">
-	#id_checkbox_errors{
-		display:none;
-		color: red;
-	}
-</style>
 
 <div class="container">
 	<div class="d-flex flex-column">
-		<h1>Chat rooms</h1>
-		<hr>
-		{% for room in rooms %}
-			<p><a href="{% url 'chat:room' room_id=room.id %}">{{room.title}}</a></p>
-		{% endfor %}
+		<p>There is nothing here</p>
 	</div>
-
-	{% if request.user.is_staff %}
-	<div class="d-flex flex-row">
-		<button type="button" id="id_trigger_create_room_modal" class=" btn btn-primary" data-toggle="modal" data-target="#id_create_room_modal">Create room
-		</button>
-	</div>
-	{% endif %}
-
 </div>
 
-
-<!-- New Room MODAL -->
-
-<div class="modal fade" id="id_create_room_modal" tabindex="-1" role="dialog">
-  <div class="modal-dialog" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Create a Room</h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-          <span aria-hidden="true">&times;</span>
-        </button>
-      </div>
-      <form method="post" id="id_create_room_form">{% csrf_token %}
-		<div class="modal-body">
-			<div class="form-group">
-				<label for="id_new_room_title">Room Title</label>
-				<input type="text" class="form-control" placeholder="Enter title" id="id_new_room_title" name="new_room_title" required="true">
-			</div>
-			<div class="form-group" >
-				<div class="checkbox">
-				<label>
-					<input type="checkbox" id="id_authorization_private" name="authorization_private" checked>
-					Private
-				</label>
-				</div>
-
-			</div>
-		</div>
-		<div class="modal-footer">
-			<input class="btn btn-primary" value="Create" type="submit" >
-			<button type="button" class="btn btn-secondary" data-dismiss="modal" onclick="onCancelCreateRoomModal()">Cancel</button>
-		</div>
-      </form>
-    </div>
-  </div>
-</div>
-<!-- END New room MODAL -->
 
 
 {% endblock content %}

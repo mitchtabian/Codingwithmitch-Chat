@@ -3,19 +3,18 @@ from django.core.paginator import Paginator
 from django.core.cache import cache
 from django.db import models
 
-from chat.models import Room, RoomChatMessage
+from chat.models import PrivateChatRoom, RoomChatMessage
 
-class RoomAdmin(admin.ModelAdmin):
-    list_filter = ['id', 'title', 'private', ]
-    list_display = ['id', 'title', 'private',]
-    search_fields = ['id', 'title', 'owners', 'admins',]
-    readonly_fields = ['id','connected_users','not_connected_users',]
+class PrivateChatRoomAdmin(admin.ModelAdmin):
+    list_display = ['id','user1', 'user2', ]
+    search_fields = ['id', 'user1__username', 'user2__username','user1__email', 'user2__email', ]
+    readonly_fields = ['id',]
 
     class Meta:
-        model = Room
+        model = PrivateChatRoom
 
 
-admin.site.register(Room, RoomAdmin)
+admin.site.register(PrivateChatRoom, PrivateChatRoomAdmin)
 
 
 # Resource: http://masnun.rocks/2017/03/20/django-admin-expensive-count-all-queries/
