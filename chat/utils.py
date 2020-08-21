@@ -4,7 +4,7 @@ from django.utils.encoding import smart_text
 from django.conf import settings
 
 from .exceptions import ClientError
-from .models import Room, RoomChatMessage
+from .models import PrivateChatRoom, RoomChatMessage
 
 
 # This decorator turns this function from a synchronous function into an async one
@@ -20,8 +20,8 @@ def get_room_or_error(room_id, user):
     #     raise ClientError("USER_HAS_TO_LOGIN", "You must login.")
     # Find the room they requested (by ID)
     try:
-        room = Room.objects.get(pk=room_id)
-    except Room.DoesNotExist:
+        room = PrivateChatRoom.objects.get(pk=room_id)
+    except PrivateChatRoom.DoesNotExist:
         raise ClientError("ROOM_INVALID", "Invalid room.")
     # Check permissions
 
@@ -41,18 +41,7 @@ class LazyRoomChatMessageEncoder(Serializer):
 
 
 
-def create_new_room(title, private, owner, users):
-    room = Room(title=title, private=private)
-    room.save()
-    room.owners.add(owner)
-    room.admins.add(owner)
-    if users == None:
-        room.users.add(owner)
-    else:
-        users.add(owner)
-        room.users.add(users)
-    room.save()
-    return room
+
 
 
 

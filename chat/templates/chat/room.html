@@ -431,10 +431,26 @@
 
 	function selectUser(uName){
 		console.log("username: " + uName)
-		// Weird work-around for passing arg to url
-		var url = "{% url 'account:view' username=53252623623632623 %}".replace("53252623623632623", uName)
-		var win = window.open(url, "_blank")
-		win.focus()
+
+		// open menu
+
+		// all 
+		// 1. view profile (target=_blank) 
+
+		// if admin
+		// 1. remove
+		
+		// if owner
+		// 1. promote to admin
+		// 2. promote to owner
+
+		
+
+
+		// // Weird work-around for passing arg to url
+		// var url = "{% url 'account:view' username=53252623623632623 %}".replace("53252623623632623", uName)
+		// var win = window.open(url, "_blank")
+		// win.focus()
 	}
 </script>
 

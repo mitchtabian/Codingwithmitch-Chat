@@ -10,7 +10,7 @@ from time import sleep
 
 from account.models import Account
 from account.utils import LazyAccountEncoder
-from chat.models import Room, RoomChatMessage
+from chat.models import PrivateChatRoom, RoomChatMessage
 from chat.utils import LazyRoomChatMessageEncoder
 
 
@@ -18,7 +18,7 @@ DEFAULT_ROOM_CHAT_MESSAGE_PAGE_SIZE = 20
 DEBUG = False
 
 
-def room_view(request, *args, **kwargs):
+def private_chat_room_room_view(request, *args, **kwargs):
 	room_id = kwargs.get("room_id")
 	user = request.user
 	if not user.is_authenticated:
@@ -29,8 +29,7 @@ def room_view(request, *args, **kwargs):
 	context = {}
 	context["BASE_URL"] = settings.BASE_URL
 	context["room_id"] = room_id
-	room = Room.objects.get(pk=room_id)
-	context["room_title"] = room.title
+	room = PrivateChatRoom.objects.get(pk=room_id)
 	context['debug'] = DEBUG
 	return render(request, "chat/room.html", context)
 
@@ -42,7 +41,7 @@ def get_room_chat_messages(request, *args, **kwargs):
 		# print("has joined room: " + str(has_joined_room))
 		if has_joined_room == "True":
 			room_id = request.GET.get("room_id")
-			room = Room.objects.get(pk=room_id)
+			room = PrivateChatRoom.objects.get(pk=room_id)
 			qs = RoomChatMessage.objects.by_room(room)
 			page_number = request.GET.get("page_number")
 			p = Paginator(qs, DEFAULT_ROOM_CHAT_MESSAGE_PAGE_SIZE)
