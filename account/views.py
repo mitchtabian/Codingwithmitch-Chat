@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, authenticate, logout
 from django.http import HttpResponse
 from django.conf import settings
@@ -12,6 +12,8 @@ import requests
 import tempfile
 from django.core import files
 
+from friend.utils import get_friend_request_or_false
+from friend.friend_request_status import FriendRequestStatus
 from friend.models import FriendList, FriendRequest
 from account.models import Account, get_profile_image_filepath
 from account.forms import RegistrationForm, AccountAuthenticationForm, AccountUpdateForm
@@ -60,7 +62,16 @@ def save_temp_profile_image_from_base64String(imageString, user):
 	return None
 
 
+
 def account_view(request, *args, **kwargs):
+	"""
+	- Logic here is kind of tricky
+		is_self
+		is_friend
+			-1: NO_REQUEST_SENT
+			0: THEM_SENT_TO_YOU
+			1: YOU_SENT_TO_THEM
+	"""
 	context = {}
 	username = kwargs.get("username")
 	account = Account.objects.filter(username=username).first()
@@ -74,39 +85,41 @@ def account_view(request, *args, **kwargs):
 		friend_list = FriendList.objects.get(user=account)
 		friends = friend_list.friends.all()
 		context['friends'] = friends
-		
-		friend_requests = FriendRequest.objects.filter(receiver=account)
+	
+		# Define template variables
+		is_self = True
+		is_friend = False
+		request_sent = FriendRequestStatus.NO_REQUEST_SENT.value # range: ENUM -> friend/friend_request_status.FriendRequestStatus
+		friend_requests = None
 		user = request.user
-		should_display_friend_request_button = False
-		should_display_accept_friend_request_button = False
-		display_unfriend_btn = False
 		if user.is_authenticated and user != account:
-			if not friends.filter(pk=user.id):
-				# Did they send me a friend request?
-				try:
-					my_friend_requests = FriendRequest.objects.get(receiver=user, sender=account)
-					should_display_accept_friend_request_button = True
-					should_display_friend_request_button = False
-				except FriendRequest.DoesNotExist:
-					should_display_friend_request_button = True
-					pass
-				display_unfriend_btn = False
+			is_self = False
+			if friends.filter(pk=user.id):
+				is_friend = True
 			else:
-				display_unfriend_btn = True
-			if should_display_friend_request_button:
-				if friend_requests.filter(sender=user):
-					context['is_friend_request_pending'] = True
+				is_friend = False
+				# CASE1: Request has been sent from THEM to YOU: FriendRequestStatus.THEM_SENT_TO_YOU
+				if get_friend_request_or_false(sender=account, receiver=user) != False:
+					print("receiver is " + str(user))
+					request_sent = FriendRequestStatus.THEM_SENT_TO_YOU.value
+				# CASE2: Request has been sent from YOU to THEM: FriendRequestStatus.YOU_SENT_TO_THEM
+				elif get_friend_request_or_false(sender=user, receiver=account) != False:
+					request_sent = FriendRequestStatus.YOU_SENT_TO_THEM.value
+				# CASE3: No request sent from YOU or THEM: FriendRequestStatus.NO_REQUEST_SENT
 				else:
-					context['is_friend_request_pending'] = False
-		elif user == account:
-			context['friend_requests'] = friend_requests
-		context['display_unfriend_btn'] = display_unfriend_btn
-		context['display_friend_request_btn'] = should_display_friend_request_button
-		context['should_display_accept_friend_request_button'] = should_display_accept_friend_request_button
-			
-	else:
-		return HttpResponse("Something went wrong.")
-	return render(request, "account/account.html", context)
+					request_sent = FriendRequestStatus.NO_REQUEST_SENT.value
+		else:
+			try:
+				friend_requests = FriendRequest.objects.get(receiver=user)
+			except FriendRequest.DoesNotExist:
+				pass
+
+		# Set the template variables to the values
+		context['is_self'] = is_self
+		context['is_friend'] = is_friend
+		context['request_sent'] = request_sent
+		context['friend_requests'] = friend_requests
+		return render(request, "account/account.html", context)
 
 
 def edit_account_view(request, *args, **kwargs):
@@ -129,6 +142,7 @@ def edit_account_view(request, *args, **kwargs):
 						"email": account.email, 
 						"username": account.username,
 						"profile_image": account.profile_image,
+						"hide_email": account.hide_email,
 					}
 				)
 				context['form'] = form
@@ -138,6 +152,7 @@ def edit_account_view(request, *args, **kwargs):
 					"email": account.email, 
 					"username": account.username,
 					"profile_image": account.profile_image,
+					"hide_email": account.hide_email,
 				}
 			)
 		context['form'] = form

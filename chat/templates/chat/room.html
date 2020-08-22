@@ -3,6 +3,8 @@
 
 {% block content %}
 
+<script src="{% static 'bootstrap/js/jquery.min.js' %}"></script>
+
 <style type="text/css">
 	.chat-log {
 		height: 300px;
@@ -85,7 +87,6 @@
 		cursor: pointer;
 	}
 </style>
-
 
 <div class="container">
 	<h3 id="id_room_title">
@@ -342,12 +343,7 @@
 	document.querySelector('#id_chat_message_input').focus();
 	document.querySelector('#id_chat_message_input').onkeyup = function(e) {
 		if (e.keyCode === 13) {  // enter, return
-			if("{{request.user.is_authenticated}}" == "True"){
-				document.querySelector('#id_chat_message_submit').click();
-			}
-			else{
-				document.getElementById("id_trigger_must_login_modal").click()
-			}
+			document.querySelector('#id_chat_message_submit').click();
 		}
 	};
 	
@@ -377,6 +373,8 @@
 </script>
 
 <script type="text/javascript">
+
+
 	function displayChatroomLoadingSpinner(isDisplayed){
 		console.log("display spinner " + isDisplayed)
 		var spinner = document.getElementById("id_chatroom_loading_spinner")
@@ -387,32 +385,8 @@
 			spinner.style.display = "none"
 		}
 	}
+
 </script>
-
-
-<!-- Must Login MODAL -->
-<button type="button" id="id_trigger_must_login_modal" class="d-none btn btn-primary" data-toggle="modal" data-target="#id_must_login_modal">
-</button>
-<div class="modal fade" id="id_must_login_modal" tabindex="-1" role="dialog">
-  <div class="modal-dialog" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Log in</h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-          <span aria-hidden="true">&times;</span>
-        </button>
-      </div>
-      <div class="modal-body">
-        <p>You must log in to chat.</p>
-      </div>
-      <div class="modal-footer">
-        <a href="{% url 'login' %}?next=/chat/{{room_id}}/" class="btn btn-primary">Log in</a>
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-      </div>
-    </div>
-  </div>
-</div>
-<!-- END Must Login MODAL -->
 
 
 <!-- Client Error MODAL -->
@@ -431,11 +405,13 @@
         <p id="id_client_error_modal_body">Something went wrong.</p>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-secondary" data-dismiss="modal" id="id_client_error_modal_close_btn">Close</button>
       </div>
     </div>
   </div>
 </div>
 <!-- Client Error MODAL -->
+
+
 
 {% endblock content %}

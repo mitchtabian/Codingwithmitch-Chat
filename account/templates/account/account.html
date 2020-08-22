@@ -61,6 +61,9 @@
 	.decline-friend-request{
 		color: red;
 	}
+	.message-btn-text{
+		font-weight: 500;
+	}
 </style>
 
 <div class="container-fluid">
@@ -73,7 +76,7 @@
 		  			<img class="border border-dark rounded-circle img-fluid mx-auto d-block profile-image" src="{{profile_image.url}}" alt="codingwithmitch logo">
 		  		</div>
 		  		<h6 class="mt-4 field-heading">Email</h6>
-		  		{%  if email == request.user.email %}
+		  		{%  if is_self %}
 		  			<h5>{{email}}</h5>
 		  		{% else %}
 		  			{% if hide_email %}
@@ -86,7 +89,7 @@
 		  		<h5>{{username}}</h5>
 
 		  		<!-- If Auth user is viewing their own profile -->
-		  		{% if request.user.email == email %}
+		  		{% if is_self %}
 		  		<a  class="mt-4 btn btn-primary" href="{% url 'account:edit' username=username %}">Update</a>
 				<div class="d-flex flex-column mt-4">
 					<a class="m-auto" href="{% url 'password_change' %}">Change password</a>
@@ -98,7 +101,8 @@
 
 		<div class="d-flex flex-column mb-4">
 
-			{% if should_display_accept_friend_request_button %}
+			<!-- THEM to YOU -->
+			{% if request_sent == 0 %}
 			<div class="card m-2 p-4">
 				<div class="d-flex flex-row align-items-center">
 					<span class="friend-text align-items-center mr-2">Accept Friend Request</span>
@@ -110,29 +114,35 @@
 
 			<div class="card m-2 px-4 pb-4">
 				<!-- Cancel Friend Request / Send Friend Request / Remove Friend -->
-				{% if display_friend_request_btn %}
-					<div class="d-flex flex-column align-items-center pt-4">
-						{% if is_friend_request_pending %}
+				{% if is_friend == False and is_self == False %}
+						<!-- You sent them a request -->
+						{% if request_sent == 1 %}
+						<div class="d-flex flex-column align-items-center pt-4">
 							<button class="btn btn-danger" id="id_cancel_friend_request_btn">
 								Cancel Friend Request
 							</button>
-						{% else %}
+						</div>
+						{% endif %}
+						<!-- No requests have been sent -->
+						{% if request_sent == -1 %}
+						<div class="d-flex flex-column align-items-center pt-4">
 							<button class="btn btn-primary" id="id_send_friend_request_btn">
 								Send Friend Request
 							</button>
-						{% endif %}
-					</div>
-				{% else %}
-					{% if display_unfriend_btn %}
-						<div class="dropdown pt-4 m-auto">
-							<button class="btn btn-secondary dropdown-toggle friends-btn" type="button" id="id_friends_toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-							Friends
-							</button>
-							<div class="dropdown-menu" aria-labelledby="id_friends_toggle">
-								<a class="dropdown-item" href="#" onclick="removeFriend('{{id}}', onFriendRemoved)">Unfriend</a>
-							</div>
 						</div>
-					{% endif %}
+						{% endif %}
+				{% endif %}
+					
+					
+				{% if is_friend %}
+					<div class="dropdown pt-4 m-auto">
+						<button class="btn btn-secondary dropdown-toggle friends-btn" type="button" id="id_friends_toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+						Friends
+						</button>
+						<div class="dropdown-menu" aria-labelledby="id_friends_toggle">
+							<a class="dropdown-item" href="#" onclick="removeFriend('{{id}}', onFriendRemoved)">Unfriend</a>
+						</div>
+					</div>
 				{% endif %}
 				
 				<!-- Friend list link -->
@@ -156,6 +166,15 @@
 					</a>
 				</div>
 			</div>
+			{% endif %}
+
+			{% if is_friend %}
+				<div class="d-flex flex-row align-items-center btn btn-primary m-2 px-4" onclick="createOrReturnPrivateChat('{{id}}')">
+					<span class="material-icons m-auto">
+					message
+					</span>
+					<span class="message-btn-text m-auto pl-2">Message</span>
+				</div>
 			{% endif %}
 
 		</div>
@@ -225,6 +244,7 @@
 {% include 'snippets/decline_friend_request.html' %}
 {% include 'snippets/cancel_friend_request.html' %}
 {% include 'snippets/remove_friend.html' %}
+{% include 'chat/create_or_return_private_chat.html' %}
 
 
 

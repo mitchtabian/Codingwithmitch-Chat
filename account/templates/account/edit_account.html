@@ -48,14 +48,20 @@
 						<div class="text" id="id_text">Edit</div>
 					</div>
 		  		</div>
-
 		  		<form class="form-signin" method="post">{% csrf_token %}
 		  			<input class="d-none" type="file" id="id_profile_image_file_selector" name="profile_image_file_selector" onchange="readURL(this)">
 			  		<h6 class="mt-4 field-heading">Email</h6>
-			  		<input type="email" name="email" id="inputEmail" class="form-control" placeholder="Email address" required autofocus value={{form.initial.email}}>
+			  		<input type="email" name="email" id="id_input_email" class="form-control" placeholder="Email address" required autofocus value={{form.initial.email}}>
 			  		<h6 class="mt-4 field-heading">Username</h6>
-			  		<input type="text" name="username" id="inputUsername" class="form-control" placeholder="Username" required
+			  		<input type="text" name="username" id="id_input_username" class="form-control" placeholder="Username" required
 					value="{{form.initial.username}}">
+					<div class="mt-4 checkbox">
+						<label>
+							<input type="checkbox" name="hide_email" id="id_input_hide_email" {% if form.initial.hide_email %}checked{%endif%}>
+							Hide Email
+						</label>
+			  			
+					</div>
 
 					{% for field in form %}
 					<p>

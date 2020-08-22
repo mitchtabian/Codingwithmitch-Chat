@@ -29,7 +29,13 @@ def private_chat_room_room_view(request, *args, **kwargs):
 	context = {}
 	context["BASE_URL"] = settings.BASE_URL
 	context["room_id"] = room_id
-	room = PrivateChatRoom.objects.get(pk=room_id)
+	try:
+		room = PrivateChatRoom.objects.get(pk=room_id)
+	except:
+		return HttpResponse("There's nothing here.")
+	# # I like this way to not allow users to join chats but you can use socket also.
+	# if room.user1 != user and room.user2 != user:
+	# 	return HttpResponse("You do not have permission to join that chat room.")
 	context['user1'] = room.user1
 	context['user2'] = room.user2
 	context['debug'] = DEBUG
