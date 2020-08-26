@@ -91,9 +91,9 @@
 <div class="container">
 	<h3 class="d-flex flex-row align-items-center" id="id_room_title">
 		{% if request.user == user1 %}
-			<img class="profile-image rounded-circle img-fluid" src="{{user2.profile_image.url}}"><a href="{% url 'account:view' username=user2.username%}" target="_blank">&nbsp;{{user2}}&nbsp;
+			<img class="profile-image rounded-circle img-fluid" src="{{user2.profile_image.url}}"><a href="{% url 'account:view' user_id=user2.id%}" target="_blank">&nbsp;{{user2.username}}&nbsp;
 		{% else %}
-			<img class="profile-image rounded-circle img-fluid" src="{{user1.profile_image.url}}"><a href="{% url 'account:view' username=user1.username%}" target="_blank">&nbsp;{{user1}}&nbsp;
+			<img class="profile-image rounded-circle img-fluid" src="{{user1.profile_image.url}}"><a href="{% url 'account:view' user_id=user1.id%}" target="_blank">&nbsp;{{user1.username}}&nbsp;
 		{% endif %}
 		</a>
 	</h3>
@@ -156,7 +156,7 @@
 						console.log("SUCCESS", data)
 						var newMessages = data['messages']
 						if (newMessages != "None"){
-							newMessages.forEach(message => appendChatMessage(0, message['message'], message['username'], message['profile_image'], true, false))
+							newMessages.forEach(message => appendChatMessage(0, message['message'], message['username'], message['user_id'], message['profile_image'], true, false))
 							var newPageNumber = data['page_number']
 							setPageNumber(newPageNumber)
 						}
@@ -186,7 +186,7 @@
 		}
 	})
 
-	function appendChatMessage(messageType, message, uName, pImage, maintainPosition, isNewMessage){
+	function appendChatMessage(messageType, message, uName, user_id, pImage, maintainPosition, isNewMessage){
 		var chatLog = document.getElementById("id_chat_log")
 		var msg = "";
 		var username = ""
@@ -232,9 +232,7 @@
 
 		var profileImage = document.createElement("img")
 		profileImage.addEventListener("click", function(e){
-			if(uName != "{{request.user.username}}"){
-				selectUser(uName)
-			}
+			selectUser(user_id)
 		})
 		profileImage.classList.add("profile-image")
 		profileImage.classList.add("rounded-circle")
@@ -247,9 +245,7 @@
 		usernameSpan.innerHTML = username
 		usernameSpan.classList.add("username-span")
 		usernameSpan.addEventListener("click", function(e){
-			if(uName != "{{request.user.username}}"){
-				selectUser(uName)
-			}
+			selectUser(user_id)
 		})
 		newMessageDiv.appendChild(usernameSpan)
 
@@ -301,7 +297,7 @@
 		}
 		// Handle getting a message
 		else if (data.message || data.msg_type != 0) {
-			appendChatMessage(data.msg_type, data.message, data.username, data.profile_image, false, true)
+			appendChatMessage(data.msg_type, data.message, data.username, data.user_id, data.profile_image, false, true)
 		}
 		else {
 			var textNode
@@ -362,10 +358,9 @@
 		document.getElementById("id_trigger_client_error_modal").click()
 	}
 
-	function selectUser(uName){
-		console.log("username: " + uName)
+	function selectUser(user_id){
 		// Weird work-around for passing arg to url
-		var url = "{% url 'account:view' username=53252623623632623 %}".replace("53252623623632623", uName)
+		var url = "{% url 'account:view' user_id=53252623623632623 %}".replace("53252623623632623", user_id)
 		var win = window.open(url, "_blank")
 		win.focus()
 	}

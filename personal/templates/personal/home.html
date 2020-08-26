@@ -5,64 +5,81 @@
 {% block content %}
 
 <style type="text/css">
-	.notification-profile-image{
+	.notification-thumbnail-image{
 		height: 50px;
 		width: 50px;
 	}
-	.notification-username{
-		font-weight: 500;
-		font-size: 1.2em;
+	.card:hover{
+		cursor: pointer;
+		background: #f2f2f2;
+	}
+	.timestamp-text{
+		color: var(--secondary-text-color);
+	}
+	.notifcation-chatroom-msg{
+		color: var(--light-primary-text-color);
 	}
 </style>
 
 
 <div class="container">
 	<div class="d-flex flex-column">
-		<p>Notifications</p>
+		<h2>Notifications</h2>
 		{% for n in notifications %}
-			<div class="d-flex flex-column align-items-start card p-4">
-				
-				{% if n.completion_verb %}
-					{% if n.get_content_object_type == "FriendList" or n.get_content_object_type == "FriendRequest" %}
-						<a href="{{n.positive_action_object}}">
-							<p>{{n.completion_verb}}</p>
-						</a>
-					{% else %}
-						<p>{{n.completion_verb}}</p>
-					{% endif %}
-					
-				{% else %}
-					{% if n.get_content_object_type == "FriendRequest" %}
+			<div class="d-flex flex-column align-items-start card p-4" onClick="onClickNotification('{{n.redirect_url}}')">
 
-						<p>{{n.verb}}</p>
-						<div class="d-flex flex-row">
+				<!-- FriendRequest -->
+				{% if n.get_content_object_type == "FriendRequest" %}
+					
+					<!-- Friend request is pending (is_active=True) -->
+					{% if n.content_object.is_active %}
+						
+						<div class="d-flex flex-row align-items-start">
+							<img class="notification-thumbnail-image img-fluid rounded-circle mr-2" src="{{n.image_url}}">
+							<span class="m-auto">{{n.verb}}</span>
+						</div>
+						<div class="d-flex flex-row mt-2">
 							{% if n.positive_action_object %}
-								<p><a href="#" onClick="acceptFriendRequest('{{n.positive_action_object}}')">accept</a> |&nbsp;</p>
+								<a class="btn btn-primary mr-2" href="#" onClick="onClickPositiveActionObject('{{n.positive_action_object}}', onAcceptFriendRequest)">accept</a>
 							{% endif %} 
 							{% if n.negative_action_object %}
-								<p><a href="#" onClick="declineFriendRequest('{{n.negative_action_object}}')">decline</a></p>
+								<a class="btn btn-secondary" href="#" onClick="onClickNegativeActionObject('{{n.negative_action_object}}', onDeclineFriendRequest)">decline</a>
 							{% endif %}
 						</div>
-					{% endif %}
-					{% if n.get_content_object_type == "UnreadChatRoomMessages" %}
-						{% if n.positive_action_object %}
-								<div class="d-flex flex-row align-items-start">
-									<a href="{{n.positive_action_object}}">
-										<img class="notification-profile-image img-fluid rounded-circle mr-2" src="{{n.content_object.get_other_user.profile_image.url}}">
-									</a>
-									<a href="{{n.positive_action_object}}">
-										<div class="d-flex flex-column">
-											<span class="align-items-start  notification-username">{{n.content_object.get_other_user.username}}</span>
-											<p class="align-items-start pt-1 small">{{n.verb|truncatechars:50}}</p>
-										</div>
-									</a>
-								</div>
-							
-						{% endif %} 
+					<!-- Friend request has been declined or accepted (is_active=False) -->
+					{% else %}
+					<div class="d-flex flex-row align-items-start">
+						<img class="notification-thumbnail-image img-fluid rounded-circle mr-2" src="{{n.image_url}}">
+						<span class="m-auto">{{n.verb}}</span>
+					</div>
+					
 					{% endif %}
 					
 				{% endif %}
-				<p class="small">{{n.timestamp|naturaltime}}</p>
+
+				<!-- FriendList -->
+				{% if n.get_content_object_type == "FriendList" %}
+					<div class="d-flex flex-row align-items-start">
+						<img class="notification-thumbnail-image img-fluid rounded-circle mr-2" src="{{n.image_url}}">
+						<span class="align-items-start pt-1 m-auto">{{n.verb|truncatechars:50}}</span>
+					</div>
+				{% endif %}
+
+				<!-- UnreadChatRoomMessages -->
+				{% if n.get_content_object_type == "UnreadChatRoomMessages" %}
+					{% if n.positive_action_object %}
+						<div class="d-flex flex-row align-items-start">
+							<img class="notification-thumbnail-image img-fluid rounded-circle mr-2" src="{{n.image_url}}">
+							<div class="d-flex flex-column">
+								<span class="align-items-start">{{n.content_object.get_other_user.username}}</span>
+								<span class="align-items-start pt-1 small notifcation-chatroom-msg">{{n.verb|truncatechars:50}}</span>
+							</div>
+						</div>
+					{% endif %} 
+				{% endif %}
+
+				<!-- Timestamp -->
+				<p class="small pt-2 timestamp-text">{{n.timestamp|naturaltime}}</p>
 			</div>
 			
 		{% endfor %}
@@ -71,20 +88,37 @@
 
 <script type="text/javascript">
 
+	// Used to delegate clicks to children if they are available (ex: accept/decline friend request)
+	var isChildClicked = false
+
+	function onClickPositiveActionObject(url, uiUpdateFunction){
+		isChildClicked = true
+		executeAjaxAsync(url, uiUpdateFunction)
+	}
+
+	function onClickNegativeActionObject(url, uiUpdateFunction){
+		isChildClicked = true
+		executeAjaxAsync(url, uiUpdateFunction)
+	}
+
+	function onClickNotification(url){
+		if(!isChildClicked){
+			window.location.assign(url)
+		}
+	}
+
+	function none(){
+		isChildClicked = false
+	}
+
 	function onAcceptFriendRequest(){
+		isChildClicked = false
 		location.reload();
 	}
 
 	function onDeclineFriendRequest(){
+		isChildClicked = false
 		location.reload();
-	}
-	
-	function declineFriendRequest(url){
-		executeAjaxAsync(url, onDeclineFriendRequest)
-	}
-
-	function acceptFriendRequest(url){
-		executeAjaxAsync(url, onAcceptFriendRequest)
 	}
 </script>
 

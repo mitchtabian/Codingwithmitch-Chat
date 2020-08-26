@@ -39,7 +39,7 @@
 					<div class="dropdown dropleft show p-2">
 						<img class="account-image rounded-circle mx-auto d-block dropdown-toggle" id="dropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" src="{{request.user.profile_image.url}}" alt="codingwithmitch logo" width="40" height="40">
 					<div class="dropdown-menu" aria-labelledby="dropdownMenuLink">
-						<a class="dropdown-item" href="{% url 'account:view' username=request.user.username %}">Account</a>
+						<a class="dropdown-item" href="{% url 'account:view' user_id=request.user.id %}">Account</a>
 						<a class="dropdown-item" href="{% url 'logout' %}">Logout</a>
 					</div>
 					</div>
@@ -66,7 +66,7 @@
 					<div class="dropdown show p-2">
 						<img class="account-image rounded-circle mx-auto d-block dropdown-toggle" id="dropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" src="{{request.user.profile_image.url}}" alt="codingwithmitch logo" width="40" height="40">
 					<div class="dropdown-menu" aria-labelledby="dropdownMenuLink">
-						<a class="dropdown-item" href="{% url 'account:view' username=request.user.username %}">Account</a>
+						<a class="dropdown-item" href="{% url 'account:view' user_id=request.user.id %}">Account</a>
 						<a class="dropdown-item" href="{% url 'logout' %}">Logout</a>
 					</div>
 					</div>

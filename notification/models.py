@@ -7,16 +7,24 @@ from django.contrib.contenttypes.models import ContentType
 
 class Notification(models.Model):
 
+	# Who the notification is sent to
 	target 						= models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
+	# The image to be shown with the notification (ex: Profile image of user who sent a private message)
+	image_url 					= models.URLField(max_length=500, null=True, unique=False, blank=True, help_text="Thumbnail image for notification.")
+
+	redirect_url				= models.URLField(max_length=500, null=True, unique=False, blank=True, help_text="The URL to be visited when a notification is clicked.")
+
+	# statement describing the notification (ex: "Mitch sent you a friend request")
 	verb 						= models.CharField(max_length=255, unique=False, blank=True, null=True)
 
-	completion_verb 			= models.CharField(max_length=255, unique=False, blank=True,)
-
+	# URL for interacting positively with the notification (ex: Accept a friend request)
 	positive_action_object		= models.URLField(max_length=500, null=True, unique=False, blank=True, help_text="The URL to be executed if accepted by the Target (User).")
 	
+	# URL for interacting negatively with the notification (ex: Decline a friend request)
 	negative_action_object		= models.URLField(max_length=500, null=True, unique=False, blank=True, help_text="The URL to be executed if declined by the Target (User).")
 
+	# When the notification was created/updated
 	timestamp 					= models.DateTimeField(auto_now_add=True)
 
 	# Actor: A generic type that can refer to a FriendRequest, Unread Message, or any other type of "Notification"
@@ -26,8 +34,6 @@ class Notification(models.Model):
 	content_object 				= GenericForeignKey()
 
 	def __str__(self):
-		if self.verb == None:
-			return self.completion_verb
 		return self.verb
 
 	def get_content_object_type(self):

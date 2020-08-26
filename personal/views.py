@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+import json
 
 from notification.models import Notification
 from friend.models import FriendRequest

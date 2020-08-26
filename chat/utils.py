@@ -42,6 +42,7 @@ def get_room_or_error(room_id, user):
 class LazyRoomChatMessageEncoder(Serializer):
     def get_dump_object(self, obj):
         dump_object = {}
+        dump_object.update({'user_id': smart_text(obj.user.id, strings_only=True)})
         dump_object.update({'username': smart_text(obj.user.username, strings_only=True)})
         dump_object.update({'message': smart_text(obj.content, strings_only=True)})
         dump_object.update({'profile_image': smart_text(obj.user.profile_image.url, strings_only=True)})

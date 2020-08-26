@@ -191,6 +191,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                 "room_id": room_id,
                 "profile_image": self.scope["user"].profile_image.url,
                 "username": self.scope["user"].username,
+                "user_id": self.scope["user"].id,
                 "message": message,
             }
         )
@@ -202,7 +203,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         Called when someone has joined our chat.
         """
         # Send a message down to the client
-        print("ChatConsumer: chat_join: " + str(self.scope["user"].username))
+        print("ChatConsumer: chat_join: " + str(self.scope["user"].id))
         if event["username"]:
             await self.send_json(
                 {
@@ -238,13 +239,14 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         Called when someone has messaged our chat.
         """
         # Send a message down to the client
-        print("ChatConsumer: chat_message")
+        print("ChatConsumer: chat_message from user #" + str(event["user_id"]))
 
         await self.send_json(
             {
                 "msg_type": settings.MSG_TYPE_MESSAGE,
                 "room": event["room_id"],
                 "username": event["username"],
+                "user_id": event["user_id"],
                 "profile_image": event["profile_image"],
                 "message": event["message"],
             },

@@ -74,8 +74,12 @@ def account_view(request, *args, **kwargs):
 			1: YOU_SENT_TO_THEM
 	"""
 	context = {}
-	username = kwargs.get("username")
-	account = Account.objects.filter(username=username).first()
+	user_id = kwargs.get("user_id")
+	print("USER ID for account:  " + str(user_id))
+	try:
+		account = Account.objects.get(pk=user_id)
+	except:
+		return HttpResponse("Something went wrong.")
 	if account:
 		context['id'] = account.id
 		context['username'] = account.username
@@ -114,7 +118,7 @@ def account_view(request, *args, **kwargs):
 				friend_requests = FriendRequest.objects.filter(receiver=user, is_active=True)
 			except FriendRequest.DoesNotExist:
 				pass
-
+			
 		# Set the template variables to the values
 		context['is_self'] = is_self
 		context['is_friend'] = is_friend
@@ -126,8 +130,8 @@ def account_view(request, *args, **kwargs):
 def edit_account_view(request, *args, **kwargs):
 	if not request.user.is_authenticated:
 		return redirect("login")
-	username = kwargs.get("username")
-	account = Account.objects.filter(username=username).first()
+	user_id = kwargs.get("user_id")
+	account = Account.objects.get(pk=user_id)
 	if account.pk != request.user.pk:
 		return HttpResponse("You cannot edit someone elses profile.")
 	context = {}
@@ -140,6 +144,7 @@ def edit_account_view(request, *args, **kwargs):
 			else:
 				form = AccountUpdateForm(request.POST, instance=request.user,
 					initial={
+						"id": account.pk,
 						"email": account.email, 
 						"username": account.username,
 						"profile_image": account.profile_image,
@@ -150,6 +155,7 @@ def edit_account_view(request, *args, **kwargs):
 	else:
 		form = AccountUpdateForm(
 			initial={
+					"id": account.pk,
 					"email": account.email, 
 					"username": account.username,
 					"profile_image": account.profile_image,

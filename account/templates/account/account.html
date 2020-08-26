@@ -9,7 +9,7 @@
 		height: auto;
 	}
 	.field-heading{
-		color: #737373;
+		color: var(--secondary-text-color);
 	}
 	.icon-container:hover {
 		opacity: 0.3;
@@ -75,7 +75,7 @@
 		  		<div class="image-container mx-auto mb-4">
 		  			<img class="border border-dark rounded-circle img-fluid mx-auto d-block profile-image" src="{{profile_image.url}}" alt="codingwithmitch logo">
 		  		</div>
-		  		<h6 class="mt-4 field-heading">Email</h6>
+		  		<p class="mt-4 mb-1 field-heading">Email</p>
 		  		{%  if is_self %}
 		  			<h5>{{email}}</h5>
 		  		{% else %}
@@ -85,12 +85,12 @@
 			  			<h5>{{email}}</h5>
 			  		{% endif %}
 			  	{% endif %}
-		  		<h6 class="mt-4 field-heading">Username</h6>
+		  		<p class="mt-4 mb-1 field-heading">Username</p>
 		  		<h5>{{username}}</h5>
 
 		  		<!-- If Auth user is viewing their own profile -->
 		  		{% if is_self %}
-		  		<a  class="mt-4 btn btn-primary" href="{% url 'account:edit' username=username %}">Update</a>
+		  		<a  class="mt-4 btn btn-primary" href="{% url 'account:edit' user_id=id %}">Update</a>
 				<div class="d-flex flex-column mt-4">
 					<a class="m-auto" href="{% url 'password_change' %}">Change password</a>
 				</div>
@@ -147,7 +147,7 @@
 				
 				<!-- Friend list link -->
 		  		<div class="d-flex flex-column pt-4">
-					<a href="{% url 'friend:list' username=username %}">
+					<a href="{% url 'friend:list' user_id=id %}">
 						<div class="d-flex flex-row align-items-center justify-content-center icon-container">
 							<span class="material-icons mr-2 friends-icon">contact_page</span><span class="friend-text">Friends ({{friends|length}})</span>
 						</div>

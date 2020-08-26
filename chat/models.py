@@ -156,6 +156,8 @@ def increment_unread_msg_count(sender, instance, **kwargs):
             except Notification.DoesNotExist:
                 instance.notifications.create(
                     target=instance.user,
+                    image_url=other_user.profile_image.url,
+                    redirect_url=positive_action_object, # we want to go to the chatroom
                     verb=instance.most_recent_message,
                     positive_action_object=positive_action_object,
                     negative_action_object=None,
@@ -176,7 +178,7 @@ def remove_unread_msg_count_notification(sender, instance, **kwargs):
         previous = UnreadChatRoomMessages.objects.get(id=instance.id)
         if previous.count > instance.count: # if count is decremented
             content_type = ContentType.objects.get_for_model(instance)
-            positive_action_object = settings.BASE_URL + "/chat/" + str(instance.room.id) + "/"
+            positive_action_object = f"{settings.BASE_URL}/chat/{str(instance.room.id)}"
             try:
                 notification = Notification.objects.get(target=instance.user, content_type=content_type, object_id=instance.id)
                 notification.delete()
