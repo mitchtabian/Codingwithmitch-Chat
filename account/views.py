@@ -19,6 +19,7 @@ from account.models import Account, get_profile_image_filepath
 from account.forms import RegistrationForm, AccountAuthenticationForm, AccountUpdateForm
 TEMP_PROFILE_IMAGE_NAME = "temp_profile_image.png"
 
+
 # This is basically almost exactly the same as friends/friend_list_view
 def account_search_view(request, *args, **kwargs):
 	context = {}
@@ -100,8 +101,8 @@ def account_view(request, *args, **kwargs):
 				is_friend = False
 				# CASE1: Request has been sent from THEM to YOU: FriendRequestStatus.THEM_SENT_TO_YOU
 				if get_friend_request_or_false(sender=account, receiver=user) != False:
-					print("receiver is " + str(user))
 					request_sent = FriendRequestStatus.THEM_SENT_TO_YOU.value
+					context['pending_friend_request_id'] = get_friend_request_or_false(sender=account, receiver=user).id
 				# CASE2: Request has been sent from YOU to THEM: FriendRequestStatus.YOU_SENT_TO_THEM
 				elif get_friend_request_or_false(sender=user, receiver=account) != False:
 					request_sent = FriendRequestStatus.YOU_SENT_TO_THEM.value
@@ -110,7 +111,7 @@ def account_view(request, *args, **kwargs):
 					request_sent = FriendRequestStatus.NO_REQUEST_SENT.value
 		else:
 			try:
-				friend_requests = FriendRequest.objects.get(receiver=user)
+				friend_requests = FriendRequest.objects.filter(receiver=user, is_active=True)
 			except FriendRequest.DoesNotExist:
 				pass
 

@@ -53,6 +53,7 @@ def friends_list_view(request, *args, **kwargs):
 	return render(request, "friend/friend_list.html", context)
 
 
+
 def send_friend_request(request, *args, **kwargs):
 	user = request.user
 	payload = {}
@@ -60,13 +61,27 @@ def send_friend_request(request, *args, **kwargs):
 		user_id = request.POST.get("receiver_user_id")
 		if user_id:
 			receiver = Account.objects.get(pk=user_id)
-			obj, created = FriendRequest.objects.get_or_create(sender=user, receiver=receiver)
-			if not created: 
-				# There is already a request pending.
-				payload['response'] = "You already sent them a friend request."
-			elif created:
+			try:
+				# Get any friend requests (active and not-active)
+				friend_requests = FriendRequest.objects.filter(sender=user, receiver=receiver)
+				# find if any of them are active (pending)
+				try:
+					for request in friend_requests:
+						if request.is_active:
+							raise Exception("You already sent them a friend request.")
+					# If none are active create a new friend request
+					friend_request = FriendRequest(sender=user, receiver=receiver)
+					friend_request.save()
+					payload['response'] = "Friend request sent."
+				except Exception as e:
+					payload['response'] = str(e)
+			except FriendRequest.DoesNotExist:
+				# There are no friend requests so create one.
+				friend_request = FriendRequest(sender=user, receiver=receiver)
+				friend_request.save()
 				payload['response'] = "Friend request sent."
-			else:
+
+			if payload['response'] == None:
 				payload['response'] = "Something went wrong."
 		else:
 			payload['response'] = "Unable to sent a friend request."
@@ -83,13 +98,21 @@ def cancel_friend_request(request, *args, **kwargs):
 		user_id = request.POST.get("receiver_user_id")
 		if user_id:
 			receiver = Account.objects.get(pk=user_id)
-			friend_request = FriendRequest.objects.get(sender=user, receiver=receiver)
-			if friend_request: 
-				# found the request. Now decline it
-				friend_request.delete()
+			try:
+				friend_requests = FriendRequest.objects.filter(sender=user, receiver=receiver, is_active=True)
+			except FriendRequest.DoesNotExist:
+				payload['response'] = "Nothing to cancel. Friend request does not exist."
+
+			# There should only ever be ONE active friend request at any given time. Cancel them all.
+			if len(friend_requests) > 1:
+				for request in friend_requests:
+					request.is_active = False
+					request.save()
 				payload['response'] = "Friend request canceled."
 			else:
-				payload['response'] = "Something went wrong."
+				# found the request. Now decline it
+				friend_requests.first().cancel()
+				payload['response'] = "Friend request canceled."
 		else:
 			payload['response'] = "Unable to cancel that friend request."
 	else:
@@ -120,46 +143,49 @@ def remove_friend(request, *args, **kwargs):
 		
 
 
-
 def accept_friend_request(request, *args, **kwargs):
 	user = request.user
 	payload = {}
-	if request.method == "POST" and user.is_authenticated:
-		sender_user_id = request.POST.get("sender_user_id")
-		if sender_user_id:
-			sender = Account.objects.get(pk=sender_user_id)
-			friend_request = FriendRequest.objects.get(sender=sender, receiver=user)
-			if friend_request: 
-				# found the request. Now accept it
-				friend_request.accept()
-				friend_request.delete()
-				payload['response'] = "Friend request accepted."
+	if request.method == "GET" and user.is_authenticated:
+		friend_request_id = kwargs.get("friend_request_id")
+		if friend_request_id:
+			friend_request = FriendRequest.objects.get(pk=friend_request_id)
+			# confirm that is the correct request
+			if friend_request.receiver == user:
+				if friend_request: 
+					# found the request. Now accept it
+					friend_request.accept()
+					payload['response'] = "Friend request accepted."
+				else:
+					payload['response'] = "Something went wrong."
 			else:
-				payload['response'] = "Something went wrong."
+				payload['response'] = "That is not your request to accept."
 		else:
 			payload['response'] = "Unable to accept that friend request."
 	else:
 		# should never happen
 		payload['response'] = "You must be authenticated to accept a friend request."
 	return HttpResponse(json.dumps(payload), content_type="application/json")
-		
 
 
 
 def decline_friend_request(request, *args, **kwargs):
 	user = request.user
 	payload = {}
-	if request.method == "POST" and user.is_authenticated:
-		sender_user_id = request.POST.get("sender_user_id")
-		if sender_user_id:
-			sender = Account.objects.get(pk=sender_user_id)
-			friend_request = FriendRequest.objects.get(sender=sender, receiver=user)
-			if friend_request: 
-				# found the request. Now decline it
-				friend_request.delete()
-				payload['response'] = "Friend request declined."
+	if request.method == "GET" and user.is_authenticated:
+		friend_request_id = kwargs.get("friend_request_id")
+		if friend_request_id:
+			friend_request = FriendRequest.objects.get(pk=friend_request_id)
+			# confirm that is the correct request
+			if friend_request.receiver == user:
+				if friend_request: 
+					# found the request. Now decline it
+					friend_request.decline()
+					payload['response'] = "Friend request declined."
+				else:
+					payload['response'] = "Something went wrong."
 			else:
-				payload['response'] = "Something went wrong."
+				payload['response'] = "That is not your friend request to decline."
 		else:
 			payload['response'] = "Unable to decline that friend request."
 	else:
@@ -167,7 +193,6 @@ def decline_friend_request(request, *args, **kwargs):
 		payload['response'] = "You must be authenticated to decline a friend request."
 	return HttpResponse(json.dumps(payload), content_type="application/json")
 		
-
 
 
 

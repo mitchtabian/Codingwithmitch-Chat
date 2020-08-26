@@ -6,7 +6,7 @@ from channels.db import database_sync_to_async
 import json
 
 from account.models import Account
-from chat.models import RoomChatMessage, PrivateChatRoom
+from chat.models import RoomChatMessage, PrivateChatRoom, UnreadChatRoomMessages
 from chat.exceptions import ClientError
 from chat.utils import get_room_or_error
 
@@ -92,6 +92,11 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             await self.send_json(errorData)
             return
 
+        # Add user to "connected_users" list
+        await self.connect_user(room, self.scope["user"])
+
+        await self.on_user_connected(room, self.scope["user"])
+
         # Store that we're in the room
         self.rooms.add(room_id)
         # Add them to the group so they get room messages
@@ -132,6 +137,9 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         print("ChatConsumer: leave_room")
         room = await get_room_or_error(room_id, self.scope["user"])
 
+        # Remove user from "connected_users" list
+        await self.disconnect_user(room, self.scope["user"])
+
         #if settings.NOTIFY_USERS_ON_ENTER_OR_LEAVE_ROOMS:
         # Notify the group that someone left
         await self.channel_layer.group_send(
@@ -169,6 +177,12 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             raise ClientError("ROOM_ACCESS_DENIED", "Room access denied")
         # Get the room and send to the group about it
         room = await get_room_or_error(room_id, self.scope["user"])
+
+        # get list of connected_users
+        connected_users = room.connected_users.all()
+        await self.append_unread_msg_if_not_connected(room, room.user1, connected_users, message)
+        await self.append_unread_msg_if_not_connected(room, room.user2, connected_users, message)
+
         await self.create_room_chat_message(room, self.scope["user"], message)
         await self.channel_layer.group_send(
             room.group_name,
@@ -225,6 +239,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         """
         # Send a message down to the client
         print("ChatConsumer: chat_message")
+
         await self.send_json(
             {
                 "msg_type": settings.MSG_TYPE_MESSAGE,
@@ -240,7 +255,41 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         return RoomChatMessage.objects.create(user=user, room=room, content=message)
 
 
+    @database_sync_to_async
+    def connect_user(self, room, user):
+        # add user to connected_users list
+        account = Account.objects.get(pk=user.id)
+        return room.connect_user(account)
 
+
+    @database_sync_to_async
+    def disconnect_user(self, room, user):
+        # remove from connected_users list
+        account = Account.objects.get(pk=user.id)
+        return room.disconnect_user(account)
+
+
+    # If the user is not connected to the chat, increment "unread messages" count
+    @database_sync_to_async
+    def append_unread_msg_if_not_connected(self, room, user, connected_users, message):
+        if not user in connected_users: 
+            unread_msgs = UnreadChatRoomMessages.objects.get(room=room, user=user)
+            unread_msgs.most_recent_message = message
+            unread_msgs.count += 1
+            unread_msgs.save()
+        return
+
+    # When a user connects, reset their unread message count
+    @database_sync_to_async
+    def on_user_connected(self, room, user):
+        # confirm they are in the connected users list
+        connected_users = room.connected_users.all()
+        if user in connected_users:
+            # reset count
+            unread_msgs = UnreadChatRoomMessages.objects.get(room=room, user=user)
+            unread_msgs.count = 0
+            unread_msgs.save()
+        return
 
 
 

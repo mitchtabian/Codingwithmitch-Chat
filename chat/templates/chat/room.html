@@ -89,12 +89,11 @@
 </style>
 
 <div class="container">
-	<h3 id="id_room_title">
-		Chatting with 
+	<h3 class="d-flex flex-row align-items-center" id="id_room_title">
 		{% if request.user == user1 %}
-			<a href="{% url 'account:view' username=user2.username%}" target="_blank">{{user2}}
+			<img class="profile-image rounded-circle img-fluid" src="{{user2.profile_image.url}}"><a href="{% url 'account:view' username=user2.username%}" target="_blank">&nbsp;{{user2}}&nbsp;
 		{% else %}
-			<a href="{% url 'account:view' username=user1.username%}" target="_blank">{{user1}}
+			<img class="profile-image rounded-circle img-fluid" src="{{user1.profile_image.url}}"><a href="{% url 'account:view' username=user1.username%}" target="_blank">&nbsp;{{user1}}&nbsp;
 		{% endif %}
 		</a>
 	</h3>
@@ -370,6 +369,7 @@
 		var win = window.open(url, "_blank")
 		win.focus()
 	}
+
 </script>
 
 <script type="text/javascript">

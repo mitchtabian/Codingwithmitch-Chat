@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     "chat",
     "account",
     "friend",
+    "notification",
 
 
     # Django and third party apps
@@ -52,6 +53,7 @@ INSTALLED_APPS = [
     'bootstrap',
     'fontawesome',
     'cropperjs',
+    'django.contrib.humanize',
 ]
 
 AUTH_USER_MODEL = 'account.Account'

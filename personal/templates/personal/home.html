@@ -1,16 +1,94 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load humanize %}
 
 {% block content %}
 
+<style type="text/css">
+	.notification-profile-image{
+		height: 50px;
+		width: 50px;
+	}
+	.notification-username{
+		font-weight: 500;
+		font-size: 1.2em;
+	}
+</style>
 
 
 <div class="container">
 	<div class="d-flex flex-column">
-		<p>There is nothing here</p>
+		<p>Notifications</p>
+		{% for n in notifications %}
+			<div class="d-flex flex-column align-items-start card p-4">
+				
+				{% if n.completion_verb %}
+					{% if n.get_content_object_type == "FriendList" or n.get_content_object_type == "FriendRequest" %}
+						<a href="{{n.positive_action_object}}">
+							<p>{{n.completion_verb}}</p>
+						</a>
+					{% else %}
+						<p>{{n.completion_verb}}</p>
+					{% endif %}
+					
+				{% else %}
+					{% if n.get_content_object_type == "FriendRequest" %}
+
+						<p>{{n.verb}}</p>
+						<div class="d-flex flex-row">
+							{% if n.positive_action_object %}
+								<p><a href="#" onClick="acceptFriendRequest('{{n.positive_action_object}}')">accept</a> |&nbsp;</p>
+							{% endif %} 
+							{% if n.negative_action_object %}
+								<p><a href="#" onClick="declineFriendRequest('{{n.negative_action_object}}')">decline</a></p>
+							{% endif %}
+						</div>
+					{% endif %}
+					{% if n.get_content_object_type == "UnreadChatRoomMessages" %}
+						{% if n.positive_action_object %}
+								<div class="d-flex flex-row align-items-start">
+									<a href="{{n.positive_action_object}}">
+										<img class="notification-profile-image img-fluid rounded-circle mr-2" src="{{n.content_object.get_other_user.profile_image.url}}">
+									</a>
+									<a href="{{n.positive_action_object}}">
+										<div class="d-flex flex-column">
+											<span class="align-items-start  notification-username">{{n.content_object.get_other_user.username}}</span>
+											<p class="align-items-start pt-1 small">{{n.verb|truncatechars:50}}</p>
+										</div>
+									</a>
+								</div>
+							
+						{% endif %} 
+					{% endif %}
+					
+				{% endif %}
+				<p class="small">{{n.timestamp|naturaltime}}</p>
+			</div>
+			
+		{% endfor %}
 	</div>
 </div>
 
+<script type="text/javascript">
 
+	function onAcceptFriendRequest(){
+		location.reload();
+	}
+
+	function onDeclineFriendRequest(){
+		location.reload();
+	}
+	
+	function declineFriendRequest(url){
+		executeAjaxAsync(url, onDeclineFriendRequest)
+	}
+
+	function acceptFriendRequest(url){
+		executeAjaxAsync(url, onAcceptFriendRequest)
+	}
+</script>
+
+
+{% include 'snippets/execute_get_async.html' %}
 
 {% endblock content %}

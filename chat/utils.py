@@ -5,6 +5,7 @@ from django.conf import settings
 
 from .exceptions import ClientError
 from .models import PrivateChatRoom, RoomChatMessage
+from friend.models import FriendList
 
 
 # This decorator turns this function from a synchronous function into an async one
@@ -25,8 +26,15 @@ def get_room_or_error(room_id, user):
         raise ClientError("ROOM_INVALID", "Invalid room.")
     # Check permissions
 
+    # Is this user allowed in the room? (must be user1 or user2)
     if user != room.user1 and user != room.user2:
         raise ClientError("ROOM_ACCESS_DENIED", "You do not have permission to join this room.")
+
+    # Are the users in this room friends?
+    friend_list = FriendList.objects.get(user=user).friends.all()
+    if not room.user1 in friend_list:
+        if not room.user2 in friend_list:
+            raise ClientError("ROOM_ACCESS_DENIED", "You must be friends to chat.")
     return room
 
 
