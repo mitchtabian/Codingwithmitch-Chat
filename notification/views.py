@@ -22,7 +22,7 @@ def get_notifications(request, *args, **kwargs):
 		p = Paginator(notifications, DEFAULT_NOTIFICATION_PAGE_SIZE)
 
 		# sleep 1s for testing
-		# sleep(1)
+		# sleep(1)	
 
 		if len(notifications) > 0:
 			new_page_number = int(page_number)
