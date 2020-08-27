@@ -39,6 +39,7 @@
 	</div>
 	
 	<p class="{% if not debug %}d-none{% else %}d-flex{% endif %}" id="id_page_number">1</p>
+	<p class="{% if not debug %}d-none{% else %}d-flex{% endif %}" id="id_oldest_timestamp">{{initial_timestamp}}</p>
 </div>
 
 
@@ -73,6 +74,7 @@
 		window.onscroll = function(ev) {
 			// because of rounding we need to add 2. 1 might be OK but I'm using 2.
 			if ((window.innerHeight + window.scrollY + 2) >= document.body.scrollHeight) {
+				// incrementNotificationPageNumber()
 				getNotifications()
 			}
 		};
@@ -85,6 +87,8 @@
 
 	// Used to delegate clicks to children if they are available (ex: accept/decline friend request)
 	var childLock = false
+
+	const NOTIFICATION_TIMEOUT = 4000
 
 	function acceptFriendRequest(url){
 		childLock = true
@@ -143,6 +147,9 @@
 		childLock = false
 	}
 
+	/*
+		Update a div with new notification data.
+	*/
 	function updateNotificationDiv(notification){
 		notificationContainer = document.getElementById("id_notifications_container")
 		divs = notificationContainer.childNodes
@@ -157,7 +164,74 @@
 		})
 	}
 
+	/*
+		Keep track of the oldest notification in view. 
+		When 'refreshNotifications' is called, it refreshes all the notifications newer than this date.
+	*/
+	function setOldestTimestamp(timestamp){
+		element = document.getElementById("id_oldest_timestamp")
+		current = element.innerHTML
+		if(Date.parse(timestamp) < Date.parse(current)){
+			element.innerHTML = timestamp
+		}
+	}
 
+	/*
+		usage: await sleep(1000)
+	*/
+	function sleep(ms) {
+		return new Promise(resolve => setTimeout(resolve, ms));
+	}
+
+	/*
+		1. Refresh the notifications that are currently in view.
+		2. Append notifications that are newer than what is currently in view.
+	*/
+	function refreshNotifications(){
+		console.log("refreshNotifications called.")
+		newestTimestamp = document.getElementById("id_oldest_timestamp").innerHTML
+		var requestData = {
+			"oldest_timestamp": newestTimestamp,
+		}
+		$.ajax({
+				type: 'GET',
+				dataType: "json",
+				url: "{% url 'notification:refresh-notifications' %}",
+				data: requestData,
+				timeout: NOTIFICATION_TIMEOUT,
+				cache: false,
+				success: function(data) {
+					if (data['notifications'] != null){
+						console.log("REFRESHING notifications:" + data['notifications'])
+						// clear the list because we are refreshing the visible notifications and also appending new ones
+						clearNotifications() 
+						data['notifications'].forEach(notification => {
+
+							console.log("notification: " + notification['verb'])
+
+							// append to TOP of notifications list
+							appendNotification(notification)
+
+							// If this timestamp is newer than the current saved one, set it.
+							// (this is how we know when to retrieve new notifications)
+							setOldestTimestamp(notification['timestamp'])
+						})
+					}
+					else{
+						console.log("Currently displaying all the newest notifications.")
+					}
+				},
+				error: function(data) {
+					console.error("refreshNotifications ERROR ...", data)
+				},
+				complete: function(data){
+					console.log("refreshNotifications on complete")
+					displayNotificationsLoadingSpinner(false)
+				}
+			});
+	}
+
+	// Get new notifications as scroll downwards (pagination)
 	function getNotifications(){
 		console.log("getNotifications called.")
 		var pageNumber = document.getElementById("id_page_number").innerHTML
@@ -173,13 +247,19 @@
 				dataType: "json",
 				url: "{% url 'notification:get-notifications' %}",
 				data: requestData,
-				timeout: 5000,
+				timeout: NOTIFICATION_TIMEOUT,
 				cache: false,
 				success: function(data) {
 					console.log(data['notifications'])
 					if (data['notifications'] != null){
 						data['notifications'].forEach(notification => {
+
+							// append to notifications list
 							appendNotification(notification)
+
+							// If this timestamp is newer than the current saved one, set it.
+							// (this is how we know when to retrieve new notifications)
+							setOldestTimestamp(notification['timestamp'])
 						})
 						var newPageNumber = data['page_number']
 						setPageNumber(newPageNumber)
@@ -197,10 +277,36 @@
 				}
 			});
 		}
-		
+	}
+
+
+
+	function appendTopNotification(notification){
+		notificationContainer = document.getElementById("id_notifications_container")
+		switch(notification['notification_type']) {
+
+			case "FriendRequest":
+				card = createFriendRequestElement(notification)
+				notificationContainer.insertBefore(card, notificationContainer.firstChild)
+				break;
+
+			case "FriendList":
+				card = createFriendListElement(notification)
+				notificationContainer.insertBefore(card, notificationContainer.firstChild)
+				break;
+
+			case "UnreadChatRoomMessages":
+				card = createUnreadChatRoomMessagesElement(notification)
+				notificationContainer.insertBefore(card, notificationContainer.firstChild)
+				break;
+
+			default:
+				// code block
+		}
 	}
 
 	function appendNotification(notification){
+
 		notificationContainer = document.getElementById("id_notifications_container")
 		switch(notification['notification_type']) {
 
@@ -390,7 +496,7 @@
 	function createTimestampElement(notification){
 		var timestamp = document.createElement("p")
 		timestamp.classList.add("small", "pt-2", "timestamp-text")
-		timestamp.innerHTML = notification['timestamp']
+		timestamp.innerHTML = notification['natural_timestamp']
 		return timestamp
 	}
 
@@ -413,6 +519,9 @@
 		return img
 	}
 
+	/*
+		This does nothing. Just for reference.
+	*/
 	function clearNotifications(){
 		childLock = false
 		notificationContainer = document.getElementById("id_notifications_container")
@@ -422,6 +531,14 @@
 	}
 
 	getNotifications();
+
+	startNotificationService()
+
+	function startNotificationService(){
+		setInterval(refreshNotifications, NOTIFICATION_TIMEOUT)
+	}
+
+
 </script>
 
 {% endblock content %}

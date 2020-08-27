@@ -99,6 +99,7 @@
 		  </div>
 		</div>
 
+		{% if request.user.is_authenticated %}
 		<div class="d-flex flex-column mb-4">
 
 			<!-- THEM to YOU -->
@@ -178,6 +179,7 @@
 			{% endif %}
 
 		</div>
+		{% endif %}
 
 		
 	</div>

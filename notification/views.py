@@ -4,15 +4,42 @@ from django.core.paginator import Paginator
 from django.core.serializers import serialize
 import json
 from time import sleep
+from datetime import datetime
 
 from notification.utils import LazyNotificationEncoder
 from notification.models import Notification
 
-DEFAULT_NOTIFICATION_PAGE_SIZE = 20
+DEFAULT_NOTIFICATION_PAGE_SIZE = 15
+
+
+def refresh_notifications(request, *args, **kwargs):
+	"""
+	Used to refresh the currently visible notifications and append any new ones.
+	"""
+	payload = {}
+
+	payload = {}
+
+	user = request.user
+	if user.is_authenticated:
+		# FORMAT: 2020-08-27 19:39:13.011835+00:00
+		timestamp = request.GET.get("oldest_timestamp")
+		timestamp = timestamp[0:timestamp.find("+")] # remove timezone because who cares
+		timestamp = datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S.%f')
+		notifications = Notification.objects.filter(target=user, timestamp__gte=timestamp).order_by('-timestamp')
+
+		s = LazyNotificationEncoder()
+		payload['notifications'] = s.serialize(notifications)
+	else:
+		payload['notifications'] = None
+	return HttpResponse(json.dumps(payload), content_type="application/json")
 
 
 def get_notifications(request, *args, **kwargs):
-
+	"""
+	Get Notifications with Pagination (next page of results).
+	This is for appending to the bottom of the notifications list.
+	"""
 	payload = {}
 
 	user = request.user

@@ -106,14 +106,13 @@ def cancel_friend_request(request, *args, **kwargs):
 			except FriendRequest.DoesNotExist:
 				payload['response'] = "Nothing to cancel. Friend request does not exist."
 
-			# There should only ever be ONE active friend request at any given time. Cancel them all.
+			# There should only ever be ONE active friend request at any given time. Cancel them all just in case.
 			if len(friend_requests) > 1:
 				for request in friend_requests:
-					request.is_active = False
-					request.save()
+					request.cance()
 				payload['response'] = "Friend request canceled."
 			else:
-				# found the request. Now decline it
+				# found the request. Now cancel it
 				friend_requests.first().cancel()
 				payload['response'] = "Friend request canceled."
 		else:

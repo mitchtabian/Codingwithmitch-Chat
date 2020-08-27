@@ -17,7 +17,8 @@ class LazyNotificationEncoder(Serializer):
 			dump_object.update({'notification_id': str(obj.pk)})
 			dump_object.update({'verb': obj.verb})
 			dump_object.update({'is_active': str(obj.content_object.is_active)})
-			dump_object.update({'timestamp': str(naturaltime(obj.timestamp))})
+			dump_object.update({'natural_timestamp': str(naturaltime(obj.timestamp))})
+			dump_object.update({'timestamp': str(obj.timestamp)})
 			dump_object.update({
 				'actions': {
 					'redirect_url': str(obj.redirect_url),
@@ -31,7 +32,8 @@ class LazyNotificationEncoder(Serializer):
 		if obj.get_content_object_type() == "FriendList":
 			dump_object.update({'notification_type': obj.get_content_object_type()})
 			dump_object.update({'verb': obj.verb})
-			dump_object.update({'timestamp': str(naturaltime(obj.timestamp))})
+			dump_object.update({'natural_timestamp': str(naturaltime(obj.timestamp))})
+			dump_object.update({'timestamp': str(obj.timestamp)})
 			dump_object.update({
 				'actions': {
 					'redirect_url': str(obj.redirect_url),
@@ -43,7 +45,8 @@ class LazyNotificationEncoder(Serializer):
 		if obj.get_content_object_type() == "UnreadChatRoomMessages":
 			dump_object.update({'notification_type': obj.get_content_object_type()})
 			dump_object.update({'verb': obj.verb})
-			dump_object.update({'timestamp': str(naturaltime(obj.timestamp))})
+			dump_object.update({'natural_timestamp': str(naturaltime(obj.timestamp))})
+			dump_object.update({'timestamp': str(obj.timestamp)})
 			dump_object.update({
 				'actions': {
 					'redirect_url': str(obj.redirect_url),

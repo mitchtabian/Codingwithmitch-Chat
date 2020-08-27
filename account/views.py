@@ -28,15 +28,17 @@ def account_search_view(request, *args, **kwargs):
 		if len(search_query) > 0:
 			search_results = Account.objects.filter(email__icontains=search_query).filter(username__icontains=search_query).distinct()
 			user = request.user
+			accounts = [] # [(account1, True), (account2, False), ...]
 			if user.is_authenticated:
-				accounts = [] # [(account1, True), (account2, False), ...]
 				# get the authenticated users friend list
 				auth_user_friend_list = FriendList.objects.get(user=user)
 				for account in search_results:
 					accounts.append((account, auth_user_friend_list.is_mutual_friend(account)))
 				context['accounts'] = accounts
 			else:
-				context['accounts'] = search_results
+				for account in search_results:
+					accounts.append((account, False))
+				context['accounts'] = accounts
 	return render(request, "account/search_results.html", context)
 
 
@@ -75,7 +77,6 @@ def account_view(request, *args, **kwargs):
 	"""
 	context = {}
 	user_id = kwargs.get("user_id")
-	print("USER ID for account:  " + str(user_id))
 	try:
 		account = Account.objects.get(pk=user_id)
 	except:
@@ -113,10 +114,13 @@ def account_view(request, *args, **kwargs):
 				# CASE3: No request sent from YOU or THEM: FriendRequestStatus.NO_REQUEST_SENT
 				else:
 					request_sent = FriendRequestStatus.NO_REQUEST_SENT.value
+		
+		elif not user.is_authenticated:
+			is_self = False
 		else:
 			try:
 				friend_requests = FriendRequest.objects.filter(receiver=user, is_active=True)
-			except FriendRequest.DoesNotExist:
+			except:
 				pass
 			
 		# Set the template variables to the values

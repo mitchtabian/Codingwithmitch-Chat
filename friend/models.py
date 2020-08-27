@@ -197,9 +197,11 @@ class FriendRequest(models.Model):
 			content_type=content_type,
 		)
 
-		# find the notification sent to the RECEIVER and delete it
 		notification = Notification.objects.get(target=self.receiver, content_type=content_type, object_id=self.id)
-		notification.delete()
+		notification.verb = f"{self.sender.username} cancelled the friend request sent to you."
+		notification.positive_action_object = None
+		notification.negative_action_object = None
+		notification.save()
 
 	@property
 	def get_cname(self):
