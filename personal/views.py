@@ -6,6 +6,7 @@ import json
 from notification.models import Notification
 from friend.models import FriendRequest
 
+DEBUG = False
 
 def home_screen_view(request):
 	context = {}
@@ -13,6 +14,7 @@ def home_screen_view(request):
 	if user.is_authenticated:
 		notifications = Notification.objects.filter(target=user).order_by('-timestamp')
 		context['notifications'] = notifications
+		context['debug'] = DEBUG
 
 	return render(request, "personal/home.html", context)
 

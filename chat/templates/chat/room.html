@@ -155,7 +155,7 @@
 					success: function(data) {
 						console.log("SUCCESS", data)
 						var newMessages = data['messages']
-						if (newMessages != "None"){
+						if (newMessages != null){
 							newMessages.forEach(message => appendChatMessage(0, message['message'], message['username'], message['user_id'], message['profile_image'], true, false))
 							var newPageNumber = data['page_number']
 							setPageNumber(newPageNumber)

@@ -103,6 +103,11 @@ class FriendRequest(models.Model):
 		return self.sender.username
 
 	def accept(self):
+		"""
+		Update the notification for the person who accepted.
+		Create a notification for the person who sent it.
+		return the updated notification for person who accepted.
+		"""
 		receiver_friend_list = FriendList.objects.get(user=self.receiver)
 		if receiver_friend_list:
 
@@ -137,9 +142,15 @@ class FriendRequest(models.Model):
 				sender_friend_list.save()
 				self.is_active = False
 				self.save()
+			return receiver_notification
 			
 
 	def decline(self):
+		"""
+		Update the notification for the person who declined.
+		Create a notification for the person who sent it.
+		return the updated notification for person who declined.
+		"""
 		self.is_active = False
 		self.save()
 
@@ -165,6 +176,8 @@ class FriendRequest(models.Model):
 			negative_action_object=None,
 			content_type=content_type,
 		)
+
+		return notification
 
 
 	def cancel(self):

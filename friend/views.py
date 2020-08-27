@@ -1,7 +1,10 @@
 from django.shortcuts import render, redirect
 from django.http import HttpResponse
+from django.core.serializers import serialize
 import json
 
+from notification.utils import LazyNotificationEncoder
+from notification.models import Notification
 from friend.models import FriendRequest, FriendList
 from account.models import Account
 
@@ -13,7 +16,7 @@ def friend_requests(request, *args, **kwargs):
 		user_id = kwargs.get("user_id")
 		account = Account.objects.get(pk=user_id)
 		if account == user:
-			friend_requests = FriendRequest.objects.filter(receiver=account)
+			friend_requests = FriendRequest.objects.filter(receiver=account, is_active=True)
 			context['friend_requests'] = friend_requests
 		else:
 			return HttpResponse("You can't view another users friend requets.")
@@ -154,8 +157,12 @@ def accept_friend_request(request, *args, **kwargs):
 			if friend_request.receiver == user:
 				if friend_request: 
 					# found the request. Now accept it
-					friend_request.accept()
+					updated_notification = friend_request.accept()
 					payload['response'] = "Friend request accepted."
+
+					# return the notification associated with this FriendRequest
+					s = LazyNotificationEncoder()
+					payload['notification'] = s.serialize([updated_notification])[0]
 				else:
 					payload['response'] = "Something went wrong."
 			else:
@@ -180,8 +187,12 @@ def decline_friend_request(request, *args, **kwargs):
 			if friend_request.receiver == user:
 				if friend_request: 
 					# found the request. Now decline it
-					friend_request.decline()
+					updated_notification = friend_request.decline()
 					payload['response'] = "Friend request declined."
+
+					# return the notification associated with this FriendRequest
+					s = LazyNotificationEncoder()
+					payload['notification'] = s.serialize([updated_notification])[0]
 				else:
 					payload['response'] = "Something went wrong."
 			else:

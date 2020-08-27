@@ -1,6 +1,5 @@
 from channels.db import database_sync_to_async
 from django.core.serializers.python import Serializer
-from django.utils.encoding import smart_text 
 from django.conf import settings
 
 from .exceptions import ClientError
@@ -42,10 +41,10 @@ def get_room_or_error(room_id, user):
 class LazyRoomChatMessageEncoder(Serializer):
     def get_dump_object(self, obj):
         dump_object = {}
-        dump_object.update({'user_id': smart_text(obj.user.id, strings_only=True)})
-        dump_object.update({'username': smart_text(obj.user.username, strings_only=True)})
-        dump_object.update({'message': smart_text(obj.content, strings_only=True)})
-        dump_object.update({'profile_image': smart_text(obj.user.profile_image.url, strings_only=True)})
+        dump_object.update({'user_id': str(obj.user.id)})
+        dump_object.update({'username': str(obj.user.username)})
+        dump_object.update({'message': str(obj.content)})
+        dump_object.update({'profile_image': str(obj.user.profile_image.url)})
         return dump_object
 
 

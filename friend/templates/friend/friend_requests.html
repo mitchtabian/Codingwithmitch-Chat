@@ -48,12 +48,12 @@
 		<div class="d-flex flex-row flex-wrap">
 		{% for request in friend_requests %}
 		<div class="card flex-row flex-grow-1 p-2 mx-2 my-2 align-items-center">
-			<a class="profile-link" href="{% url 'account:view' username=request.sender.username %}">
+			<a class="profile-link" href="{% url 'account:view' user_id=request.sender.id %}">
 				<div class="card-image m-2">
 					<img class="img-fluid profile-image" src="{{request.sender.profile_image.url}}" alt="">
 				</div>
 			</a>
-			<a class="profile-link" href="{% url 'account:view' username=request.sender.username %}">
+			<a class="profile-link" href="{% url 'account:view' user_id=request.sender.id %}">
 				<div class="card-center px-2">
 					<h4 class="card-title">{{request.sender.username}}</h4>
 				</div>
