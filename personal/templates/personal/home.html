@@ -88,7 +88,8 @@
 	// Used to delegate clicks to children if they are available (ex: accept/decline friend request)
 	var childLock = false
 
-	const NOTIFICATION_TIMEOUT = 4000
+	const NOTIFICATION_INTERVAL = 4000
+	const NOTIFICATION_TIMEOUT = 5000
 
 	function acceptFriendRequest(url){
 		childLock = true
@@ -535,7 +536,9 @@
 	startNotificationService()
 
 	function startNotificationService(){
-		setInterval(refreshNotifications, NOTIFICATION_TIMEOUT)
+		if("{{request.user.is_authenticated}}" == "True"){
+			setInterval(refreshNotifications, NOTIFICATION_INTERVAL)
+		}
 	}
 
 
