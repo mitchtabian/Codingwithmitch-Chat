@@ -43,6 +43,10 @@
 
 <!-- WebSocket for Notifications -->
 <script type="text/javascript">
+
+	const NOTIFICATION_INTERVAL = 4000
+	const NOTIFICATION_TIMEOUT = 5000
+
 	// Correctly decide between ws:// and wss://
 	var ws_scheme = window.location.protocol == "https:" ? "wss" : "ws";
 	var ws_path = ws_scheme + '://' + window.location.host + "/";
@@ -52,29 +56,45 @@
 	// Handle incoming messages
 	socket.onmessage = function(message) {
 		// Decode the JSON
-		console.log("Got websocket message " + message.data);
-		// console.log("Got websocket message.");
+		// console.log("Got websocket message " + message.data);
+		console.log("Got websocket message.");
 		var data = JSON.parse(message.data);
+		
 		// Handle errors (ClientError)
 		if (data.error) {
 			console.error(data.error + ": " + data.message)
 			showClientErrorModal(data.message)
 			return;
 		}
-		else {
-			var textNode
-			console.log("Cannot handle message!");
+		// new notifications data payload
+		if(data.msg_type == 0){
+			handleNotificationsData(data['notifications'], data['new_page_number'])
+		}
+		// Pagination exhausted. No more results.
+		else if(data.msg_type == 1){
+			setPaginationExhausted()
+		}
+
+		if(data.msg_type == 2){
+			refreshNotificationsData(data['notifications'])
+		}
+
+		if(data.progress_bar != "undefined"){
+			if(data.progress_bar == true){
+				setPageNumber("-1")
+				displayNotificationsLoadingSpinner(true)
+			}
+			else{
+				displayNotificationsLoadingSpinner(false)
+			}
 		}
 	};
 
 	socket.addEventListener("open", function(e){
 		console.log("Socket is open")
-		if("{{request.user.is_authenticated}}"){
-			socket.send(JSON.stringify({
-				"command": "on_open",
-			}));
-		}
+		getFirstNotificationsPage()
 	})
+
 
 	socket.onclose = function(e) {
 		console.error('Chat socket closed unexpectedly');
@@ -88,7 +108,71 @@
         console.log('error', e)
     }
 
-    
+    function getFirstNotificationsPage(){
+		if("{{request.user.is_authenticated}}"){
+			socket.send(JSON.stringify({
+				"command": "get_notifications",
+				"page_number": "1",
+			}));
+		}
+		startNotificationService()
+	}
+
+    function handleNotificationsData(notifications, new_page_number){
+		notifications.forEach(notification => {
+
+			// append to notifications list
+			appendNotification(notification)
+
+			// If this timestamp is newer than the current saved one, set it.
+			// (this is how we know when to retrieve new notifications)
+			setOldestTimestamp(notification['timestamp'])
+		})
+		setPageNumber(new_page_number)
+	}
+
+	function refreshNotificationsData(notifications){
+		console.log("REFRESHING notifications:" + notifications)
+		// clear the list because we are refreshing the visible notifications and also appending new ones
+		clearNotifications() 
+		notifications.forEach(notification => {
+
+			// append to notifications list
+			appendNotification(notification)
+
+			// If this timestamp is newer than the current saved one, set it.
+			// (this is how we know when to retrieve new notifications)
+			setOldestTimestamp(notification['timestamp'])
+		})
+	}
+
+	function refreshNotifications(){
+		oldestTimestamp = document.getElementById("id_oldest_timestamp").innerHTML
+		if("{{request.user.is_authenticated}}"){
+			socket.send(JSON.stringify({
+				"command": "refresh_notifications",
+				"oldest_timestamp": oldestTimestamp,
+			}));
+		}
+	}
+
+	function getNextNotificationsPage(){
+		var pageNumber = document.getElementById("id_page_number").innerHTML
+		console.log("getNextNotificationsPage: page number: " + pageNumber)
+		// -1 means exhausted or a query is currently in progress
+		if("{{request.user.is_authenticated}}" && pageNumber != "-1"){
+			socket.send(JSON.stringify({
+				"command": "get_notifications",
+				"page_number": pageNumber,
+			}));
+		}
+	}
+
+	function startNotificationService(){
+		if("{{request.user.is_authenticated}}" == "True"){
+			setInterval(refreshNotifications, NOTIFICATION_INTERVAL)
+		}
+	}
 </script>
 
 <script src="{% static 'bootstrap/js/jquery.min.js' %}"></script>
@@ -122,8 +206,7 @@
 		window.onscroll = function(ev) {
 			// because of rounding we need to add 2. 1 might be OK but I'm using 2.
 			if ((window.innerHeight + window.scrollY + 2) >= document.body.scrollHeight) {
-				// incrementNotificationPageNumber()
-				getNotifications()
+				getNextNotificationsPage()
 			}
 		};
 	}
@@ -136,9 +219,9 @@
 	// Used to delegate clicks to children if they are available (ex: accept/decline friend request)
 	var childLock = false
 
-	const NOTIFICATION_INTERVAL = 4000
-	const NOTIFICATION_TIMEOUT = 5000
-
+	/*
+		Did not use Ajax for accepting/declining friend requests since there is already a url built for that. Simpler this way.
+	*/
 	function acceptFriendRequest(url){
 		childLock = true
 		$.ajax({
@@ -232,127 +315,6 @@
 		return new Promise(resolve => setTimeout(resolve, ms));
 	}
 
-	/*
-		1. Refresh the notifications that are currently in view.
-		2. Append notifications that are newer than what is currently in view.
-	*/
-	function refreshNotifications(){
-		console.log("refreshNotifications called.")
-		newestTimestamp = document.getElementById("id_oldest_timestamp").innerHTML
-		var requestData = {
-			"oldest_timestamp": newestTimestamp,
-		}
-		$.ajax({
-				type: 'GET',
-				dataType: "json",
-				url: "{% url 'notification:refresh-notifications' %}",
-				data: requestData,
-				timeout: NOTIFICATION_TIMEOUT,
-				cache: false,
-				success: function(data) {
-					if (data['notifications'] != null){
-						console.log("REFRESHING notifications:" + data['notifications'])
-						// clear the list because we are refreshing the visible notifications and also appending new ones
-						clearNotifications() 
-						data['notifications'].forEach(notification => {
-
-							console.log("notification: " + notification['verb'])
-
-							// append to TOP of notifications list
-							appendNotification(notification)
-
-							// If this timestamp is newer than the current saved one, set it.
-							// (this is how we know when to retrieve new notifications)
-							setOldestTimestamp(notification['timestamp'])
-						})
-					}
-					else{
-						console.log("Currently displaying all the newest notifications.")
-					}
-				},
-				error: function(data) {
-					console.error("refreshNotifications ERROR ...", data)
-				},
-				complete: function(data){
-					console.log("refreshNotifications on complete")
-					displayNotificationsLoadingSpinner(false)
-				}
-			});
-	}
-
-	// Get new notifications as scroll downwards (pagination)
-	function getNotifications(){
-		console.log("getNotifications called.")
-		var pageNumber = document.getElementById("id_page_number").innerHTML
-		var requestData = {
-			"page_number": pageNumber,
-		}
-		console.log("page number: " + pageNumber)
-		if(pageNumber != "-1"){
-			displayNotificationsLoadingSpinner(true)
-			setPageNumber("-1") // loading
-			$.ajax({
-				type: 'GET',
-				dataType: "json",
-				url: "{% url 'notification:get-notifications' %}",
-				data: requestData,
-				timeout: NOTIFICATION_TIMEOUT,
-				cache: false,
-				success: function(data) {
-					console.log(data['notifications'])
-					if (data['notifications'] != null){
-						data['notifications'].forEach(notification => {
-
-							// append to notifications list
-							appendNotification(notification)
-
-							// If this timestamp is newer than the current saved one, set it.
-							// (this is how we know when to retrieve new notifications)
-							setOldestTimestamp(notification['timestamp'])
-						})
-						var newPageNumber = data['page_number']
-						setPageNumber(newPageNumber)
-					}
-					else{
-						setPaginationExhausted() // no more notifications
-					}
-				},
-				error: function(data) {
-					console.error("getNotifications ERROR ...", data)
-				},
-				complete: function(data){
-					console.log("getNotifications on complete")
-					displayNotificationsLoadingSpinner(false)
-				}
-			});
-		}
-	}
-
-
-
-	function appendTopNotification(notification){
-		notificationContainer = document.getElementById("id_notifications_container")
-		switch(notification['notification_type']) {
-
-			case "FriendRequest":
-				card = createFriendRequestElement(notification)
-				notificationContainer.insertBefore(card, notificationContainer.firstChild)
-				break;
-
-			case "FriendList":
-				card = createFriendListElement(notification)
-				notificationContainer.insertBefore(card, notificationContainer.firstChild)
-				break;
-
-			case "UnreadChatRoomMessages":
-				card = createUnreadChatRoomMessagesElement(notification)
-				notificationContainer.insertBefore(card, notificationContainer.firstChild)
-				break;
-
-			default:
-				// code block
-		}
-	}
 
 	function appendNotification(notification){
 
@@ -483,7 +445,7 @@
 		// Is the friend request PENDING? (not answered yet)
 		if(notification['is_active'] == "True"){
 
-			console.log("found an active friend request")
+			//console.log("found an active friend request")
 			div1 = document.createElement("div")
 			div1.classList.add("d-flex", "flex-row", "align-items-start")
 			
@@ -569,7 +531,7 @@
 	}
 
 	/*
-		This does nothing. Just for reference.
+		Clear all the current notifications data
 	*/
 	function clearNotifications(){
 		childLock = false
@@ -579,15 +541,7 @@
 		}
 	}
 
-	getNotifications();
 
-	// startNotificationService()
-
-	function startNotificationService(){
-		if("{{request.user.is_authenticated}}" == "True"){
-			setInterval(refreshNotifications, NOTIFICATION_INTERVAL)
-		}
-	}
 
 
 </script>

@@ -9,6 +9,7 @@ from account.models import Account
 from chat.models import RoomChatMessage, PrivateChatRoom, UnreadChatRoomMessages
 from chat.exceptions import ClientError
 from chat.utils import get_room_or_error
+from chat.constants import *
 
 User = get_user_model()
 
@@ -207,7 +208,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         if event["username"]:
             await self.send_json(
                 {
-                    "msg_type": settings.MSG_TYPE_ENTER,
+                    "msg_type": MSG_TYPE_ENTER,
                     "room": event["room_id"],
                     "profile_image": event["profile_image"],
                     "username": event["username"],
@@ -225,7 +226,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         if event["username"]:
             await self.send_json(
                 {
-                    "msg_type": settings.MSG_TYPE_LEAVE,
+                    "msg_type": MSG_TYPE_LEAVE,
                     "room": event["room_id"],
                     "profile_image": event["profile_image"],
                     "username": event["username"],
@@ -243,7 +244,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 
         await self.send_json(
             {
-                "msg_type": settings.MSG_TYPE_MESSAGE,
+                "msg_type": MSG_TYPE_MESSAGE,
                 "room": event["room_id"],
                 "username": event["username"],
                 "user_id": event["user_id"],

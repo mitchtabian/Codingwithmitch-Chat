@@ -18,8 +18,6 @@ def refresh_notifications(request, *args, **kwargs):
 	"""
 	payload = {}
 
-	payload = {}
-
 	user = request.user
 	if user.is_authenticated:
 		# FORMAT: 2020-08-27 19:39:13.011835+00:00
