@@ -19,6 +19,46 @@
 		cursor: pointer;
 	}
 
+	.notifications-material-icon {
+		font-size: 28px;
+
+	}
+	.notifications-icon-container{
+		width: 40px;
+		height: 40px;
+		background-color: var(--main-background-color);
+	}
+	.notifications-icon-container:hover {
+		cursor: pointer;
+		background-color: var(--secondary-text-color)
+	}
+	.notify-badge{
+		position: absolute;
+		background: red;
+		height:1.2rem;
+		width:1.2rem;
+		line-height: 1.2rem;
+		top:1rem;
+		right:2rem;
+		text-align: center;
+		font-size: 1rem;
+		border-radius: 50%;
+		color:white;
+		font-weight: 630;
+		margin-top:-15px;
+		margin-right: -25px;
+	}
+	.scrollable-menu {
+		height: auto;
+		max-height: 90vh;
+		width: 500px;
+		overflow-x: hidden;
+	}
+
+	#id_notifications_spinner{
+		margin-top: 20px;
+		margin-bottom: 20px;
+	}
 </style>
 
 <!-- Header -->
@@ -37,11 +77,86 @@
 			<nav class="">
 				{% if request.user.is_authenticated %}
 					<div class="dropdown dropleft show p-2">
-						<img class="account-image rounded-circle mx-auto d-block dropdown-toggle" id="dropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" src="{{request.user.profile_image.url}}" alt="codingwithmitch logo" width="40" height="40">
-					<div class="dropdown-menu" aria-labelledby="dropdownMenuLink">
-						<a class="dropdown-item" href="{% url 'account:view' user_id=request.user.id %}">Account</a>
-						<a class="dropdown-item" href="{% url 'logout' %}">Logout</a>
-					</div>
+						<div class="d-flex flex-row">
+							<div class="btn-group dropleft">
+								<div class="d-flex notifications-icon-container rounded-circle align-items-center mr-3" id="id_notification_dropdown_toggle" data-toggle="dropdown">
+									<span class="notify-badge">9</span>
+									<span class="d-flex material-icons notifications-material-icon m-auto align-items-center">notifications</span>
+									<div class="dropdown-menu scrollable-menu" aria-labelledby="id_notification_dropdown_toggle" id="id_notificatons_menu">
+										<a class="dropdown-item" href="#">Action</a>
+										<a class="dropdown-item" href="#">Another action</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<a class="dropdown-item" href="#">Something else here</a>
+										<div class="d-flex flex-row justify-content-center dropdown-item" id="id_notifications_loading_spinner_container">
+										<div class="spinner-border text-primary"  id="id_notifications_spinner" role="status"  style="display: none; ">
+											<span class="sr-only">Loading...</span>
+										</div>
+									</div>
+									</div>
+								</div>
+							</div>
+
+							<div class="btn-group dropleft">
+								<img class="account-image rounded-circle m-auto d-block dropdown-toggle" id="id_profile_links" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" src="{{request.user.profile_image.url}}" alt="codingwithmitch logo" width="40" height="40">
+								<div class="dropdown-menu" aria-labelledby="id_profile_links">
+									<a class="dropdown-item" href="{% url 'account:view' user_id=request.user.id %}">Account</a>
+									<a class="dropdown-item" href="{% url 'logout' %}">Logout</a>
+								</div>
+							</div>
+						</div>
+						
 					</div>
 				{% else %}
 					<a class="p-2 text-dark" href="{% url 'login' %}">Login</a>
@@ -63,8 +178,14 @@
 		<div class="flex-grow-1">
 			<nav class="">
 				{% if request.user.is_authenticated %}
-					<div class="dropdown show p-2">
-						<img class="account-image rounded-circle mx-auto d-block dropdown-toggle" id="dropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" src="{{request.user.profile_image.url}}" alt="codingwithmitch logo" width="40" height="40">
+					<div class="dropdown show p-2 mt-2">
+						<div class="d-flex flex-row">
+							<div class="d-flex notifications-icon-container rounded-circle align-items-center mr-3">
+								<span class="notify-badge">9</span>
+								<span class="d-flex material-icons notifications-material-icon m-auto align-items-center">notifications</span>
+							</div>
+							<img class="account-image rounded-circle m-auto d-block dropdown-toggle" id="dropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" src="{{request.user.profile_image.url}}" alt="codingwithmitch logo" width="40" height="40">
+						</div>
 					<div class="dropdown-menu" aria-labelledby="dropdownMenuLink">
 						<a class="dropdown-item" href="{% url 'account:view' user_id=request.user.id %}">Account</a>
 						<a class="dropdown-item" href="{% url 'logout' %}">Logout</a>
@@ -79,6 +200,34 @@
 	</div>
 	<!-- END SMALL SCREENS -->
 </div>
+
+<script type="text/javascript">
+
+	setOnNotificationScrollListener()
+
+	displayNotificationsSpinner(true)
+	
+	function setOnNotificationScrollListener(){
+		var menu = document.getElementById("id_notificatons_menu")
+		menu.addEventListener("scroll", function(e){
+
+			if ((menu.scrollTop) >= (menu.scrollHeight - menu.offsetHeight)) {
+				console.log("SCROLL: END?....")
+			}
+		});
+	}
+
+	function displayNotificationsSpinner(isDisplayed){
+		console.log("display spinner " + isDisplayed)
+		var spinner = document.getElementById("id_notifications_spinner")
+		if(isDisplayed){
+			spinner.style.display = "block"
+		}
+		else{
+			spinner.style.display = "none"
+		}
+	}
+</script>
 
 <script type="text/javascript">
 	document.getElementById("id_q").value = "{{query}}"
