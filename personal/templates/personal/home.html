@@ -1,6 +1,5 @@
 {% extends 'base.html' %}
 {% load static %}
-{% load humanize %}
 
 {% block content %}
 
@@ -42,6 +41,55 @@
 	<p class="{% if not debug %}d-none{% else %}d-flex{% endif %}" id="id_oldest_timestamp">{{initial_timestamp}}</p>
 </div>
 
+<!-- WebSocket for Notifications -->
+<script type="text/javascript">
+	// Correctly decide between ws:// and wss://
+	var ws_scheme = window.location.protocol == "https:" ? "wss" : "ws";
+	var ws_path = ws_scheme + '://' + window.location.host + "/";
+	// console.log("Connecting to " + ws_path);
+	var socket = new WebSocket(ws_path);
+
+	// Handle incoming messages
+	socket.onmessage = function(message) {
+		// Decode the JSON
+		console.log("Got websocket message " + message.data);
+		// console.log("Got websocket message.");
+		var data = JSON.parse(message.data);
+		// Handle errors (ClientError)
+		if (data.error) {
+			console.error(data.error + ": " + data.message)
+			showClientErrorModal(data.message)
+			return;
+		}
+		else {
+			var textNode
+			console.log("Cannot handle message!");
+		}
+	};
+
+	socket.addEventListener("open", function(e){
+		console.log("Socket is open")
+		if("{{request.user.is_authenticated}}"){
+			socket.send(JSON.stringify({
+				"command": "on_open",
+			}));
+		}
+	})
+
+	socket.onclose = function(e) {
+		console.error('Chat socket closed unexpectedly');
+	};
+
+	socket.onOpen = function(e){
+		console.log("onOpen", e)
+	}
+
+	socket.onerror = function(e){
+        console.log('error', e)
+    }
+
+    
+</script>
 
 <script src="{% static 'bootstrap/js/jquery.min.js' %}"></script>
 
@@ -533,7 +581,7 @@
 
 	getNotifications();
 
-	startNotificationService()
+	// startNotificationService()
 
 	function startNotificationService(){
 		if("{{request.user.is_authenticated}}" == "True"){
