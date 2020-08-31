@@ -78,72 +78,21 @@
 				{% if request.user.is_authenticated %}
 					<div class="dropdown dropleft show p-2">
 						<div class="d-flex flex-row">
+
+							<div class="btn-group dropleft">
+								<div class="d-flex notifications-icon-container rounded-circle align-items-center mr-3" id="id_chat_notification_dropdown_toggle" data-toggle="dropdown">
+									<span id="id_chat_notifications_count" class="notify-badge">5</span>
+									<span class="d-flex material-icons notifications-material-icon m-auto align-items-center">chat</span>
+									<div class="dropdown-menu scrollable-menu" aria-labelledby="id_chat_notification_dropdown_toggle" id="id_chat_notifications_container">										
+									</div>
+								</div>
+							</div>
+
 							<div class="btn-group dropleft">
 								<div class="d-flex notifications-icon-container rounded-circle align-items-center mr-3" id="id_notification_dropdown_toggle" data-toggle="dropdown">
-									<span class="notify-badge">9</span>
+									<span id="id_notifications_count" class="notify-badge">9</span>
 									<span class="d-flex material-icons notifications-material-icon m-auto align-items-center">notifications</span>
-									<div class="dropdown-menu scrollable-menu" aria-labelledby="id_notification_dropdown_toggle" id="id_notificatons_menu">
-										<a class="dropdown-item" href="#">Action</a>
-										<a class="dropdown-item" href="#">Another action</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<a class="dropdown-item" href="#">Something else here</a>
-										<div class="d-flex flex-row justify-content-center dropdown-item" id="id_notifications_loading_spinner_container">
-										<div class="spinner-border text-primary"  id="id_notifications_spinner" role="status"  style="display: none; ">
-											<span class="sr-only">Loading...</span>
-										</div>
-									</div>
+									<div class="dropdown-menu scrollable-menu" aria-labelledby="id_notification_dropdown_toggle" id="id_general_notifications_container">										
 									</div>
 								</div>
 							</div>
@@ -201,34 +150,99 @@
 	<!-- END SMALL SCREENS -->
 </div>
 
+{% include 'snippets/general_notifications.html' %}
+{% include 'snippets/chat_notifications.html' %}
+
+
+<!-- Setup SOCKET for NOTIFICATIONS -->
 <script type="text/javascript">
+	// Correctly decide between ws:// and wss://
+	var ws_scheme = window.location.protocol == "https:" ? "wss" : "ws";
+	var ws_path = ws_scheme + '://' + window.location.host + "/";
+	// console.log("Connecting to " + ws_path);
+	var socket = new WebSocket(ws_path);
 
-	setOnNotificationScrollListener()
+	// Handle incoming messages
+	socket.onmessage = function(message) {
+		// Decode the JSON
+		// console.log("Got websocket message " + message.data);
+		console.log("Got websocket message.");
+		var data = JSON.parse(message.data);
+		
+		// Handle errors (ClientError)
+		if (data.error) {
+			console.error(data.error + ": " + data.message)
+			showClientErrorModal(data.message)
+			return;
+		}
 
-	displayNotificationsSpinner(true)
-	
-	function setOnNotificationScrollListener(){
-		var menu = document.getElementById("id_notificatons_menu")
-		menu.addEventListener("scroll", function(e){
+		/*
+			GENERAL NOTIFICATIONS
+		*/
+		// new 'general' notifications data payload
+		if(data.general_msg_type == 0){
+			handleGeneralNotificationsData(data['notifications'], data['new_page_number'])
+		}
+		// "General" Pagination exhausted. No more results.
+		else if(data.general_msg_type == 1){
+			setGeneralPaginationExhausted()
+		}
 
-			if ((menu.scrollTop) >= (menu.scrollHeight - menu.offsetHeight)) {
-				console.log("SCROLL: END?....")
+		if(data.general_msg_type == 2){
+			refreshGeneralNotificationsData(data['notifications'])
+		}
+
+
+		/*
+			CHAT NOTIFICATIONS
+		*/
+		// new 'chat' notifications data payload
+		if(data.chat_msg_type == 10){
+			handleChatNotificationsData(data['notifications'], data['new_page_number'])
+		}
+		// "Chat" Pagination exhausted. No more results.
+		else if(data.chat_msg_type == 11){
+			setChatPaginationExhausted()
+		}
+
+		if(data.chat_msg_type == 12){
+			refreshChatNotificationsData(data['notifications'])
+		}
+
+
+		/* Not being used */
+		if(data.progress_bar != "undefined"){
+			if(data.progress_bar == true){
+				// display spinner?
 			}
-		});
+			else{
+				// display spinner?
+			}
+		}
+	};
+
+	socket.addEventListener("open", function(e){
+		console.log("Socket is open")
+		setupGeneralNotificationsMenu()
+		setupChatNotificationsMenu()
+		getFirstGeneralNotificationsPage()
+		getFirstChatNotificationsPage()
+	})
+
+
+	socket.onclose = function(e) {
+		console.error('Chat socket closed unexpectedly');
+	};
+
+	socket.onOpen = function(e){
+		console.log("onOpen", e)
 	}
 
-	function displayNotificationsSpinner(isDisplayed){
-		console.log("display spinner " + isDisplayed)
-		var spinner = document.getElementById("id_notifications_spinner")
-		if(isDisplayed){
-			spinner.style.display = "block"
-		}
-		else{
-			spinner.style.display = "none"
-		}
-	}
+	socket.onerror = function(e){
+        console.log('error', e)
+    }
+
 </script>
-
 <script type="text/javascript">
 	document.getElementById("id_q").value = "{{query}}"
 </script>

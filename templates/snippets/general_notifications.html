@@ -1,0 +1,472 @@
+{% load static %}
+
+
+<style type="text/css">
+	.notification-thumbnail-image{
+		height: 50px;
+		width: 50px;
+	}
+	.card:hover{
+		cursor: pointer;
+		background: #f2f2f2;
+	}
+	.timestamp-text{
+		color: var(--secondary-text-color);
+	}
+	.notification-chatroom-msg{
+		color: var(--light-primary-text-color);
+	}
+	#id_notifications_loading_spinner{
+		position: absolute;
+		margin-top: 40px;
+	}
+</style>
+
+{% if debug %}
+<p>GENERAL</p>
+{% endif %}
+<p class="{% if not debug %}d-none{% else %}d-flex{% endif %}" id="id_general_page_number">1</p>
+<p class="{% if not debug %}d-none{% else %}d-flex{% endif %}" id="id_general_oldest_timestamp">{{initial_timestamp}}</p>
+
+<script type="text/javascript">
+
+	const GENERAL_NOTIFICATION_INTERVAL = 4000
+	const GENERAL_NOTIFICATION_TIMEOUT = 5000
+
+	
+    function getFirstGeneralNotificationsPage(){
+		if("{{request.user.is_authenticated}}"){
+			socket.send(JSON.stringify({
+				"command": "get_general_notifications",
+				"page_number": "1",
+			}));
+		}
+		startGeneralNotificationService()
+	}
+
+	function clearNoGeneralNotificationsCard(){
+		var element = document.getElementById("id_no_general_notifications")
+		if(element != null && element != "undefined"){
+			document.getElementById("id_general_notifications_container").removeChild(element)
+		}
+	}
+
+    function handleGeneralNotificationsData(notifications, new_page_number){
+
+    	if(notifications.length > 0){
+    		clearNoGeneralNotificationsCard()
+    		notifications.forEach(notification => {
+
+				// append to notifications list
+				appendGeneralNotification(notification)
+
+				// If this timestamp is newer than the current saved one, set it.
+				// (this is how we know when to retrieve new notifications)
+				setGeneralOldestTimestamp(notification['timestamp'])
+			})
+			setGeneralPageNumber(new_page_number)
+	    }
+	}
+
+	function refreshGeneralNotificationsData(notifications){
+		// console.log("REFRESHING notifications:" + notifications)
+		// clear the list because we are refreshing the visible notifications and also appending new ones
+		if(notifications.length > 0){
+			clearGeneralNotifications() 
+			notifications.forEach(notification => {
+
+				// append to notifications list
+				appendGeneralNotification(notification)
+
+				// If this timestamp is newer than the current saved one, set it.
+				// (this is how we know when to retrieve new notifications)
+				setGeneralOldestTimestamp(notification['timestamp'])
+			})
+		}
+	}
+
+	function refreshGeneralNotifications(){
+		oldestTimestamp = document.getElementById("id_general_oldest_timestamp").innerHTML
+		if("{{request.user.is_authenticated}}"){
+			socket.send(JSON.stringify({
+				"command": "refresh_general_notifications",
+				"oldest_timestamp": oldestTimestamp,
+			}));
+		}
+	}
+
+	function getNextGeneralNotificationsPage(){
+		var pageNumber = document.getElementById("id_general_page_number").innerHTML
+		console.log("getNextGeneralNotificationsPage: page number: " + pageNumber)
+		// -1 means exhausted or a query is currently in progress
+		if("{{request.user.is_authenticated}}" && pageNumber != "-1"){
+			socket.send(JSON.stringify({
+				"command": "get_general_notifications",
+				"page_number": pageNumber,
+			}));
+		}
+	}
+
+	function startGeneralNotificationService(){
+		if("{{request.user.is_authenticated}}" == "True"){
+			setInterval(refreshGeneralNotifications, GENERAL_NOTIFICATION_INTERVAL)
+		}
+	}
+	
+	function setOnGeneralNotificationScrollListener(){
+		var menu = document.getElementById("id_general_notifications_container")
+		if(menu != null ){
+			menu.addEventListener("scroll", function(e){
+
+				if ((menu.scrollTop) >= (menu.scrollHeight - menu.offsetHeight)) {
+					getNextGeneralNotificationsPage()
+				}
+			});
+		}
+		
+	}
+
+	setOnGeneralNotificationScrollListener()
+
+
+</script>
+
+<script src="{% static 'bootstrap/js/jquery.min.js' %}"></script>
+
+<!-- Pagination -->
+<script type="text/javascript">
+
+	
+	function setGeneralPaginationExhausted(){
+		console.log("general pagination exhausted.")
+		setGeneralPageNumber("-1")
+	}
+
+	function setGeneralPageNumber(pageNumber){
+		document.getElementById("id_general_page_number").innerHTML = pageNumber
+	}
+
+
+	function onGeneralNotificationsPaginationTriggerListener(){
+		window.onscroll = function(ev) {
+			// because of rounding we need to add 2. 1 might be OK but I'm using 2.
+			if ((window.innerHeight + window.scrollY + 2) >= document.body.scrollHeight) {
+				getNextGeneralNotificationsPage()
+			}
+		};
+	}
+
+	onGeneralNotificationsPaginationTriggerListener()
+</script>
+
+<script type="text/javascript">
+
+	// Used to delegate clicks to children if they are available (ex: accept/decline friend request)
+	var childLock = false
+
+	/*
+		Did not use Ajax for accepting/declining friend requests since there is already a url built for that. Simpler this way.
+	*/
+	function acceptFriendRequest(url){
+		childLock = true
+		$.ajax({
+			type: 'GET',
+			dataType: "json",
+			url: url,
+			timeout: GENERAL_NOTIFICATION_TIMEOUT,
+			cache: false,
+			success: function(data) {
+				console.log("SUCCESS", data)
+				console.log("updated notification: " + data['notification'])
+				updateGeneralNotificationDiv(data['notification'])
+			},
+			error: function(data) {
+				console.error("ERROR...", data)
+				// alert("Something went wrong.")
+			},
+			complete: function(){
+				childLock = false
+			}
+		});
+	}
+
+	function declineFriendRequest(url){
+		childLock = true
+		$.ajax({
+			type: 'GET',
+			dataType: "json",
+			url: url,
+			timeout: GENERAL_NOTIFICATION_TIMEOUT,
+			cache: false,
+			success: function(data) {
+				console.log("SUCCESS", data)
+				console.log("updated notification: " + data['notification'])
+				updateGeneralNotificationDiv(data['notification'])
+			},
+			error: function(data) {
+				console.error("ERROR...", data)
+				// alert("Something went wrong.")
+			},
+			complete: function(){
+				childLock = false
+			}
+		});
+	}
+
+	function redirect(url){
+		if(!childLock){
+			// window.location.assign(url)
+			window.location.href = url
+		}
+	}
+
+	function none(){
+		childLock = false
+	}
+
+	/*
+		Update a div with new notification data.
+	*/
+	function updateGeneralNotificationDiv(notification){
+		notificationContainer = document.getElementById("id_general_notifications_container")
+
+		if(notificationContainer != null){
+			divs = notificationContainer.childNodes
+
+			divs.forEach(function(element){
+				if(element.id == ("id_notification_" + notification['notification_id'])){
+					
+					// Replace current div with updated one
+					updatedDiv = createFriendRequestElement(notification)
+					element.replaceWith(updatedDiv)
+				}
+			})
+		}
+	}
+
+	/*
+		Keep track of the 'general' oldest notification in view. 
+		When 'refreshGeneralNotifications' is called, it refreshes all the notifications newer than this date.
+	*/
+	function setGeneralOldestTimestamp(timestamp){
+		element = document.getElementById("id_general_oldest_timestamp")
+		current = element.innerHTML
+		if(Date.parse(timestamp) < Date.parse(current)){
+			element.innerHTML = timestamp
+		}
+	}
+
+	/*
+		usage: await sleep(1000)
+	*/
+	function sleep(ms) {
+		return new Promise(resolve => setTimeout(resolve, ms));
+	}
+
+
+	function appendGeneralNotification(notification){
+
+		switch(notification['notification_type']) {
+
+			case "FriendRequest":
+				notificationContainer = document.getElementById("id_general_notifications_container")
+				card = createFriendRequestElement(notification)
+				notificationContainer.appendChild(card)
+				break;
+
+			case "FriendList":
+				notificationContainer = document.getElementById("id_general_notifications_container")
+				card = createFriendListElement(notification)
+				notificationContainer.appendChild(card)
+				break;
+
+			default:
+				// code block
+		}
+	}
+
+	/*
+		Ex: "You are now friends with Maizy."
+		Ex: "You are no longer friends with John."
+
+		Params:
+			1. redirect_url
+				- Will redirect to the other users account profile
+	*/
+	function createFriendListElement(notification, notificationContainer){
+		card = createNotificationCard()
+		card.addEventListener("click", function(){
+			console.log("click: " + notification['actions']['redirect_url'])
+			redirect(notification['actions']['redirect_url'])
+		})
+
+		var div = document.createElement("div")
+		div.classList.add("d-flex", "flex-row", "align-items-start")
+
+		img = createProfileImageThumbnail(notification)
+		div.appendChild(img)
+
+		span = document.createElement("span")
+		span.classList.add("align-items-start", "pt-1", "m-auto")
+		if(notification['verb'].length > 50){
+			span.innerHTML = notification['verb'].slice(0, 50) + "..."
+		}
+		else{
+			span.innerHTML = notification['verb']
+		}
+		div.appendChild(span)
+		card.appendChild(div)
+		card.appendChild(createTimestampElement(notification))
+		return card
+	}
+
+	/*
+		Ex: "John sent you a friend request."
+		Ex: "You declined John's friend request."
+		Ex: "You accepted John's friend request."
+		Ex: "You cancelled the friend request to Kiba."
+		Ex: "Maizy accepted your friend request."
+		Ex: "Maizy declined your friend request."
+
+		Params:
+			1. redirect_url
+				- Will redirect to the other users profile
+			2. positive_action_object
+				- accepts the friend request
+			3. negative_action_object
+				- declines the friend request
+	*/
+	function createFriendRequestElement(notification, notificationContainer){
+		card = createNotificationCard()
+
+		// assign id b/c we need to find this div if they accept/decline the friend request
+		card.id = "id_notification_" + notification['notification_id']
+		card.addEventListener("click", function(){
+			console.log("click: " + notification['actions']['redirect_url'])
+			redirect(notification['actions']['redirect_url'])
+		})
+
+		// Is the friend request PENDING? (not answered yet)
+		if(notification['is_active'] == "True"){
+
+			//console.log("found an active friend request")
+			div1 = document.createElement("div")
+			div1.classList.add("d-flex", "flex-row", "align-items-start")
+			
+			img = createProfileImageThumbnail(notification)
+			div1.appendChild(img)
+
+			span = document.createElement("span")
+			span.classList.add("m-auto")
+			span.innerHTML = notification['verb']
+			div1.appendChild(span)
+			card.appendChild(div1)
+
+			div2 = document.createElement("div")
+			div2.classList.add("d-flex", "flex-row", "mt-2")
+
+			pos_action = document.createElement("a")
+			pos_action.classList.add("btn", "btn-primary", "mr-2")
+			pos_action.href = "#"
+			pos_action.innerHTML = "Accept"
+			pos_action.addEventListener("click", function(){
+				acceptFriendRequest(notification['actions']['positive_action_object'])
+			})
+			div2.appendChild(pos_action)
+
+			neg_action = document.createElement("a")
+			neg_action.classList.add("btn", "btn-secondary")
+			neg_action.href = "#"
+			neg_action.innerHTML = "Decline"
+			neg_action.addEventListener("click", function(){
+				declineFriendRequest(notification['actions']['negative_action_object'])
+			})
+			div2.appendChild(neg_action)
+			card.appendChild(div2)
+		}
+		// The friend request has been answered (Declined or accepted)
+		else{
+			var div1 = document.createElement("div")
+			div1.classList.add("d-flex", "flex-row", "align-items-start")
+
+			img = document.createElement("img")
+			img.classList.add("notification-thumbnail-image", "img-fluid", "rounded-circle", "mr-2")
+			img.src = notification['from']['image_url']
+			div1.appendChild(img)
+
+			span = document.createElement("span")
+			span.classList.add("m-auto")
+			span.innerHTML = notification['verb']
+			div1.appendChild(span)
+			card.appendChild(div1)
+		}
+		card.appendChild(createTimestampElement(notification))
+
+		return card
+	}
+
+	/*
+		Timestamp at the bottom of each notification card
+	*/
+	function createTimestampElement(notification){
+		var timestamp = document.createElement("p")
+		timestamp.classList.add("small", "pt-2", "timestamp-text")
+		timestamp.innerHTML = notification['natural_timestamp']
+		return timestamp
+	}
+
+	/*
+		The card that each notification sits in
+	*/
+	function createNotificationCard(cardId){
+		var card = document.createElement("div")
+		if(cardId != "undefined"){
+			card.id = cardId
+		}
+		card.classList.add("d-flex", "flex-column", "align-items-start", "card" ,"p-4")
+		return card
+	}
+
+	/*
+		Circular image icon that can be in a notification card
+	*/
+	function createProfileImageThumbnail(notification){
+		img = document.createElement("img")
+		img.classList.add("notification-thumbnail-image", "img-fluid", "rounded-circle", "mr-2")
+		img.src = notification['from']['image_url']
+		return img
+	}
+
+	/*
+		Clear all the current notifications data
+	*/
+	function clearGeneralNotifications(){
+		childLock = false
+		notificationContainer = document.getElementById("id_general_notifications_container")
+		while (notificationContainer.hasChildNodes()) {
+			notificationContainer.removeChild(notificationContainer.lastChild);
+		}
+	}
+
+
+	function setupGeneralNotificationsMenu(){
+		var notificationContainer = document.getElementById("id_general_notifications_container")
+
+		if(notificationContainer != null){
+			card = createNotificationCard("id_no_general_notifications")
+
+			var div = document.createElement("div")
+			div.classList.add("d-flex", "flex-row", "align-items-start")
+
+			span = document.createElement("span")
+			span.classList.add("align-items-start", "pt-1", "m-auto")
+			span.innerHTML = "You have no notifications."
+			div.appendChild(span)
+			card.appendChild(div)
+			notificationContainer.appendChild(card)
+		}
+	}
+
+
+
+</script>

@@ -13,8 +13,8 @@ def home_screen_view(request):
 	context = {}
 	user = request.user
 	if user.is_authenticated:
-		notifications = Notification.objects.filter(target=user).order_by('-timestamp')
-		context['notifications'] = notifications
+		# notifications = Notification.objects.filter(target=user).order_by('-timestamp')
+		# context['notifications'] = notifications
 		date = datetime.now()
 
 		# initial timestamp is used to check to refresh notifications

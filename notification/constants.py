@@ -1,16 +1,27 @@
+"""
+"General" notifications include:
+	1. FriendRequest
+	2. FriendList
+"""
+GENERAL_MSG_TYPE_NOTIFICATIONS_PAYLOAD = 0  # New 'general' notifications data payload incoming
+GENERAL_MSG_TYPE_PAGINATION_EXHAUSTED = 1  # No more 'general' notifications to retrieve
+GENERAL_MSG_TYPE_NOTIFICATIONS_REFRESH_PAYLOAD = 2  # Retrieved all 'general' notifications newer than the oldest visible on screen
 
-MSG_TYPE_NOTIFICATIONS_PAYLOAD = 0  # New notifications data payload incoming
-MSG_TYPE_PAGINATION_EXHAUSTED = 1  # No more notifications to retrieve
-MSG_TYPE_NOTIFICATIONS_REFRESH_PAYLOAD = 2  # Retrieved all notifications newer than the oldest visible on screen
 
-MESSAGE_TYPES_CHOICES = (
-    (MSG_TYPE_NOTIFICATIONS_PAYLOAD, 'NOTIFICATIONS_PAYLOAD'),
-    (MSG_TYPE_PAGINATION_EXHAUSTED, 'PAGINATION_EXHAUSTED'),
-    (MSG_TYPE_NOTIFICATIONS_REFRESH_PAYLOAD, 'NOTIFICATIONS_REFRESH_PAYLOAD'),
-)
 
-MESSAGE_TYPES_LIST = [
-    MSG_TYPE_NOTIFICATIONS_PAYLOAD,
-    MSG_TYPE_PAGINATION_EXHAUSTED,
-    MSG_TYPE_NOTIFICATIONS_REFRESH_PAYLOAD,
-]
+"""
+"Chat" notifications include:
+	1. UnreadChatRoomMessages
+"""
+CHAT_MSG_TYPE_NOTIFICATIONS_PAYLOAD = 10  # New 'chat' notifications data payload incoming
+CHAT_MSG_TYPE_PAGINATION_EXHAUSTED = 11  # No more 'chat' notifications to retrieve
+CHAT_MSG_TYPE_NOTIFICATIONS_REFRESH_PAYLOAD = 12  # Retrieved all 'chat' notifications newer than the oldest visible on screen
+
+
+
+
+
+
+
+
+
