@@ -27,6 +27,9 @@ class Notification(models.Model):
 	# When the notification was created/updated
 	timestamp 					= models.DateTimeField(auto_now_add=True)
 
+	# Some notifications can be marked as "read"
+	read 						= models.BooleanField(default=False)
+
 	# Actor: A generic type that can refer to a FriendRequest, Unread Message, or any other type of "Notification"
 	# See article: https://simpleisbetterthancomplex.com/tutorial/2016/10/13/how-to-use-generic-relations.html
 	content_type 				= models.ForeignKey(ContentType, on_delete=models.CASCADE)

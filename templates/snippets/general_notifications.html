@@ -44,6 +44,15 @@
 		startGeneralNotificationService()
 	}
 
+	 function getUnreadGeneralNotificationsCount(){
+	 	console.log("getUnreadGeneralNotificationsCount")
+		if("{{request.user.is_authenticated}}"){
+			socket.send(JSON.stringify({
+				"command": "get_unread_general_notifications_count",
+			}));
+		}
+	}
+
 	function clearNoGeneralNotificationsCard(){
 		var element = document.getElementById("id_no_general_notifications")
 		if(element != null && element != "undefined"){
@@ -52,7 +61,6 @@
 	}
 
     function handleGeneralNotificationsData(notifications, new_page_number){
-
     	if(notifications.length > 0){
     		clearNoGeneralNotificationsCard()
     		notifications.forEach(notification => {
@@ -69,9 +77,8 @@
 	}
 
 	function refreshGeneralNotificationsData(notifications){
-		// console.log("REFRESHING notifications:" + notifications)
-		// clear the list because we are refreshing the visible notifications and also appending new ones
 		if(notifications.length > 0){
+			// clear the list because we are refreshing the visible notifications and also appending new ones
 			clearGeneralNotifications() 
 			notifications.forEach(notification => {
 
@@ -107,9 +114,20 @@
 		}
 	}
 
+	function setGeneralNotificationsAsRead(){
+		if("{{request.user.is_authenticated}}"){
+			oldestTimestamp = document.getElementById("id_general_oldest_timestamp").innerHTML
+			socket.send(JSON.stringify({
+				"command": "mark_notifications_read",
+			}));
+			getUnreadGeneralNotificationsCount()
+		}
+	}
+
 	function startGeneralNotificationService(){
 		if("{{request.user.is_authenticated}}" == "True"){
 			setInterval(refreshGeneralNotifications, GENERAL_NOTIFICATION_INTERVAL)
+			setInterval(getUnreadGeneralNotificationsCount, GENERAL_NOTIFICATION_INTERVAL)
 		}
 	}
 	
@@ -282,6 +300,18 @@
 
 			default:
 				// code block
+		}
+	}
+
+	function setUnreadGeneralNotificationsCount(count){
+		console.log("setUnreadGeneralNotificationsCount: " + count)
+		var countElement = document.getElementById("id_general_notifications_count")
+		if(count > 0){
+			countElement.style.display = "block"
+			countElement.innerHTML = count
+		}
+		else{
+			countElement.style.display = "none"
 		}
 	}
 
@@ -467,6 +497,14 @@
 		}
 	}
 
+	function setInitialTimestamp(){
+		// ('%Y-%m-%d %H:%M:%S.%f')
+		var today = new Date();
+		var date = today.getFullYear()+'-'+(today.getMonth()+1)+'-'+today.getDate() + " " + today.getHours() + ":" + today.getMinutes() + ":" + today.getSeconds()
+		document.getElementById("id_general_oldest_timestamp").innerHTML = date
 
+	}
+
+	setInitialTimestamp()
 
 </script>

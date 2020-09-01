@@ -85,6 +85,11 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
                     payload = json.loads(payload)
                     await self.send_chat_notifications_payload(payload['notifications'], payload['new_page_number'])
                 await self.display_progress_bar(False)
+            elif command == "get_unread_general_notifications_count":
+                payload = await self.get_unread_general_notification_count()
+                if payload != None:
+                    payload = json.loads(payload)
+                    await self.send_unread_general_notification_count(payload['count'])
             elif command == "refresh_chat_notifications":
                 payload = await self.refresh_chat_notifications(content['oldest_timestamp'])
                 if payload == None:
@@ -92,6 +97,8 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
                 else:
                     payload = json.loads(payload)
                     await self.send_chat_refreshed_notifications_payload(payload['notifications'])
+            elif command =="mark_notifications_read":
+                await self.mark_notifications_read()
         except Exception as e:
             await self.display_progress_bar(False)
             # Catch any errors and send it back
@@ -105,6 +112,27 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
                 errorData['message'] = "An unknown error occurred"
             await self.send_json(errorData)
 
+
+    async def send_unread_general_notification_count(self, count):
+        """
+        Send the number of unread "general" notifications to the template
+        """
+        await self.send_json(
+            {
+                "general_msg_type": GENERAL_MSG_TYPE_GET_UNREAD_NOTIFICATIONS_COUNT,
+                "count": count,
+            },
+        )
+
+    # async def refresh_general_notifications(self):
+    #     """
+    #     Send msg to the template to refresh the general notifications currently in view
+    #     """
+    #     await self.send_json(
+    #         {
+    #             "general_msg_type": GENERAL_MSG_TYPE_REFRESH_NOTIFICATIONS,
+    #         },
+    #     )
 
     async def general_pagination_exhausted(self):
         """
@@ -191,6 +219,21 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
 
 
     @database_sync_to_async
+    def mark_notifications_read(self):
+        """
+        marks a notification as "read"
+        """
+        user = self.scope["user"]
+        if user.is_authenticated:
+            notifications = Notification.objects.filter(target=user)
+            if notifications:
+                for notification in notifications.all():
+                    notification.read = True
+                    notification.save()
+        return
+
+
+    @database_sync_to_async
     def get_chat_notifications(self, page_number):
         """
         Get Chat Notifications with Pagination (next page of results).
@@ -244,6 +287,26 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
 
         return json.dumps(payload)  
 
+    @database_sync_to_async
+    def get_unread_general_notification_count(self):
+        user = self.scope["user"]
+        payload = {}
+        if user.is_authenticated:
+            friend_request_ct = ContentType.objects.get_for_model(FriendRequest)
+            friend_list_ct = ContentType.objects.get_for_model(FriendList)
+            notifications = Notification.objects.filter(target=user, content_type__in=[friend_request_ct, friend_list_ct])
+
+            
+            unread_count = 0
+            if notifications:
+                for notification in notifications.all():
+                    if not notification.read:
+                        unread_count = unread_count + 1
+            payload['count'] = unread_count
+            return json.dumps(payload)
+        else:
+            raise NotificationClientError("User must be authenticated to get notifications.")
+        return None
 
     @database_sync_to_async
     def get_general_notifications(self, page_number):

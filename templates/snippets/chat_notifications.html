@@ -28,7 +28,6 @@
 <p class="{% if not debug %}d-none{% else %}d-flex{% endif %}" id="id_chat_page_number">1</p>
 <p class="{% if not debug %}d-none{% else %}d-flex{% endif %}" id="id_chat_oldest_timestamp">{{initial_timestamp}}</p>
 
-
 <script type="text/javascript">
 
 	const CHAT_NOTIFICATION_INTERVAL = 4000
@@ -51,9 +50,10 @@
 	}
 
     function handleChatNotificationsData(notifications, new_page_number){
-
+    	setChatNotificationsCount(notifications)
     	if(notifications.length > 0){
     		clearNoChatNotificationsCard()
+    		
     		notifications.forEach(notification => {
 
 				// append to notifications list
@@ -68,9 +68,9 @@
 	}
 
 	function refreshChatNotificationsData(notifications){
-		// console.log("REFRESHING notifications:" + notifications)
-		// clear the list because we are refreshing the visible notifications and also appending new ones
+		setChatNotificationsCount(notifications)
 		if(notifications.length > 0){
+			// clear the list because we are refreshing the visible notifications and also appending new ones
 			clearChatNotifications() 
 			notifications.forEach(notification => {
 
@@ -200,6 +200,18 @@
 		}
 	}
 
+	function setChatNotificationsCount(notifications){
+		console.log("setChatNotificationsCount")
+		var countElement = document.getElementById("id_chat_notifications_count")
+		if(notifications.length > 0){
+			countElement.style.display = "block"
+			countElement.innerHTML = notifications.length
+		}
+		else{
+			countElement.style.display = "none"
+		}
+	}
+
 	/*
 		Ex: "Hey what's up?"
 		Ex: "This is a message from John. How are you..."
@@ -301,9 +313,20 @@
 			div.appendChild(span)
 			card.appendChild(div)
 			notificationContainer.appendChild(card)
+
+			setChatNotificationsCount([])
 		}
 	}
 
 
+	function setInitialTimestamp(){
+		// ('%Y-%m-%d %H:%M:%S.%f')
+		var today = new Date();
+		var date = today.getFullYear()+'-'+(today.getMonth()+1)+'-'+today.getDate() + " " + today.getHours() + ":" + today.getMinutes() + ":" + today.getSeconds()
+		document.getElementById("id_chat_oldest_timestamp").innerHTML = date
+
+	}
+
+	setInitialTimestamp()
 
 </script>

@@ -6,6 +6,8 @@
 GENERAL_MSG_TYPE_NOTIFICATIONS_PAYLOAD = 0  # New 'general' notifications data payload incoming
 GENERAL_MSG_TYPE_PAGINATION_EXHAUSTED = 1  # No more 'general' notifications to retrieve
 GENERAL_MSG_TYPE_NOTIFICATIONS_REFRESH_PAYLOAD = 2  # Retrieved all 'general' notifications newer than the oldest visible on screen
+GENERAL_MSG_TYPE_REFRESH_NOTIFICATIONS = 3  # Send msg to the template to refresh the general notifications currently in view
+GENERAL_MSG_TYPE_GET_UNREAD_NOTIFICATIONS_COUNT = 4  # Send the number of unread "general" notifications to the template
 
 
 
