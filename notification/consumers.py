@@ -60,6 +60,7 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
         command = content.get("command", None)
         print("NotificationConsumer: receive_json. Command: " + command)
         try:
+            print("NEW PAYLOAD")
             if command == "get_general_notifications":
                 await self.display_progress_bar(True)
                 payload = await self.get_general_notifications(content.get("page_number", None))
@@ -103,7 +104,6 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
                 try:
                     payload = await self.refresh_chat_notifications(content['oldest_timestamp'])
                     if payload == None:
-                        print("PAYLOAD IS NONE??...")
                         raise NotificationClientError("Something went wrong. Try refreshing the browser.")
                     else:
                         payload = json.loads(payload)
@@ -120,6 +120,7 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
             elif command == "accept_friend_request":
                 notification_id = content['notification_id']
                 payload = await self.accept_friend_request(notification_id)
+                print("ACCEPT: accept_friend_request")
                 if payload == None:
                     raise NotificationClientError("Something went wrong. Try refreshing the browser.")
                 else:

@@ -5,6 +5,7 @@ from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
+from django.utils import timezone
 
 
 from notification.models import Notification
@@ -151,6 +152,7 @@ def increment_unread_msg_count(sender, instance, **kwargs):
             try:
                 notification = Notification.objects.get(target=instance.user, content_type=content_type, object_id=instance.id)
                 notification.verb = instance.most_recent_message
+                notification.timestamp = timezone.now()
                 notification.save()
             except Notification.DoesNotExist:
                 instance.notifications.create(

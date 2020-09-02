@@ -183,6 +183,7 @@
 <script type="text/javascript">
 
 	function sendAcceptFriendRequestToSocket(notification_id){
+		console.log("ACCEPT: " + notification_id)
 		notificationSocket.send(JSON.stringify({
 			"command": "accept_friend_request",
 			"notification_id": notification_id,
@@ -196,7 +197,7 @@
 		}));
 	}
 
-	function redirect(url){
+	function generalRedirect(url){
 		window.location.href = url
 	}
 
@@ -284,7 +285,7 @@
 	function createFriendListElement(notification, notificationContainer){
 		card = createGeneralNotificationCard()
 		card.addEventListener("click", function(){
-			redirect(notification['actions']['redirect_url'])
+			generalRedirect(notification['actions']['redirect_url'])
 		})
 
 		var div = document.createElement("div")
@@ -325,7 +326,7 @@
 		// assign id b/c we need to find this div if they accept/decline the friend request
 		card.id = "id_notification_" + notification['notification_id']
 		card.addEventListener("click", function(){
-			redirect(notification['actions']['redirect_url'])
+			generalRedirect(notification['actions']['redirect_url'])
 		})
 
 		// Is the friend request PENDING? (not answered yet)

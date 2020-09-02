@@ -165,7 +165,7 @@
 <script type="text/javascript">
 
 
-	function redirect(url){
+	function chatRedirect(url){
 		window.location.href = url
 	}
 
@@ -224,7 +224,7 @@
 		card = createChatNotificationCard()
 		card.addEventListener("click", function(){
 			console.log("click: " + notification['actions']['redirect_url'])
-			redirect(notification['actions']['redirect_url'])
+			chatRedirect(notification['actions']['redirect_url'])
 		})
 
 		var div1 = document.createElement("div")

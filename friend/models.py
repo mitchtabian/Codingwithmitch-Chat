@@ -4,6 +4,7 @@ from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
+from django.utils import timezone
 
 from notification.models import Notification
 
@@ -112,6 +113,7 @@ class FriendRequest(models.Model):
 			receiver_notification.is_active = False
 			receiver_notification.redirect_url = f"{settings.BASE_URL}/account/{self.sender.pk}/"
 			receiver_notification.verb = f"You accepted {self.sender.username}'s friend request."
+			receiver_notification.timestamp = timezone.now()
 			receiver_notification.save()
 
 			receiver_friend_list.add_friend(self.sender)
@@ -152,6 +154,7 @@ class FriendRequest(models.Model):
 		notification.redirect_url = f"{settings.BASE_URL}/account/{self.sender.pk}/"
 		notification.verb = f"You declined {self.sender}'s friend request."
 		notification.image_url = self.sender.profile_image.url
+		notification.timestamp = timezone.now()
 		notification.save()
 
 		# Create notification for SENDER
@@ -183,6 +186,7 @@ class FriendRequest(models.Model):
 
 		notification = Notification.objects.get(target=self.receiver, content_type=content_type, object_id=self.id)
 		notification.verb = f"{self.sender.username} cancelled the friend request sent to you."
+		notification.timestamp = timezone.now()
 		notification.save()
 
 	@property

@@ -19,7 +19,7 @@ class Notification(models.Model):
 	verb 						= models.CharField(max_length=255, unique=False, blank=True, null=True)
 
 	# When the notification was created/updated
-	timestamp 					= models.DateTimeField(auto_now=True)
+	timestamp 					= models.DateTimeField(auto_now_add=True)
 
 	# Some notifications can be marked as "read"
 	read 						= models.BooleanField(default=False)
