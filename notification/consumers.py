@@ -69,6 +69,8 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
                     payload = json.loads(payload)
                     await self.send_general_notifications_payload(payload['notifications'], payload['new_page_number'])
                 await self.display_progress_bar(False)
+
+
             elif command == "refresh_general_notifications":
                 payload = await self.refresh_general_notifications(content['oldest_timestamp'])
                 if payload == None:
@@ -76,6 +78,8 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
                 else:
                     payload = json.loads(payload)
                     await self.send_general_refreshed_notifications_payload(payload['notifications'])
+
+
             elif command == "get_chat_notifications":
                 await self.display_progress_bar(True)
                 payload = await self.get_chat_notifications(content.get("page_number", None))
@@ -85,20 +89,52 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
                     payload = json.loads(payload)
                     await self.send_chat_notifications_payload(payload['notifications'], payload['new_page_number'])
                 await self.display_progress_bar(False)
+
+            
+
             elif command == "get_unread_general_notifications_count":
                 payload = await self.get_unread_general_notification_count()
                 if payload != None:
                     payload = json.loads(payload)
                     await self.send_unread_general_notification_count(payload['count'])
+            
+
             elif command == "refresh_chat_notifications":
-                payload = await self.refresh_chat_notifications(content['oldest_timestamp'])
+                try:
+                    payload = await self.refresh_chat_notifications(content['oldest_timestamp'])
+                    if payload == None:
+                        print("PAYLOAD IS NONE??...")
+                        raise NotificationClientError("Something went wrong. Try refreshing the browser.")
+                    else:
+                        payload = json.loads(payload)
+                        await self.send_chat_refreshed_notifications_payload(payload['notifications'])
+                except Exception as e:
+                    print("EXCEPTION: " + str(e))
+                
+            
+
+            elif command == "mark_notifications_read":
+                await self.mark_notifications_read()
+
+
+            elif command == "accept_friend_request":
+                notification_id = content['notification_id']
+                payload = await self.accept_friend_request(notification_id)
                 if payload == None:
                     raise NotificationClientError("Something went wrong. Try refreshing the browser.")
                 else:
                     payload = json.loads(payload)
-                    await self.send_chat_refreshed_notifications_payload(payload['notifications'])
-            elif command =="mark_notifications_read":
-                await self.mark_notifications_read()
+                    await self.send_updated_friend_request_notification(payload['notification'])
+
+            elif command == "decline_friend_request":
+                notification_id = content['notification_id']
+                payload = await self.decline_friend_request(notification_id)
+                if payload == None:
+                    raise NotificationClientError("Something went wrong. Try refreshing the browser.")
+                else:
+                    payload = json.loads(payload)
+                    await self.send_updated_friend_request_notification(payload['notification'])
+
         except Exception as e:
             await self.display_progress_bar(False)
             # Catch any errors and send it back
@@ -113,6 +149,21 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
             await self.send_json(errorData)
 
 
+
+    async def send_updated_friend_request_notification(self, notification):
+        """
+        After a friend request is accepted or declined, send the updated notification to template
+        payload contains 'notification' and 'response':
+            1. payload['notification']
+            2. payload['response']
+        """
+        await self.send_json(
+            {
+                "general_msg_type": GENERAL_MSG_TYPE_UPDATED_NOTIFICATION,
+                "notification": notification,
+            },
+        )
+
     async def send_unread_general_notification_count(self, count):
         """
         Send the number of unread "general" notifications to the template
@@ -124,15 +175,6 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
             },
         )
 
-    # async def refresh_general_notifications(self):
-    #     """
-    #     Send msg to the template to refresh the general notifications currently in view
-    #     """
-    #     await self.send_json(
-    #         {
-    #             "general_msg_type": GENERAL_MSG_TYPE_REFRESH_NOTIFICATIONS,
-    #         },
-    #     )
 
     async def general_pagination_exhausted(self):
         """
@@ -188,6 +230,9 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
         Called by receive_json when ready to send a json array of the chat notifications
         """
         print("NotificationConsumer: send_chat_notifications_payload")
+        print("------------------------------------------")
+        print(str(notifications))
+        print(str(new_page_number))
         await self.send_json(
             {
                 "chat_msg_type": CHAT_MSG_TYPE_NOTIFICATIONS_PAYLOAD,
@@ -216,6 +261,54 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
                 "progress_bar": shouldDisplay,
             },
         )
+
+    @database_sync_to_async
+    def decline_friend_request(self, notification_id):
+        """
+        Decline a friend request
+        """
+        payload = {}
+        user = self.scope["user"]
+        if user.is_authenticated:
+            try:
+                notification = Notification.objects.get(pk=notification_id)
+                friend_request = notification.content_object
+                # confirm this is the correct user
+                if friend_request.receiver == user:
+                    # accept the request and get the updated notification
+                    updated_notification = friend_request.decline()
+
+                    # return the notification associated with this FriendRequest
+                    s = LazyNotificationEncoder()
+                    payload['notification'] = s.serialize([updated_notification])[0]
+                    return json.dumps(payload)
+            except Notification.DoesNotExist:
+                raise NotificationClientError("An error occurred with that notification. Try refreshing the browser.")
+        return None
+
+    @database_sync_to_async
+    def accept_friend_request(self, notification_id):
+        """
+        Accept a friend request
+        """
+        payload = {}
+        user = self.scope["user"]
+        if user.is_authenticated:
+            try:
+                notification = Notification.objects.get(pk=notification_id)
+                friend_request = notification.content_object
+                # confirm this is the correct user
+                if friend_request.receiver == user:
+                    # accept the request and get the updated notification
+                    updated_notification = friend_request.accept()
+
+                    # return the notification associated with this FriendRequest
+                    s = LazyNotificationEncoder()
+                    payload['notification'] = s.serialize([updated_notification])[0]
+                    return json.dumps(payload)
+            except Notification.DoesNotExist:
+                raise NotificationClientError("An error occurred with that notification. Try refreshing the browser.")
+        return None
 
 
     @database_sync_to_async

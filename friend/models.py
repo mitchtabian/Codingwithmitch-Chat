@@ -31,8 +31,6 @@ class FriendList(models.Model):
 				image_url=account.profile_image.url,
 				redirect_url=f"{settings.BASE_URL}/account/{account.pk}/",
 				verb=f"You are now friends with {account.username}.",
-				positive_action_object=None,
-				negative_action_object=None,
 				content_type=content_type,
 			)
 
@@ -58,8 +56,6 @@ class FriendList(models.Model):
 			image_url=self.user.profile_image.url,
 			redirect_url=f"{settings.BASE_URL}/account/{self.user.pk}/",
 			verb=f"You are no longer friends with {self.user.username}.",
-			positive_action_object=None,
-			negative_action_object=None,
 			content_type=content_type,
 		)
 
@@ -69,8 +65,6 @@ class FriendList(models.Model):
 			image_url=removee.profile_image.url,
 			redirect_url=f"{settings.BASE_URL}/account/{removee.pk}/",
 			verb=f"You are no longer friends with {removee.username}.",
-			positive_action_object=None,
-			negative_action_object=None,
 			content_type=content_type,
 		)
 
@@ -116,8 +110,6 @@ class FriendRequest(models.Model):
 			# Update notification for RECEIVER
 			receiver_notification = Notification.objects.get(target=self.receiver, content_type=content_type, object_id=self.id)
 			receiver_notification.is_active = False
-			receiver_notification.positive_action_object = None
-			receiver_notification.negative_action_object = None
 			receiver_notification.redirect_url = f"{settings.BASE_URL}/account/{self.sender.pk}/"
 			receiver_notification.verb = f"You accepted {self.sender.username}'s friend request."
 			receiver_notification.save()
@@ -133,8 +125,6 @@ class FriendRequest(models.Model):
 					image_url=self.receiver.profile_image.url,
 					redirect_url=f"{settings.BASE_URL}/account/{self.receiver.pk}/",
 					verb=f"{self.receiver.username} accepted your friend request.",
-					positive_action_object=None,
-					negative_action_object=None,
 					content_type=content_type,
 				)
 
@@ -159,8 +149,6 @@ class FriendRequest(models.Model):
 		# Update notification for RECEIVER
 		notification = Notification.objects.get(target=self.receiver, content_type=content_type, object_id=self.id)
 		notification.is_active = False
-		notification.positive_action_object = None
-		notification.negative_action_object = None
 		notification.redirect_url = f"{settings.BASE_URL}/account/{self.sender.pk}/"
 		notification.verb = f"You declined {self.sender}'s friend request."
 		notification.image_url = self.sender.profile_image.url
@@ -172,8 +160,6 @@ class FriendRequest(models.Model):
 			verb=f"{self.receiver.username} declined your friend request.",
 			image_url=self.receiver.profile_image.url,
 			redirect_url=f"{settings.BASE_URL}/account/{self.receiver.pk}/",
-			positive_action_object=None,
-			negative_action_object=None,
 			content_type=content_type,
 		)
 
@@ -192,15 +178,11 @@ class FriendRequest(models.Model):
 			verb=f"You cancelled the friend request to {self.receiver.username}.",
 			image_url=self.receiver.profile_image.url,
 			redirect_url=f"{settings.BASE_URL}/account/{self.receiver.pk}/",
-			positive_action_object=None,
-			negative_action_object=None,
 			content_type=content_type,
 		)
 
 		notification = Notification.objects.get(target=self.receiver, content_type=content_type, object_id=self.id)
 		notification.verb = f"{self.sender.username} cancelled the friend request sent to you."
-		notification.positive_action_object = None
-		notification.negative_action_object = None
 		notification.save()
 
 	@property
@@ -214,15 +196,11 @@ class FriendRequest(models.Model):
 @receiver(post_save, sender=FriendRequest)
 def create_notification(sender, instance, created, **kwargs):
 	if created:
-		positive_action_object = settings.BASE_URL + "/friend/friend_request_accept/" + str(instance.pk) + "/"
-		negative_action_object = settings.BASE_URL + "/friend/friend_request_decline/" + str(instance.pk) + "/"
 		instance.notifications.create(
 			target=instance.receiver,
 			image_url=instance.sender.profile_image.url,
 			redirect_url=f"{settings.BASE_URL}/account/{instance.sender.pk}/",
 			verb=f"{instance.sender.username} sent you a friend request.",
-			positive_action_object=positive_action_object,
-			negative_action_object=negative_action_object,
 			content_type=instance,
 		)
 

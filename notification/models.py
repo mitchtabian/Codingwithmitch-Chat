@@ -18,14 +18,8 @@ class Notification(models.Model):
 	# statement describing the notification (ex: "Mitch sent you a friend request")
 	verb 						= models.CharField(max_length=255, unique=False, blank=True, null=True)
 
-	# URL for interacting positively with the notification (ex: Accept a friend request)
-	positive_action_object		= models.URLField(max_length=500, null=True, unique=False, blank=True, help_text="The URL to be executed if accepted by the Target (User).")
-	
-	# URL for interacting negatively with the notification (ex: Decline a friend request)
-	negative_action_object		= models.URLField(max_length=500, null=True, unique=False, blank=True, help_text="The URL to be executed if declined by the Target (User).")
-
 	# When the notification was created/updated
-	timestamp 					= models.DateTimeField(auto_now_add=True)
+	timestamp 					= models.DateTimeField(auto_now=True)
 
 	# Some notifications can be marked as "read"
 	read 						= models.BooleanField(default=False)
@@ -41,6 +35,19 @@ class Notification(models.Model):
 
 	def get_content_object_type(self):
 		return str(self.content_object.get_cname)
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

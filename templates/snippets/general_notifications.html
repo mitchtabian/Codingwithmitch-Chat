@@ -6,9 +6,12 @@
 		height: 50px;
 		width: 50px;
 	}
-	.card:hover{
+	.general-card:hover{
 		cursor: pointer;
 		background: #f2f2f2;
+	}
+	.general-card{
+		border-bottom: 1px solid var(--main-background-color);
 	}
 	.timestamp-text{
 		color: var(--secondary-text-color);
@@ -36,7 +39,7 @@
 	
     function getFirstGeneralNotificationsPage(){
 		if("{{request.user.is_authenticated}}"){
-			socket.send(JSON.stringify({
+			notificationSocket.send(JSON.stringify({
 				"command": "get_general_notifications",
 				"page_number": "1",
 			}));
@@ -47,7 +50,7 @@
 	 function getUnreadGeneralNotificationsCount(){
 	 	console.log("getUnreadGeneralNotificationsCount")
 		if("{{request.user.is_authenticated}}"){
-			socket.send(JSON.stringify({
+			notificationSocket.send(JSON.stringify({
 				"command": "get_unread_general_notifications_count",
 			}));
 		}
@@ -95,7 +98,7 @@
 	function refreshGeneralNotifications(){
 		oldestTimestamp = document.getElementById("id_general_oldest_timestamp").innerHTML
 		if("{{request.user.is_authenticated}}"){
-			socket.send(JSON.stringify({
+			notificationSocket.send(JSON.stringify({
 				"command": "refresh_general_notifications",
 				"oldest_timestamp": oldestTimestamp,
 			}));
@@ -107,7 +110,7 @@
 		console.log("getNextGeneralNotificationsPage: page number: " + pageNumber)
 		// -1 means exhausted or a query is currently in progress
 		if("{{request.user.is_authenticated}}" && pageNumber != "-1"){
-			socket.send(JSON.stringify({
+			notificationSocket.send(JSON.stringify({
 				"command": "get_general_notifications",
 				"page_number": pageNumber,
 			}));
@@ -117,7 +120,7 @@
 	function setGeneralNotificationsAsRead(){
 		if("{{request.user.is_authenticated}}"){
 			oldestTimestamp = document.getElementById("id_general_oldest_timestamp").innerHTML
-			socket.send(JSON.stringify({
+			notificationSocket.send(JSON.stringify({
 				"command": "mark_notifications_read",
 			}));
 			getUnreadGeneralNotificationsCount()
@@ -179,67 +182,22 @@
 
 <script type="text/javascript">
 
-	// Used to delegate clicks to children if they are available (ex: accept/decline friend request)
-	var childLock = false
-
-	/*
-		Did not use Ajax for accepting/declining friend requests since there is already a url built for that. Simpler this way.
-	*/
-	function acceptFriendRequest(url){
-		childLock = true
-		$.ajax({
-			type: 'GET',
-			dataType: "json",
-			url: url,
-			timeout: GENERAL_NOTIFICATION_TIMEOUT,
-			cache: false,
-			success: function(data) {
-				console.log("SUCCESS", data)
-				console.log("updated notification: " + data['notification'])
-				updateGeneralNotificationDiv(data['notification'])
-			},
-			error: function(data) {
-				console.error("ERROR...", data)
-				// alert("Something went wrong.")
-			},
-			complete: function(){
-				childLock = false
-			}
-		});
+	function sendAcceptFriendRequestToSocket(notification_id){
+		notificationSocket.send(JSON.stringify({
+			"command": "accept_friend_request",
+			"notification_id": notification_id,
+		}));
 	}
 
-	function declineFriendRequest(url){
-		childLock = true
-		$.ajax({
-			type: 'GET',
-			dataType: "json",
-			url: url,
-			timeout: GENERAL_NOTIFICATION_TIMEOUT,
-			cache: false,
-			success: function(data) {
-				console.log("SUCCESS", data)
-				console.log("updated notification: " + data['notification'])
-				updateGeneralNotificationDiv(data['notification'])
-			},
-			error: function(data) {
-				console.error("ERROR...", data)
-				// alert("Something went wrong.")
-			},
-			complete: function(){
-				childLock = false
-			}
-		});
+	function sendDeclineFriendRequestToSocket(notification_id){
+		notificationSocket.send(JSON.stringify({
+			"command": "decline_friend_request",
+			"notification_id": notification_id,
+		}));
 	}
 
 	function redirect(url){
-		if(!childLock){
-			// window.location.assign(url)
-			window.location.href = url
-		}
-	}
-
-	function none(){
-		childLock = false
+		window.location.href = url
 	}
 
 	/*
@@ -324,9 +282,8 @@
 				- Will redirect to the other users account profile
 	*/
 	function createFriendListElement(notification, notificationContainer){
-		card = createNotificationCard()
+		card = createGeneralNotificationCard()
 		card.addEventListener("click", function(){
-			console.log("click: " + notification['actions']['redirect_url'])
 			redirect(notification['actions']['redirect_url'])
 		})
 
@@ -361,18 +318,13 @@
 		Params:
 			1. redirect_url
 				- Will redirect to the other users profile
-			2. positive_action_object
-				- accepts the friend request
-			3. negative_action_object
-				- declines the friend request
 	*/
 	function createFriendRequestElement(notification, notificationContainer){
-		card = createNotificationCard()
+		card = createGeneralNotificationCard()
 
 		// assign id b/c we need to find this div if they accept/decline the friend request
 		card.id = "id_notification_" + notification['notification_id']
 		card.addEventListener("click", function(){
-			console.log("click: " + notification['actions']['redirect_url'])
 			redirect(notification['actions']['redirect_url'])
 		})
 
@@ -399,8 +351,9 @@
 			pos_action.classList.add("btn", "btn-primary", "mr-2")
 			pos_action.href = "#"
 			pos_action.innerHTML = "Accept"
-			pos_action.addEventListener("click", function(){
-				acceptFriendRequest(notification['actions']['positive_action_object'])
+			pos_action.addEventListener("click", function(e){
+				e.stopPropagation();
+				sendAcceptFriendRequestToSocket(notification['notification_id'])
 			})
 			div2.appendChild(pos_action)
 
@@ -408,8 +361,9 @@
 			neg_action.classList.add("btn", "btn-secondary")
 			neg_action.href = "#"
 			neg_action.innerHTML = "Decline"
-			neg_action.addEventListener("click", function(){
-				declineFriendRequest(notification['actions']['negative_action_object'])
+			neg_action.addEventListener("click", function(e){
+				e.stopPropagation();
+				sendDeclineFriendRequestToSocket(notification['notification_id'])
 			})
 			div2.appendChild(neg_action)
 			card.appendChild(div2)
@@ -448,12 +402,12 @@
 	/*
 		The card that each notification sits in
 	*/
-	function createNotificationCard(cardId){
+	function createGeneralNotificationCard(cardId){
 		var card = document.createElement("div")
 		if(cardId != "undefined"){
 			card.id = cardId
 		}
-		card.classList.add("d-flex", "flex-column", "align-items-start", "card" ,"p-4")
+		card.classList.add("d-flex", "flex-column", "align-items-start", "general-card", "p-4")
 		return card
 	}
 
@@ -471,7 +425,6 @@
 		Clear all the current notifications data
 	*/
 	function clearGeneralNotifications(){
-		childLock = false
 		notificationContainer = document.getElementById("id_general_notifications_container")
 		while (notificationContainer.hasChildNodes()) {
 			notificationContainer.removeChild(notificationContainer.lastChild);
@@ -483,7 +436,7 @@
 		var notificationContainer = document.getElementById("id_general_notifications_container")
 
 		if(notificationContainer != null){
-			card = createNotificationCard("id_no_general_notifications")
+			card = createGeneralNotificationCard("id_no_general_notifications")
 
 			var div = document.createElement("div")
 			div.classList.add("d-flex", "flex-row", "align-items-start")
@@ -500,7 +453,28 @@
 	function setInitialTimestamp(){
 		// ('%Y-%m-%d %H:%M:%S.%f')
 		var today = new Date();
-		var date = today.getFullYear()+'-'+(today.getMonth()+1)+'-'+today.getDate() + " " + today.getHours() + ":" + today.getMinutes() + ":" + today.getSeconds()
+		var month = today.getMonth()+1
+		if(month.toString().length == 1){
+			month = "0" + month
+		}
+		var day = today.getDate()
+		if(day.toString().length == 1){
+			day = "0" + day
+		}
+		var hours = today.getHours()
+		if(hours.toString().length == 1){
+			hours = "0" + hours
+		}
+		var minutes = today.getMinutes()
+		if(minutes.toString().length == 1){
+			minutes = "0" + minutes
+		}
+		var seconds = today.getSeconds()
+		if(seconds.toString().length == 1){
+			seconds = "0" + seconds
+		}
+		var ms = "000000"
+		var date = today.getFullYear()+'-'+month+'-'+day + " " + hours + ":" + minutes + ":" + seconds + "." + ms
 		document.getElementById("id_general_oldest_timestamp").innerHTML = date
 
 	}

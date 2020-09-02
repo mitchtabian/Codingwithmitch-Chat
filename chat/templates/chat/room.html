@@ -8,7 +8,7 @@
 <style type="text/css">
 	.chat-log {
 		height: 300px;
-		border: 1px solid #000;
+		/*border: 1px solid #000;*/
 		overflow-x: hidden;
 		overflow-y: auto;
 		padding: 10px;
@@ -20,7 +20,7 @@
 	#id_connected_users_container{
 		flex-basis: 150px;
 		height: 300px;
-		border: 1px solid #000;
+		/*border: 1px solid #000;*/
 		overflow-x: hidden;
 		overflow-y: auto;
 		padding: 10px;
@@ -39,10 +39,14 @@
 		height: 300px;
 	}
 	.chat-message-input-container{
-		border: 1px solid #000;
+		/*border: 1px solid #000;*/
+		outline: none;
+		box-shadow: none;
 	}
 	.chat-message-input{
 		outline: none;
+		border: 1px solid #fff;
+		border-top: 2px solid var(--main-background-color);
 	}
 	.username-span{
 		font-weight: 600;
@@ -86,40 +90,52 @@
 	.material-icons:hover{
 		cursor: pointer;
 	}
+	.card{
+		border-radius: 12px;
+	}
 </style>
 
 <div class="container">
-	<h3 class="d-flex flex-row align-items-center" id="id_room_title">
+	<div class="card">
+		<div class="d-flex flex-row align-items-center card-header" id="id_room_title">
 		{% if request.user == user1 %}
-			<img class="profile-image rounded-circle img-fluid" src="{{user2.profile_image.url}}"><a href="{% url 'account:view' user_id=user2.id%}" target="_blank">&nbsp;{{user2.username}}&nbsp;
-		{% else %}
-			<img class="profile-image rounded-circle img-fluid" src="{{user1.profile_image.url}}"><a href="{% url 'account:view' user_id=user1.id%}" target="_blank">&nbsp;{{user1.username}}&nbsp;
-		{% endif %}
+		<a class="d-flex flex-row" href="{% url 'account:view' user_id=user2.id%}" target="_blank">
+			<img class="profile-image rounded-circle img-fluid" src="{{user2.profile_image.url}}">
+			<h3>&nbsp;{{user2.username}}&nbsp;</h3>
 		</a>
-	</h3>
-	<div class="d-flex flex-row" >
-		<div class="d-flex flex-column flex-grow-1" id="id_chat_log_container">
-			
-			<div class="d-flex flex-row justify-content-center" id="id_chatroom_loading_spinner_container">
-				<div class="spinner-border text-primary"  id="id_chatroom_loading_spinner" role="status"  style="display: none; ">
-					<span class="sr-only">Loading...</span>
-				</div>
-			</div>
-			<div class="d-flex chat-log" id="id_chat_log">
+		{% else %}
+		<a class="d-flex flex-row" href="{% url 'account:view' user_id=user1.id%}" target="_blank">
+			<img class="profile-image rounded-circle img-fluid" src="{{user1.profile_image.url}}">
+			<h3>&nbsp;{{user1.username}}&nbsp;</h3>
+		</a>
+		{% endif %}
+		
+		</div>
+		<div class="d-flex flex-row card-body p-1">
+			<div class="d-flex flex-column flex-grow-1" id="id_chat_log_container">
 				
-			</div>
-			<span class="{% if not debug %}d-none{% endif %} page-number" id="id_page_number">1</span>
-			<span class="{% if not debug %}d-none{% endif %} has-joined-room" id="id_has_joined_room">False</span>
-			
-			<div class="d-flex flex-row chat-message-input-container">
-				<input class="flex-grow-1 chat-message-input" id="id_chat_message_input" type="text">
-				<button class="btn btn-primary chat-message-submit-button">
-					<span id="id_chat_message_submit" class="material-icons">send
-					</span>
-				</button>
+				<div class="d-flex flex-row justify-content-center" id="id_chatroom_loading_spinner_container">
+					<div class="spinner-border text-primary"  id="id_chatroom_loading_spinner" role="status"  style="display: none; ">
+						<span class="sr-only">Loading...</span>
+					</div>
+				</div>
+				<div class="d-flex chat-log" id="id_chat_log">
+					
+				</div>
+				<span class="{% if not debug %}d-none{% endif %} page-number" id="id_page_number">1</span>
+				<span class="{% if not debug %}d-none{% endif %} has-joined-room" id="id_has_joined_room">False</span>
+				
+				<div class="d-flex flex-row chat-message-input-container">
+					<input class="flex-grow-1 chat-message-input" id="id_chat_message_input" type="text">
+					<button class="btn btn-primary chat-message-submit-button">
+						<span id="id_chat_message_submit" class="material-icons">send
+						</span>
+					</button>
+				</div>
 			</div>
 		</div>
 	</div>
+	
 </div>
 
 <script>
@@ -155,7 +171,7 @@
 					success: function(data) {
 						console.log("SUCCESS", data)
 						var newMessages = data['messages']
-						if (newMessages != null){
+						if (newMessages != null && newMessages != "None"){
 							newMessages.forEach(message => appendChatMessage(0, message['message'], message['username'], message['user_id'], message['profile_image'], true, false))
 							var newPageNumber = data['page_number']
 							setPageNumber(newPageNumber)
@@ -270,12 +286,12 @@
 	var ws_scheme = window.location.protocol == "https:" ? "wss" : "ws";
 	var ws_path = ws_scheme + '://' + window.location.host + "/chat/{{room_id}}/";
 	// console.log("Connecting to " + ws_path);
-	var socket = new WebSocket(ws_path);
+	var chatSocket = new WebSocket(ws_path);
 
 	// Handle incoming messages
-	socket.onmessage = function(message) {
+	chatSocket.onmessage = function(message) {
 		// Decode the JSON
-		console.log("Got websocket message " + message.data);
+		console.log("Got chat websocket message " + message.data);
 		// console.log("Got websocket message.");
 		var data = JSON.parse(message.data);
 		// Handle errors (ClientError)
@@ -305,33 +321,33 @@
 		}
 	};
 
-	socket.addEventListener("open", function(e){
-		console.log("OPEN")
+	chatSocket.addEventListener("open", function(e){
+		console.log("ChatSocket OPEN")
 		// join chat room
 		if("{{request.user.is_authenticated}}"){
-			socket.send(JSON.stringify({
+			chatSocket.send(JSON.stringify({
 				"command": "join",
 				"room": "{{room_id}}"
 			}));
 		}
 	})
 
-	socket.onclose = function(e) {
+	chatSocket.onclose = function(e) {
 		console.error('Chat socket closed unexpectedly');
 	};
 
-	socket.onOpen = function(e){
-		console.log("onOpen", e)
+	chatSocket.onOpen = function(e){
+		console.log("ChatSocket onOpen", e)
 	}
 
-	socket.onerror = function(e){
-        console.log('error', e)
+	chatSocket.onerror = function(e){
+        console.log('ChatSocket error', e)
     }
 
-    if (socket.readyState == WebSocket.OPEN) {
-    	console.log("OPEN")
-    } else if (socket.readyState == WebSocket.CONNECTING){
-        console.log("connecting..")
+    if (chatSocket.readyState == WebSocket.OPEN) {
+    	console.log("ChatSocket OPEN")
+    } else if (chatSocket.readyState == WebSocket.CONNECTING){
+        console.log("ChatSocket connecting..")
     }
 
     
@@ -345,11 +361,11 @@
 	document.querySelector('#id_chat_message_submit').onclick = function(e) {
 		const messageInputDom = document.querySelector('#id_chat_message_input');
 		const message = messageInputDom.value;
-		socket.send(JSON.stringify({
+		chatSocket.send(JSON.stringify({
 			"command": "send",
 			"room": "{{room_id}}",
 			"message": message
-			}));
+		}));
 		messageInputDom.value = '';
 	};
 
