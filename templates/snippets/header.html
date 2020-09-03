@@ -70,7 +70,7 @@
 			<a class="p-2 text-dark" href="{% url 'home' %}">Home</a>
 		</h5>
 		<form class="search-bar justify-content-start" onsubmit="return executeQuery();">
-			<input type="text" class="form-control" name="q" id="id_q" placeholder="Search...">
+			<input type="text" class="form-control" name="q" id="id_q_large" placeholder="Search...">
 		</form>
 
 		<div class="d-flex flex-row-reverse flex-grow-1">
@@ -121,8 +121,8 @@
 		<h5 class="font-weight-normal">
 		<a class="p-2 text-dark" href="{% url 'home' %}">Home</a>
 		</h5>
-		<form class="search-bar flex-grow-1" onsubmit="return executeQuery();">
-		<input type="text" class="form-control" name="q" id="id_q" placeholder="Search...">
+		<form class="search-bar justify-content-start" onsubmit="return executeQuery();">
+			<input type="text" class="form-control" name="q" id="id_q_small" placeholder="Search...">
 		</form>
 		<div class="d-flex flex-row-reverse flex-grow-1">
 			<nav class="">
@@ -156,6 +156,7 @@
 <script type="text/javascript">
 	// Correctly decide between ws:// and wss://
 	var ws_scheme = window.location.protocol == "https:" ? "wss" : "ws";
+	// var ws_path = ws_scheme + '://' + window.location.host + ":8001/"; // PRODUCTION
 	var ws_path = ws_scheme + '://' + window.location.host + "/";
 	// console.log("Connecting to " + ws_path);
 	var notificationSocket = new WebSocket(ws_path);
@@ -257,15 +258,22 @@
     }
 
 </script>
+
 <script type="text/javascript">
-	document.getElementById("id_q").value = "{{query}}"
-</script>
-<script>
-function executeQuery() {
-    var query = document.getElementById('id_q').value;
-    window.location.replace("{% url 'search' %}?q=" + query)
-    return false
-}
+	function executeQuery() {
+		var query = ""
+		if(window.innerWidth <= 991){
+			query = document.getElementById('id_q_small').value;
+		}
+		else{
+			query = document.getElementById('id_q_large').value;
+		}
+	    window.location.replace("{% url 'search' %}?q=" + query)
+	    return false
+	}
 
 </script>
+
 <!-- End Header -->
+
+

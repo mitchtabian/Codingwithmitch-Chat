@@ -239,7 +239,7 @@
 				dataType: "json",
 				url: "{% url 'account:crop_image' user_id=form.initial.id %}",
 				data: requestData,
-				timeout: 5000,
+				timeout: 10000,
 				success: function(data) {
 					if(data.result == "success"){
 						document.getElementById("id_cancel").click()

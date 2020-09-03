@@ -2,7 +2,6 @@ from django.core.serializers.python import Serializer
 from django.utils.encoding import smart_text 
 
 
-
 class LazyAccountEncoder(Serializer):
     def get_dump_object(self, obj):
         dump_object = {}

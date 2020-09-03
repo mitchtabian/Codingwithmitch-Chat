@@ -1,5 +1,5 @@
 from django.db import models
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_delete
 from django.dispatch import receiver
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django.core.files.storage import FileSystemStorage
@@ -7,7 +7,6 @@ from django.conf import settings
 import os
 
 from friend.models import FriendList
-
 
 
 class MyAccountManager(BaseUserManager):
@@ -40,18 +39,21 @@ class MyAccountManager(BaseUserManager):
 
 
 def get_profile_image_filepath(self, filename):
-	return 'profile_images/' + str(self.pk) + '/' + filename
+	return 'profile_images/' + str(self.pk) + '/profile_image.png'
 
 def get_default_profile_image():
-	return "profile_images/logo_1080_1080.png"
+	#return "profile_images/logo_1080_1080.png" # Development
+	return "codingwithmitch/logo_1080_1080.png" # Production
 
 
+# Redundant
 class OverwriteStorage(FileSystemStorage):
 
-    def get_available_name(self, name, max_length=None):
-        if self.exists(name):
-            os.remove(os.path.join(settings.MEDIA_ROOT, name))
-        return name
+	def get_available_name(self, name, max_length=None):
+		if self.exists(name):
+			os.remove(os.path.join(settings.MEDIA_ROOT, name))
+		return name
+
 
 class Account(AbstractBaseUser):
 	email 					= models.EmailField(verbose_name="email", max_length=60, unique=True)
@@ -62,7 +64,7 @@ class Account(AbstractBaseUser):
 	is_active				= models.BooleanField(default=True)
 	is_staff				= models.BooleanField(default=False)
 	is_superuser			= models.BooleanField(default=False)
-	profile_image			= models.ImageField(upload_to=get_profile_image_filepath, null=True, blank=True, default=get_default_profile_image, storage=OverwriteStorage(), max_length=50)
+	profile_image			= models.ImageField(max_length=255, upload_to=get_profile_image_filepath, null=True, blank=True, default=get_default_profile_image)
 	hide_email				= models.BooleanField(default=True)
 
 	USERNAME_FIELD = 'email'
@@ -88,8 +90,6 @@ class Account(AbstractBaseUser):
 @receiver(post_save, sender=Account)
 def user_save(sender, instance, **kwargs):
     FriendList.objects.get_or_create(user=instance)
-
-
 
 
 

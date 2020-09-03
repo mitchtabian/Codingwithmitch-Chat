@@ -43,29 +43,6 @@ def account_search_view(request, *args, **kwargs):
 
 
 
-def save_temp_profile_image_from_base64String(imageString, user):
-	INCORRECT_PADDING_EXCEPTION = "Incorrect padding"
-	try:
-		if not os.path.exists(settings.TEMP):
-			os.mkdir(settings.TEMP)
-		if not os.path.exists(settings.TEMP + "/" + str(user.pk)):
-			os.mkdir(settings.TEMP + "/" + str(user.pk))
-		url = os.path.join(settings.TEMP + "/" + str(user.pk),TEMP_PROFILE_IMAGE_NAME)
-		storage = FileSystemStorage(location=url)
-		image = base64.b64decode(imageString)
-		with storage.open('', 'wb+') as destination:
-			destination.write(image)
-			destination.close()
-		return url
-	except Exception as e:
-		print("exception: " + str(e))
-		if str(e) == INCORRECT_PADDING_EXCEPTION:
-			imageString += "=" * ((4 - len(imageString) % 4) % 4)
-			return save_temp_profile_image_from_base64String(imageString, user)
-	return None
-
-
-
 def account_view(request, *args, **kwargs):
 	"""
 	- Logic here is kind of tricky
@@ -245,11 +222,32 @@ def get_redirect_if_exists(request):
 
 
 
+def save_temp_profile_image_from_base64String(imageString, user):
+	INCORRECT_PADDING_EXCEPTION = "Incorrect padding"
+	try:
+		if not os.path.exists(settings.TEMP):
+			os.mkdir(settings.TEMP)
+		if not os.path.exists(settings.TEMP + "/" + str(user.pk)):
+			os.mkdir(settings.TEMP + "/" + str(user.pk))
+		url = os.path.join(settings.TEMP + "/" + str(user.pk),TEMP_PROFILE_IMAGE_NAME)
+		storage = FileSystemStorage(location=url)
+		image = base64.b64decode(imageString)
+		with storage.open('', 'wb+') as destination:
+			destination.write(image)
+			destination.close()
+		return url
+	except Exception as e:
+		print("exception: " + str(e))
+		if str(e) == INCORRECT_PADDING_EXCEPTION:
+			imageString += "=" * ((4 - len(imageString) % 4) % 4)
+			return save_temp_profile_image_from_base64String(imageString, user)
+	return None
+
+
 # save image to /temp/
 # load image with cv2
 # crop image with cv2
 # save image to /temp/
-
 def crop_image(request, *args, **kwargs):
 	payload = {}
 	user = request.user
@@ -270,32 +268,16 @@ def crop_image(request, *args, **kwargs):
 			crop_img = img[cropY:cropY+cropHeight, cropX:cropX+cropWidth]
 
 			cv2.imwrite(url, crop_img)
-			filename = os.path.basename(url)
-			mediaUrl = settings.BASE_URL + "/media/temp/" + str(user.pk) + "/" + filename
 
-			request = requests.get(mediaUrl, stream=True)
-
-			# Was the request OK?
-			if request.status_code != requests.codes.ok:
-				raise Exception("Something went wrong. Try another image.")
-
-			# Create a temporary file
-			lf = tempfile.NamedTemporaryFile()
-			# Read the streamed image in sections
-			for block in request.iter_content(1024 * 8):
-				# If no more file then stop
-				if not block:
-					break
-
-				# Write image block to temporary file
-				lf.write(block)
-
-			# Save the temporary image to the model#
-			# This saves the model so be sure that is it valid
-			user.profile_image.save("profile_image.png", files.File(lf))
+			# Save the cropped image to user model
+			user.profile_image.save("profile_image.png", files.File(open(url, 'rb')))
+			user.save()
 
 			payload['result'] = "success"
-			payload['cropped_profile_image'] = mediaUrl
+			payload['cropped_profile_image'] = user.profile_image.url
+
+			# delete temp file
+			os.remove(url)
 			
 		except Exception as e:
 			print("exception: " + str(e))
