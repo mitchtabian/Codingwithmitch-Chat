@@ -10,7 +10,8 @@
 			type: 'POST',
 			dataType: "json",
 			// url: "{% url 'chat:create-or-return-private-chat' %}",
-			url: "//127.0.0.1:8000/chat/create_or_return_private_chat/",
+			//url: "//127.0.0.1:8000/chat/create_or_return_private_chat/", // Dev
+			url: "{{BASE_URL}}/chat/create_or_return_private_chat/", // production
 			data: payload,
 			timeout: 5000,
 			success: function(data) {

@@ -284,7 +284,8 @@
 
 	// Correctly decide between ws:// and wss://
 	var ws_scheme = window.location.protocol == "https:" ? "wss" : "ws";
-	var ws_path = ws_scheme + '://' + window.location.host + "/chat/{{room_id}}/";
+	var ws_path = ws_scheme + '://' + window.location.host + "/chat/{{room_id}}/"; // development
+	//var ws_path = ws_scheme + '://' + window.location.host + ":8001/chat/{{room_id}}/"; // production
 	// console.log("Connecting to " + ws_path);
 	var chatSocket = new WebSocket(ws_path);
 

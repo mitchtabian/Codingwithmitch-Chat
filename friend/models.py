@@ -26,14 +26,18 @@ class FriendList(models.Model):
 
 			content_type = ContentType.objects.get_for_model(self)
 
+			test = Account.objects.get(pk=account.id)
+			print("--------------------------------------")
+			print("TEST URL: " + str(test.profile_image.url))
 			# Create notification
 			self.notifications.create(
 				target=self.user,
-				image_url=account.profile_image.url,
+				image_url=test.profile_image.url,
 				redirect_url=f"{settings.BASE_URL}/account/{account.pk}/",
 				verb=f"You are now friends with {account.username}.",
 				content_type=content_type,
 			)
+			self.save()
 
 	def remove_friend(self, account):
 		if account in self.friends.all():
@@ -117,7 +121,7 @@ class FriendRequest(models.Model):
 			receiver_notification.save()
 
 			receiver_friend_list.add_friend(self.sender)
-			receiver_friend_list.save()
+			# receiver_friend_list.save()
 			sender_friend_list = FriendList.objects.get(user=self.sender)
 			if sender_friend_list:
 
@@ -131,7 +135,7 @@ class FriendRequest(models.Model):
 				)
 
 				sender_friend_list.add_friend(self.receiver)
-				sender_friend_list.save()
+				# sender_friend_list.save()
 				self.is_active = False
 				self.save()
 			return receiver_notification

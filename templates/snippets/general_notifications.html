@@ -291,7 +291,7 @@
 		var div = document.createElement("div")
 		div.classList.add("d-flex", "flex-row", "align-items-start")
 
-		img = createProfileImageThumbnail(notification)
+		img = createGeneralProfileImageThumbnail(notification)
 		div.appendChild(img)
 
 		span = document.createElement("span")
@@ -336,7 +336,7 @@
 			div1 = document.createElement("div")
 			div1.classList.add("d-flex", "flex-row", "align-items-start")
 			
-			img = createProfileImageThumbnail(notification)
+			img = createGeneralProfileImageThumbnail(notification)
 			div1.appendChild(img)
 
 			span = document.createElement("span")
@@ -415,9 +415,10 @@
 	/*
 		Circular image icon that can be in a notification card
 	*/
-	function createProfileImageThumbnail(notification){
+	function createGeneralProfileImageThumbnail(notification){
 		img = document.createElement("img")
 		img.classList.add("notification-thumbnail-image", "img-fluid", "rounded-circle", "mr-2")
+		console.log("SETTING IMAGE: " + notification['from']['image_url'])
 		img.src = notification['from']['image_url']
 		return img
 	}

@@ -230,7 +230,7 @@
 		var div1 = document.createElement("div")
 		div1.classList.add("d-flex", "flex-row", "align-items-start")
 
-		img = createProfileImageThumbnail(notification)
+		img = createChatProfileImageThumbnail(notification)
 		div1.appendChild(img)
 
 		var div2 = document.createElement("div")
@@ -281,7 +281,7 @@
 	/*
 		Circular image icon that can be in a notification card
 	*/
-	function createProfileImageThumbnail(notification){
+	function createChatProfileImageThumbnail(notification){
 		img = document.createElement("img")
 		img.classList.add("notification-thumbnail-image", "img-fluid", "rounded-circle", "mr-2")
 		img.src = notification['from']['image_url']
