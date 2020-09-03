@@ -9,7 +9,6 @@ from django.utils import timezone
 from notification.models import Notification
 
 
-
 class FriendList(models.Model):
 
 	user 				= models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="user")
@@ -23,21 +22,18 @@ class FriendList(models.Model):
 	def add_friend(self, account):
 		if not account in self.friends.all():
 			self.friends.add(account)
-
 			content_type = ContentType.objects.get_for_model(self)
 
-			test = Account.objects.get(pk=account.id)
-			print("--------------------------------------")
-			print("TEST URL: " + str(test.profile_image.url))
 			# Create notification
 			self.notifications.create(
 				target=self.user,
-				image_url=test.profile_image.url,
+				image_url=account.profile_image.url,
 				redirect_url=f"{settings.BASE_URL}/account/{account.pk}/",
 				verb=f"You are now friends with {account.username}.",
 				content_type=content_type,
 			)
 			self.save()
+			
 
 	def remove_friend(self, account):
 		if account in self.friends.all():

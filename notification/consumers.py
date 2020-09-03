@@ -12,6 +12,7 @@ import json
 from time import sleep
 from enum import Enum
 
+
 from chat.models import UnreadChatRoomMessages
 from friend.models import FriendRequest, FriendList
 from notification.utils import LazyNotificationEncoder
@@ -52,15 +53,15 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
         print("NotificationConsumer: disconnect")
 
 
+
     async def receive_json(self, content):
         """
         Called when we get a text frame. Channels will JSON-decode the payload
         for us and pass it as the first argument.
         """
         command = content.get("command", None)
-        print("NotificationConsumer: receive_json. Command: " + command)
+        #print("NotificationConsumer: receive_json. Command: " + command)
         try:
-            print("NEW PAYLOAD")
             if command == "get_general_notifications":
                 await self.display_progress_bar(True)
                 payload = await self.get_general_notifications(content.get("page_number", None))
@@ -118,14 +119,18 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
 
 
             elif command == "accept_friend_request":
-                notification_id = content['notification_id']
-                payload = await self.accept_friend_request(notification_id)
-                print("ACCEPT: accept_friend_request")
-                if payload == None:
-                    raise NotificationClientError("Something went wrong. Try refreshing the browser.")
-                else:
-                    payload = json.loads(payload)
-                    await self.send_updated_friend_request_notification(payload['notification'])
+                try:
+                    notification_id = content['notification_id']
+                    payload = await self.accept_friend_request(notification_id)
+                    print("ACCEPT: accept_friend_request")
+                    if payload == None:
+                        raise NotificationClientError("Something went wrong. Try refreshing the browser.")
+                    else:
+                        payload = json.loads(payload)
+                        await self.send_updated_friend_request_notification(payload['notification'])
+                except Exception as e:
+                    print("EXCEPTION: " + str(e))
+                
 
             elif command == "decline_friend_request":
                 notification_id = content['notification_id']
@@ -181,7 +186,7 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
         """
         Called by receive_json when pagination is exhausted for general notifications
         """
-        print("General Pagination DONE... No more notifications.")
+        #print("General Pagination DONE... No more notifications.")
         await self.send_json(
             {
                 "general_msg_type": GENERAL_MSG_TYPE_PAGINATION_EXHAUSTED,
@@ -192,7 +197,7 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
         """
         Called by receive_json when ready to send a json array of the notifications
         """
-        print("NotificationConsumer: send_general_notifications_payload")
+        #print("NotificationConsumer: send_general_notifications_payload")
         await self.send_json(
             {
                 "general_msg_type": GENERAL_MSG_TYPE_NOTIFICATIONS_PAYLOAD,
@@ -206,7 +211,7 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
         """
         Called by receive_json when ready to send a json array of the notifications
         """
-        print("NotificationConsumer: send_general_refreshed_notifications_payload")
+        #print("NotificationConsumer: send_general_refreshed_notifications_payload")
         await self.send_json(
             {
                 "general_msg_type": GENERAL_MSG_TYPE_NOTIFICATIONS_REFRESH_PAYLOAD,
@@ -230,10 +235,7 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
         """
         Called by receive_json when ready to send a json array of the chat notifications
         """
-        print("NotificationConsumer: send_chat_notifications_payload")
-        print("------------------------------------------")
-        print(str(notifications))
-        print(str(new_page_number))
+        #print("NotificationConsumer: send_chat_notifications_payload")
         await self.send_json(
             {
                 "chat_msg_type": CHAT_MSG_TYPE_NOTIFICATIONS_PAYLOAD,
@@ -246,7 +248,7 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
         """
         Called by receive_json when ready to send a json array of the chat notifications
         """
-        print("NotificationConsumer: send_chat_refreshed_notifications_payload")
+        #print("NotificationConsumer: send_chat_refreshed_notifications_payload")
         await self.send_json(
             {
                 "chat_msg_type": CHAT_MSG_TYPE_NOTIFICATIONS_REFRESH_PAYLOAD,
@@ -256,7 +258,7 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
 
 
     async def display_progress_bar(self, shouldDisplay):
-        print("NotificationConsumer: display_progress_bar: " + str(shouldDisplay)) 
+        #print("NotificationConsumer: display_progress_bar: " + str(shouldDisplay)) 
         await self.send_json(
             {
                 "progress_bar": shouldDisplay,

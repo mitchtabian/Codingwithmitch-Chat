@@ -262,10 +262,8 @@
 <script type="text/javascript">
 	function executeQuery() {
 		var query = ""
-		if(window.innerWidth <= 991){
-			query = document.getElementById('id_q_small').value;
-		}
-		else{
+		query = document.getElementById('id_q_small').value;
+		if (query == ""){
 			query = document.getElementById('id_q_large').value;
 		}
 	    window.location.replace("{% url 'search' %}?q=" + query)
@@ -274,6 +272,5 @@
 
 </script>
 
-<!-- End Header -->
 
 
