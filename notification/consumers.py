@@ -79,7 +79,7 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
                 
 
             elif command == "refresh_general_notifications":
-                payload = await self.refresh_general_notifications(content['oldest_timestamp'])
+                payload = await self.refresh_general_notifications(content['oldest_timestamp'], content['newest_timestamp'])
                 if payload == None:
                     raise NotificationClientError("Something went wrong. Try refreshing the browser.")
                 else:
@@ -462,7 +462,7 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
             timestamp = datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S.%f')
             friend_request_ct = ContentType.objects.get_for_model(FriendRequest)
             friend_list_ct = ContentType.objects.get_for_model(FriendList)
-            notifications = Notification.objects.filter(target=user, content_type__in=[friend_request_ct, friend_list_ct], timestamp__gt=timestamp).order_by('-timestamp')
+            notifications = Notification.objects.filter(target=user, content_type__in=[friend_request_ct, friend_list_ct], timestamp__gt=timestamp, read=False).order_by('-timestamp')
             s = LazyNotificationEncoder()
             payload['notifications'] = s.serialize(notifications)
         else:
@@ -472,7 +472,7 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
 
 
     @database_sync_to_async
-    def refresh_general_notifications(self, oldest_timestamp):
+    def refresh_general_notifications(self, oldest_timestamp, newest_timestatmp):
         """
         Retrieve the general notifications newer than the older one on the screen.
         The result will be: Notifications currently visible will be updated
@@ -484,7 +484,7 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
             timestamp = datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S.%f')
             friend_request_ct = ContentType.objects.get_for_model(FriendRequest)
             friend_list_ct = ContentType.objects.get_for_model(FriendList)
-            notifications = Notification.objects.filter(target=user, content_type__in=[friend_request_ct, friend_list_ct], timestamp__gte=timestamp).order_by('-timestamp')
+            notifications = Notification.objects.filter(target=user, content_type__in=[friend_request_ct, friend_list_ct], timestamp__gte=timestamp, timestamp__lt=newest_timestatmp).order_by('-timestamp')
 
             s = LazyNotificationEncoder()
             payload['notifications'] = s.serialize(notifications)

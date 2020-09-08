@@ -32,12 +32,70 @@
 <p class="{% if not debug %}d-none{% else %}d-flex{% endif %}" id="id_general_oldest_timestamp"></p>
 <p class="{% if not debug %}d-none{% else %}d-flex{% endif %}" id="id_general_newest_timestamp"></p>
 
+<script src="{% static 'collections/collections.min.js' %}"></script>
+
 <script type="text/javascript">
+
 
 	const GENERAL_NOTIFICATION_INTERVAL = 4000
 	const GENERAL_NOTIFICATION_TIMEOUT = 5000
 
+	// Keep track of what notifications are currently visible to the user.
+	var cachedNotifList = new List([])
+
+	/*
+		Append to bottom. 
+		Used for
+			1. Page load
+			2. pagination
+			3. Refresh
+		Called by 'handleGeneralNotificationsData' &  'refreshGeneralNotificationsData'
+	*/
+	function submitGeneralNotificationToCache(notification){
+		var result = cachedNotifList.filter(function(n){ 
+			return n['notification_id'] === notification['notification_id']
+		})
+		// This notification does not already exist in the list
+		if(result.length == 0){
+			cachedNotifList.push(notification)
+
+			// append to bottom of list
+			appendBottomGeneralNotification(notification)
+		}
+		// This notification already exists in the list
+		else{
+			console.log("RESULT: OLD: already exists in cache...")
+			// find the div and update it.
+			refreshGeneralNotificationsList(notification)
+		}
+	}
+
+	/*
+		Append to top OR update a div that already exists.
+		Called by 'handleNewGeneralNotificationsData'
+	*/
+	function submitNewGeneralNotificationToCache(notification){
+		var result = cachedNotifList.filter(function(n){ 
+			return n['notification_id'] === notification['notification_id']
+		})
+		// This notification does not already exist in the list
+		if(result.length == 0){
+			cachedNotifList.push(notification)
+
+			// append to top of list
+			appendTopGeneralNotification(notification)
+		}
+		// This notification already exists in the list
+		else{
+			// find the div and update it.
+			refreshGeneralNotificationsList(notification)
+		}
+	}
 	
+	/*
+		Retrieve the first page of notifications.
+		Called when page loads.
+	*/
     function getFirstGeneralNotificationsPage(){
 		if("{{request.user.is_authenticated}}"){
 			notificationSocket.send(JSON.stringify({
@@ -48,8 +106,11 @@
 		startGeneralNotificationService()
 	}
 
-	 function getUnreadGeneralNotificationsCount(){
-	 	console.log("getUnreadGeneralNotificationsCount")
+	/*
+		Retrieve the number of unread notifications. (This is the red dot in the notifications icon)
+		Called every GENERAL_NOTIFICATION_INTERVAL
+	*/
+	function getUnreadGeneralNotificationsCount(){
 		if("{{request.user.is_authenticated}}"){
 			notificationSocket.send(JSON.stringify({
 				"command": "get_unread_general_notifications_count",
@@ -57,6 +118,9 @@
 		}
 	}
 
+	/*
+		Remove the element that says "There are no notifications".
+	*/
 	function clearNoGeneralNotificationsCard(){
 		var element = document.getElementById("id_no_general_notifications")
 		if(element != null && element != "undefined"){
@@ -65,15 +129,17 @@
 	}
 
 	/*
-		Received a payload from socket containing notifications (Called when page loads)
+		Received a payload from socket containing notifications.
+		Called:
+			1. When page loads
+			2. pagination
 	*/
     function handleGeneralNotificationsData(notifications, new_page_number){
     	if(notifications.length > 0){
     		clearNoGeneralNotificationsCard()
     		notifications.forEach(notification => {
 
-				// append to notifications list
-				appendBottomGeneralNotification(notification)
+    			submitGeneralNotificationToCache(notification)
 
 				setGeneralOldestTimestamp(notification['timestamp'])
 				setGeneralNewestTimestamp(notification['timestamp'])
@@ -84,14 +150,13 @@
 
 	/*
 		Received a payload from socket containing NEW notifications
-		This is called every GENERAL_NOTIFICATION_INTERVAL
+		Called every GENERAL_NOTIFICATION_INTERVAL
 	*/
 	function handleNewGeneralNotificationsData(notifications){
     	if(notifications.length > 0){
     		notifications.forEach(notification => {
 
-				// append to notifications list
-				appendTopGeneralNotification(notification)
+    			submitNewGeneralNotificationToCache(notification)
 
 				setGeneralOldestTimestamp(notification['timestamp'])
 				setGeneralNewestTimestamp(notification['timestamp'])
@@ -99,13 +164,16 @@
 	    }
 	}
 
+	/*
+		Received a payload from socket containing notifications currently in view.
+		Called every GENERAL_NOTIFICATION_INTERVAL
+	*/
 	function refreshGeneralNotificationsData(notifications){
 		if(notifications.length > 0){
 
 			notifications.forEach(notification => {
 
-				// refresh the current notifications
-				refreshGeneralNotificationsList(notification)
+				submitGeneralNotificationToCache(notification)
 
 				setGeneralOldestTimestamp(notification['timestamp'])
 				setGeneralNewestTimestamp(notification['timestamp'])
@@ -118,16 +186,19 @@
 	*/
 	function refreshGeneralNotifications(){
 		oldestTimestamp = document.getElementById("id_general_oldest_timestamp").innerHTML
+		newestTimestamp = document.getElementById("id_general_newest_timestamp").innerHTML
 		if("{{request.user.is_authenticated}}"){
 			notificationSocket.send(JSON.stringify({
 				"command": "refresh_general_notifications",
 				"oldest_timestamp": oldestTimestamp,
+				"newest_timestamp": newestTimestamp,
 			}));
 		}
 	}
 
 	/*
 		Retrieve any new notifications
+		Called every GENERAL_NOTIFICATION_INTERVAL seconds
 	*/
 	function getNewGeneralNotifications(){
 		newestTimestamp = document.getElementById("id_general_newest_timestamp").innerHTML
@@ -139,6 +210,10 @@
 		}
 	}
 
+	/*
+		Retrieve the next page of notifications
+		Called when the user scrolls to the bottom of the popup menu.
+	*/
 	function getNextGeneralNotificationsPage(){
 		var pageNumber = document.getElementById("id_general_page_number").innerHTML
 		console.log("getNextGeneralNotificationsPage: page number: " + pageNumber)
@@ -151,6 +226,9 @@
 		}
 	}
 
+	/*
+		Sets all the notifications currently visible as "read"
+	*/
 	function setGeneralNotificationsAsRead(){
 		if("{{request.user.is_authenticated}}"){
 			oldestTimestamp = document.getElementById("id_general_oldest_timestamp").innerHTML
@@ -161,6 +239,9 @@
 		}
 	}
 
+	/*
+		Start the functions that will be executed constantly
+	*/
 	function startGeneralNotificationService(){
 		if("{{request.user.is_authenticated}}" == "True"){
 			setInterval(refreshGeneralNotifications, GENERAL_NOTIFICATION_INTERVAL)
@@ -169,6 +250,10 @@
 		}
 	}
 	
+	/*
+		Sets the scroll listener for when user scrolls to bottom of notification menu.
+		It will retrieve the next page of results.
+	*/
 	function setOnGeneralNotificationScrollListener(){
 		var menu = document.getElementById("id_general_notifications_container")
 		if(menu != null ){
@@ -184,47 +269,34 @@
 
 	setOnGeneralNotificationScrollListener()
 
-
-</script>
-
-<script src="{% static 'bootstrap/js/jquery.min.js' %}"></script>
-
-<!-- Pagination -->
-<script type="text/javascript">
-
-	
+	/*
+		Called when pagination is exhausted and there is no more notifications.
+	*/
 	function setGeneralPaginationExhausted(){
 		console.log("general pagination exhausted.")
 		setGeneralPageNumber("-1")
 	}
 
+	/*
+		Sets the pagination page number.
+	*/
 	function setGeneralPageNumber(pageNumber){
 		document.getElementById("id_general_page_number").innerHTML = pageNumber
 	}
 
-
-	function onGeneralNotificationsPaginationTriggerListener(){
-		window.onscroll = function(ev) {
-			// because of rounding we need to add 2. 1 might be OK but I'm using 2.
-			if ((window.innerHeight + window.scrollY + 2) >= document.body.scrollHeight) {
-				getNextGeneralNotificationsPage()
-			}
-		};
-	}
-
-	onGeneralNotificationsPaginationTriggerListener()
-</script>
-
-<script type="text/javascript">
-
+	/*
+		Accept a Friend request
+	*/
 	function sendAcceptFriendRequestToSocket(notification_id){
-		console.log("ACCEPT: " + notification_id)
 		notificationSocket.send(JSON.stringify({
 			"command": "accept_friend_request",
 			"notification_id": notification_id,
 		}));
 	}
 
+	/*
+		Decline a friend request
+	*/
 	function sendDeclineFriendRequestToSocket(notification_id){
 		notificationSocket.send(JSON.stringify({
 			"command": "decline_friend_request",
@@ -293,6 +365,7 @@
 
 	/*
 		Search for the notification in the list using it's id. Then update its properties.
+		I do not update the image_url since that makes the notifications "flicker".
 	*/
 	function refreshGeneralNotificationsList(notification){
 		notificationContainer = document.getElementById("id_general_notifications_container")
@@ -451,6 +524,7 @@
 	}
 
 	/*
+		Create a Notification Card for a FriendList payload
 		Ex: "You are now friends with Maizy."
 		Ex: "You are no longer friends with John."
 		Params:
@@ -487,6 +561,7 @@
 	}
 
 	/*
+		Create a Notification Card for a FriendRequest payload
 		Ex: "John sent you a friend request."
 		Ex: "You declined John's friend request."
 		Ex: "You accepted John's friend request."
@@ -574,6 +649,9 @@
 		return card
 	}
 
+	/**
+		Helpers for assigning ids to important elements.
+	**/
 	function assignGeneralDiv1Id(notification){
 		return "id_general_div1_" + notification['notification_id']
 	}
@@ -653,6 +731,7 @@
 
 	/*
 		Initialize the general notification menu
+		Called when page loads.
 	*/
 	function setupGeneralNotificationsMenu(){
 		var notificationContainer = document.getElementById("id_general_notifications_container")
