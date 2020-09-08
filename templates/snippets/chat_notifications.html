@@ -252,14 +252,14 @@
 		div2.appendChild(span2)
 		div1.appendChild(div2)
 		card.appendChild(div1)
-		card.appendChild(createTimestampElement(notification))
+		card.appendChild(createChatTimestampElement(notification))
 		return card
 	}
 
 	/*
 		Timestamp at the bottom of each notification card
 	*/
-	function createTimestampElement(notification){
+	function createChatTimestampElement(notification){
 		var timestamp = document.createElement("p")
 		timestamp.classList.add("small", "pt-2", "timestamp-text")
 		timestamp.innerHTML = notification['natural_timestamp']

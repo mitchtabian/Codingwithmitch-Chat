@@ -198,6 +198,9 @@
 		if(data.general_msg_type == 5){
 			updateGeneralNotificationDiv(data['notification'])
 		}
+		if(data.general_msg_type == 6){
+			handleNewGeneralNotificationsData(data['notifications'])
+		}
 
 
 		/*

@@ -10,8 +10,8 @@ class Notification(models.Model):
 	# Who the notification is sent to
 	target 						= models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
-	# The image to be shown with the notification (ex: Profile image of user who sent a private message)
-	image_url 					= models.URLField(max_length=500, null=True, unique=False, blank=True, help_text="Thumbnail image for notification.")
+	# The user that the creation of the notification was triggered by.
+	from_user 					= models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True, related_name="from_user")
 
 	redirect_url				= models.URLField(max_length=500, null=True, unique=False, blank=True, help_text="The URL to be visited when a notification is clicked.")
 
@@ -35,7 +35,6 @@ class Notification(models.Model):
 
 	def get_content_object_type(self):
 		return str(self.content_object.get_cname)
-
 
 
 

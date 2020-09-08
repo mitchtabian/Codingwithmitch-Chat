@@ -63,15 +63,20 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
         #print("NotificationConsumer: receive_json. Command: " + command)
         try:
             if command == "get_general_notifications":
-                await self.display_progress_bar(True)
                 payload = await self.get_general_notifications(content.get("page_number", None))
                 if payload == None:
                     await self.general_pagination_exhausted()
                 else:
                     payload = json.loads(payload)
                     await self.send_general_notifications_payload(payload['notifications'], payload['new_page_number'])
-                await self.display_progress_bar(False)
 
+            if command == "get_new_general_notifications":
+                payload = await self.get_new_general_notifications(content.get("newest_timestamp", None))
+
+                if payload != None:
+                    payload = json.loads(payload)
+                    await self.send_new_general_notifications_payload(payload['notifications'])
+                
 
             elif command == "refresh_general_notifications":
                 payload = await self.refresh_general_notifications(content['oldest_timestamp'])
@@ -83,15 +88,12 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
 
 
             elif command == "get_chat_notifications":
-                await self.display_progress_bar(True)
                 payload = await self.get_chat_notifications(content.get("page_number", None))
                 if payload == None:
                     await self.chat_pagination_exhausted()
                 else:
                     payload = json.loads(payload)
                     await self.send_chat_notifications_payload(payload['notifications'], payload['new_page_number'])
-                await self.display_progress_bar(False)
-
             
 
             elif command == "get_unread_general_notifications_count":
@@ -203,6 +205,17 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
                 "general_msg_type": GENERAL_MSG_TYPE_NOTIFICATIONS_PAYLOAD,
                 "notifications": notifications,
                 "new_page_number": new_page_number,
+            },
+        )
+
+    async def send_new_general_notifications_payload(self, notifications):
+        """
+        Called by receive_json when ready to send a json array of the notifications
+        """
+        await self.send_json(
+            {
+                "general_msg_type": GENERAL_MSG_TYPE_GET_NEW_GENERAL_NOTIFICATIONS,
+                "notifications": notifications,
             },
         )
 
@@ -437,15 +450,32 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
 
         return json.dumps(payload)
 
+    @database_sync_to_async
+    def get_new_general_notifications(self, newest_timestatmp):
+        """
+        Retrieve any notifications newer than the newest_timestatmp on the screen.
+        """
+        payload = {}
+        user = self.scope["user"]
+        if user.is_authenticated:
+            timestamp = newest_timestatmp[0:newest_timestatmp.find("+")] # remove timezone because who cares
+            timestamp = datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S.%f')
+            friend_request_ct = ContentType.objects.get_for_model(FriendRequest)
+            friend_list_ct = ContentType.objects.get_for_model(FriendList)
+            notifications = Notification.objects.filter(target=user, content_type__in=[friend_request_ct, friend_list_ct], timestamp__gt=timestamp).order_by('-timestamp')
+            s = LazyNotificationEncoder()
+            payload['notifications'] = s.serialize(notifications)
+        else:
+            raise NotificationClientError("User must be authenticated to get notifications.")
+
+        return json.dumps(payload) 
 
 
     @database_sync_to_async
     def refresh_general_notifications(self, oldest_timestamp):
         """
         Retrieve the general notifications newer than the older one on the screen.
-        This will accomplish 2 things:
-        1. Notifications currently visible will be updated
-        2. Any new notifications will be appending to the top of the list
+        The result will be: Notifications currently visible will be updated
         """
         payload = {}
         user = self.scope["user"]
@@ -462,11 +492,6 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
             raise NotificationClientError("User must be authenticated to get notifications.")
 
         return json.dumps(payload)        
-
-
-
-
-
 
 
 

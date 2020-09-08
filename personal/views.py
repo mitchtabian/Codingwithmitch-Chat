@@ -7,7 +7,7 @@ from datetime import datetime
 from notification.models import Notification
 from friend.models import FriendRequest
 
-DEBUG = False
+DEBUG = True
 
 def home_screen_view(request):
 	context = {}
