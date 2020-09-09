@@ -70,7 +70,7 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
                     payload = json.loads(payload)
                     await self.send_general_notifications_payload(payload['notifications'], payload['new_page_number'])
 
-            if command == "get_new_general_notifications":
+            elif command == "get_new_general_notifications":
                 payload = await self.get_new_general_notifications(content.get("newest_timestamp", None))
 
                 if payload != None:
@@ -104,17 +104,31 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
             
 
             elif command == "refresh_chat_notifications":
+                payload = await self.refresh_chat_notifications(content['oldest_timestamp'], content['newest_timestamp'])
+                if payload == None:
+                    raise NotificationClientError("Something went wrong. Try refreshing the browser.")
+                else:
+                    payload = json.loads(payload)
+                    await self.send_chat_refreshed_notifications_payload(payload['notifications'])
+
+
+            elif command == "get_new_chat_notifications":
+                payload = await self.get_new_chat_notifications(content.get("newest_timestamp", None))
+
+                if payload != None:
+                    payload = json.loads(payload)
+                    await self.send_new_chat_notifications_payload(payload['notifications'])
+
+
+            elif command == "get_unread_chat_notifications_count":
                 try:
-                    payload = await self.refresh_chat_notifications(content['oldest_timestamp'])
-                    if payload == None:
-                        raise NotificationClientError("Something went wrong. Try refreshing the browser.")
-                    else:
+                    payload = await self.get_unread_chat_notification_count()
+                    if payload != None:
                         payload = json.loads(payload)
-                        await self.send_chat_refreshed_notifications_payload(payload['notifications'])
+                        await self.send_unread_chat_notification_count(payload['count'])
                 except Exception as e:
-                    print("EXCEPTION: " + str(e))
-                
-            
+                    print("UNREAD CHAT MESSAGE COUNT EXCEPTION: " + str(e))
+                    pass
 
             elif command == "mark_notifications_read":
                 await self.mark_notifications_read()
@@ -124,7 +138,6 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
                 try:
                     notification_id = content['notification_id']
                     payload = await self.accept_friend_request(notification_id)
-                    print("ACCEPT: accept_friend_request")
                     if payload == None:
                         raise NotificationClientError("Something went wrong. Try refreshing the browser.")
                     else:
@@ -132,6 +145,7 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
                         await self.send_updated_friend_request_notification(payload['notification'])
                 except Exception as e:
                     print("EXCEPTION: " + str(e))
+                    pass
                 
 
             elif command == "decline_friend_request":
@@ -144,16 +158,16 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
                     await self.send_updated_friend_request_notification(payload['notification'])
 
         except Exception as e:
-            await self.display_progress_bar(False)
             # Catch any errors and send it back
             errorData = {}
-            try:
-                if e.code:
-                    errorData['error'] = e.code
-                if e.message:
-                    errorData['message'] = e.message
-            except:
-                errorData['message'] = "An unknown error occurred"
+            errorData['message'] = "An unknown error occurred while trying command: " + command
+            # try:
+            #     if e.code:
+            #         errorData['error'] = e.code
+            #     if e.message:
+            #         errorData['message'] = e.message
+            # except:
+            #     errorData['message'] = "An unknown error occurred while trying command: " + command
             await self.send_json(errorData)
 
 
@@ -244,6 +258,17 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
             },
         )
 
+    async def send_unread_chat_notification_count(self, count):
+        """
+        Send the number of unread "chat" notifications to the template
+        """
+        await self.send_json(
+            {
+                "chat_msg_type": CHAT_MSG_TYPE_GET_UNREAD_NOTIFICATIONS_COUNT,
+                "count": count,
+            },
+        )
+
     async def send_chat_notifications_payload(self, notifications, new_page_number):
         """
         Called by receive_json when ready to send a json array of the chat notifications
@@ -254,6 +279,17 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
                 "chat_msg_type": CHAT_MSG_TYPE_NOTIFICATIONS_PAYLOAD,
                 "notifications": notifications,
                 "new_page_number": new_page_number,
+            },
+        )
+
+    async def send_new_chat_notifications_payload(self, notifications):
+        """
+        Called by receive_json when ready to send a json array of the notifications
+        """
+        await self.send_json(
+            {
+                "chat_msg_type": CHAT_MSG_TYPE_GET_NEW_NOTIFICATIONS,
+                "notifications": notifications,
             },
         )
 
@@ -374,27 +410,65 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
         return json.dumps(payload)
 
     @database_sync_to_async
-    def refresh_chat_notifications(self, oldest_timestamp):
+    def refresh_chat_notifications(self, oldest_timestamp, newest_timestatmp):
         """
-        Retrieve the chat notifications newer than the older one on the screen.
-        This will accomplish 2 things:
-        1. Notifications currently visible will be updated
-        2. Any new notifications will be appending to the top of the list
+        Retrieve the chat notifications newer than the oldest one on the screen and older than the newest on the screen.
+        The result will be: Notifications currently visible will be updated
         """
         payload = {}
         user = self.scope["user"]
         if user.is_authenticated:
-            timestamp = oldest_timestamp[0:oldest_timestamp.find("+")] # remove timezone because who cares
-            timestamp = datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S.%f')
+            oldest_ts = oldest_timestamp[0:oldest_timestamp.find("+")] # remove timezone because who cares
+            oldest_ts = datetime.strptime(oldest_ts, '%Y-%m-%d %H:%M:%S.%f')
+            newest_ts = newest_timestatmp[0:newest_timestatmp.find("+")] # remove timezone because who cares
+            newest_ts = datetime.strptime(newest_ts, '%Y-%m-%d %H:%M:%S.%f')
             chatmessage_ct = ContentType.objects.get_for_model(UnreadChatRoomMessages)
-            notifications = Notification.objects.filter(target=user, content_type=chatmessage_ct, timestamp__gte=timestamp).order_by('-timestamp')
+            notifications = Notification.objects.filter(target=user, content_type__in=[chatmessage_ct], timestamp__gte=oldest_ts, timestamp__lte=newest_ts).order_by('-timestamp')
 
             s = LazyNotificationEncoder()
             payload['notifications'] = s.serialize(notifications)
         else:
             raise NotificationClientError("User must be authenticated to get notifications.")
 
-        return json.dumps(payload)  
+        return json.dumps(payload) 
+
+
+    @database_sync_to_async
+    def get_new_chat_notifications(self, newest_timestatmp):
+        """
+        Retrieve any notifications newer than the newest_timestatmp on the screen.
+        """
+        payload = {}
+        user = self.scope["user"]
+        if user.is_authenticated:
+            timestamp = newest_timestatmp[0:newest_timestatmp.find("+")] # remove timezone because who cares
+            timestamp = datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S.%f')
+            chatmessage_ct = ContentType.objects.get_for_model(UnreadChatRoomMessages)
+            notifications = Notification.objects.filter(target=user, content_type__in=[chatmessage_ct], timestamp__gt=timestamp).order_by('-timestamp')
+            s = LazyNotificationEncoder()
+            payload['notifications'] = s.serialize(notifications)
+        else:
+            raise NotificationClientError("User must be authenticated to get notifications.")
+
+        return json.dumps(payload) 
+
+    @database_sync_to_async
+    def get_unread_chat_notification_count(self):
+        user = self.scope["user"]
+        payload = {}
+        if user.is_authenticated:
+            chatmessage_ct = ContentType.objects.get_for_model(UnreadChatRoomMessages)
+            notifications = Notification.objects.filter(target=user, content_type__in=[chatmessage_ct])
+            
+            unread_count = 10
+            # if notifications:
+            #     unread_count = len(notifications.all())
+            payload['count'] = unread_count
+            return json.dumps(payload)
+        else:
+            raise NotificationClientError("User must be authenticated to get notifications.")
+        return None
+
 
     @database_sync_to_async
     def get_unread_general_notification_count(self):
@@ -404,7 +478,6 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
             friend_request_ct = ContentType.objects.get_for_model(FriendRequest)
             friend_list_ct = ContentType.objects.get_for_model(FriendList)
             notifications = Notification.objects.filter(target=user, content_type__in=[friend_request_ct, friend_list_ct])
-
             
             unread_count = 0
             if notifications:
@@ -474,17 +547,19 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
     @database_sync_to_async
     def refresh_general_notifications(self, oldest_timestamp, newest_timestatmp):
         """
-        Retrieve the general notifications newer than the older one on the screen.
+        Retrieve the general notifications newer than the oldest one on the screen and older than the newest on the screen.
         The result will be: Notifications currently visible will be updated
         """
         payload = {}
         user = self.scope["user"]
         if user.is_authenticated:
-            timestamp = oldest_timestamp[0:oldest_timestamp.find("+")] # remove timezone because who cares
-            timestamp = datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S.%f')
+            oldest_ts = oldest_timestamp[0:oldest_timestamp.find("+")] # remove timezone because who cares
+            oldest_ts = datetime.strptime(oldest_ts, '%Y-%m-%d %H:%M:%S.%f')
+            newest_ts = newest_timestatmp[0:newest_timestatmp.find("+")] # remove timezone because who cares
+            newest_ts = datetime.strptime(newest_ts, '%Y-%m-%d %H:%M:%S.%f')
             friend_request_ct = ContentType.objects.get_for_model(FriendRequest)
             friend_list_ct = ContentType.objects.get_for_model(FriendList)
-            notifications = Notification.objects.filter(target=user, content_type__in=[friend_request_ct, friend_list_ct], timestamp__gte=timestamp, timestamp__lt=newest_timestatmp).order_by('-timestamp')
+            notifications = Notification.objects.filter(target=user, content_type__in=[friend_request_ct, friend_list_ct], timestamp__gte=oldest_ts, timestamp__lte=newest_ts).order_by('-timestamp')
 
             s = LazyNotificationEncoder()
             payload['notifications'] = s.serialize(notifications)

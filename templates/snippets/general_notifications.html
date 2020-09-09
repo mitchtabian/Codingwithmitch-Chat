@@ -16,9 +16,7 @@
 	.timestamp-text{
 		color: var(--secondary-text-color);
 	}
-	.notification-chatroom-msg{
-		color: var(--light-primary-text-color);
-	}
+	
 	#id_notifications_loading_spinner{
 		position: absolute;
 		margin-top: 40px;
@@ -41,7 +39,7 @@
 	const GENERAL_NOTIFICATION_TIMEOUT = 5000
 
 	// Keep track of what notifications are currently visible to the user.
-	var cachedNotifList = new List([])
+	var generalCachedNotifList = new List([])
 
 	/*
 		Append to bottom. 
@@ -52,19 +50,18 @@
 		Called by 'handleGeneralNotificationsData' &  'refreshGeneralNotificationsData'
 	*/
 	function submitGeneralNotificationToCache(notification){
-		var result = cachedNotifList.filter(function(n){ 
+		var result = generalCachedNotifList.filter(function(n){ 
 			return n['notification_id'] === notification['notification_id']
 		})
 		// This notification does not already exist in the list
 		if(result.length == 0){
-			cachedNotifList.push(notification)
+			generalCachedNotifList.push(notification)
 
 			// append to bottom of list
 			appendBottomGeneralNotification(notification)
 		}
 		// This notification already exists in the list
 		else{
-			console.log("RESULT: OLD: already exists in cache...")
 			// find the div and update it.
 			refreshGeneralNotificationsList(notification)
 		}
@@ -75,12 +72,12 @@
 		Called by 'handleNewGeneralNotificationsData'
 	*/
 	function submitNewGeneralNotificationToCache(notification){
-		var result = cachedNotifList.filter(function(n){ 
+		var result = generalCachedNotifList.filter(function(n){ 
 			return n['notification_id'] === notification['notification_id']
 		})
 		// This notification does not already exist in the list
 		if(result.length == 0){
-			cachedNotifList.push(notification)
+			generalCachedNotifList.push(notification)
 
 			// append to top of list
 			appendTopGeneralNotification(notification)
@@ -154,6 +151,7 @@
 	*/
 	function handleNewGeneralNotificationsData(notifications){
     	if(notifications.length > 0){
+    		clearNoGeneralNotificationsCard()
     		notifications.forEach(notification => {
 
     			submitNewGeneralNotificationToCache(notification)
@@ -170,7 +168,7 @@
 	*/
 	function refreshGeneralNotificationsData(notifications){
 		if(notifications.length > 0){
-
+			clearNoGeneralNotificationsCard()
 			notifications.forEach(notification => {
 
 				submitGeneralNotificationToCache(notification)
@@ -216,7 +214,6 @@
 	*/
 	function getNextGeneralNotificationsPage(){
 		var pageNumber = document.getElementById("id_general_page_number").innerHTML
-		console.log("getNextGeneralNotificationsPage: page number: " + pageNumber)
 		// -1 means exhausted or a query is currently in progress
 		if("{{request.user.is_authenticated}}" && pageNumber != "-1"){
 			notificationSocket.send(JSON.stringify({
@@ -512,7 +509,6 @@
 		Set the number of unread notifications.
 	*/
 	function setUnreadGeneralNotificationsCount(count){
-		console.log("setUnreadGeneralNotificationsCount: " + count)
 		var countElement = document.getElementById("id_general_notifications_count")
 		if(count > 0){
 			countElement.style.display = "block"
@@ -583,7 +579,6 @@
 
 		// Is the friend request PENDING? (not answered yet)
 		if(notification['is_active'] == "True"){
-			console.log("X: is active")
 
 			//console.log("found an active friend request")
 			div1 = document.createElement("div")
@@ -713,9 +708,8 @@
 	function createGeneralProfileImageThumbnail(notification){
 		img = document.createElement("img")
 		img.classList.add("notification-thumbnail-image", "img-fluid", "rounded-circle", "mr-2")
-		// console.log("SETTING IMAGE: " + notification['from']['image_url'])
 		img.src = notification['from']['image_url']
-		img.id = "id_general_img_" + notification['notification_id']
+		img.id = assignGeneralImgId(notification['notification_id'])
 		return img
 	}
 

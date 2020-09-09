@@ -164,7 +164,7 @@
 	// Handle incoming messages
 	notificationSocket.onmessage = function(message) {
 		// Decode the JSON
-		// console.log("Got websocket message " + message.data);
+		//console.log("Got websocket message " + message.data);
 		console.log("Got notification websocket message.");
 		var data = JSON.parse(message.data);
 		
@@ -189,6 +189,8 @@
 		if(data.general_msg_type == 2){
 			refreshGeneralNotificationsData(data['notifications'])
 		}
+
+		// Not needed??.....
 		if(data.general_msg_type == 3){
 			refreshGeneralNotifications()
 		}
@@ -214,9 +216,14 @@
 		if(data.chat_msg_type == 11){
 			setChatPaginationExhausted()
 		}
-
 		if(data.chat_msg_type == 12){
 			refreshChatNotificationsData(data['notifications'])
+		}
+		if(data.chat_msg_type == 13){
+			handleNewChatNotificationsData(data['notifications'])
+		}
+		if(data.chat_msg_type == 14){
+			setChatNotificationsCount(data['count'])
 		}
 
 

@@ -29,12 +29,70 @@
 <p>CHAT</p>
 {% endif %}
 <p class="{% if not debug %}d-none{% else %}d-flex{% endif %}" id="id_chat_page_number">1</p>
-<p class="{% if not debug %}d-none{% else %}d-flex{% endif %}" id="id_chat_oldest_timestamp">{{initial_timestamp}}</p>
+<p class="{% if not debug %}d-none{% else %}d-flex{% endif %}" id="id_chat_oldest_timestamp"></p>
+<p class="{% if not debug %}d-none{% else %}d-flex{% endif %}" id="id_chat_newest_timestamp"></p>
+
+<script src="{% static 'collections/collections.min.js' %}"></script>
 
 <script type="text/javascript">
 
 	const CHAT_NOTIFICATION_INTERVAL = 4000
 
+	// Keep track of what notifications are currently visible to the user.
+	var chatCachedNotifList = new List([])
+
+	/*
+		Append to bottom. 
+		Used for
+			1. Page load
+			2. pagination
+			3. Refresh
+		Called by 'handleChatNotificationsData' &  'refreshChatNotificationsData'
+	*/
+	function submitChatNotificationToCache(notification){
+		var result = chatCachedNotifList.filter(function(n){ 
+			return n['notification_id'] === notification['notification_id']
+		})
+		// This notification does not already exist in the list
+		if(result.length == 0){
+			chatCachedNotifList.push(notification)
+
+			// append to bottom of list
+			appendBottomChatNotification(notification)
+		}
+		// This notification already exists in the list
+		else{
+			// find the div and update it.
+			refreshChatNotificationsList(notification)
+		}
+	}
+
+	/*
+		Append to top OR update a div that already exists.
+		Called by 'handleNewChatNotificationsData'
+	*/
+	function submitNewChatNotificationToCache(notification){
+		var result = chatCachedNotifList.filter(function(n){ 
+			return n['notification_id'] === notification['notification_id']
+		})
+		// This notification does not already exist in the list
+		if(result.length == 0){
+			chatCachedNotifList.push(notification)
+
+			// append to top of list
+			appendTopChatNotification(notification)
+		}
+		// This notification already exists in the list
+		else{
+			// find the div and update it.
+			refreshChatNotificationsList(notification)
+		}
+	}
+
+	/*
+		Retrieve the number of unread chat notifications. (This is the red dot in the notifications icon)
+		Called every CHAT_NOTIFICATION_INTERVAL
+	*/
     function getFirstChatNotificationsPage(){
 		if("{{request.user.is_authenticated}}"){
 			notificationSocket.send(JSON.stringify({
@@ -43,8 +101,25 @@
 			}));
 		}
 		startChatNotificationService()
+		getUnreadChatNotificationsCount()
 	}
 
+
+	/*
+		Retrieve the number of unread chat notifications. (This is the red dot in the notifications icon)
+		Called every CHAT_NOTIFICATION_INTERVAL
+	*/
+	function getUnreadChatNotificationsCount(){
+		if("{{request.user.is_authenticated}}"){
+			notificationSocket.send(JSON.stringify({
+				"command": "get_unread_chat_notifications_count",
+			}));
+		}
+	}
+
+	/*
+		Remove the element that says "There are no notifications".
+	*/
 	function clearNoChatNotificationsCard(){
 		var element = document.getElementById("id_no_chat_notifications")
 		if(element != null && element != "undefined"){
@@ -52,55 +127,98 @@
 		}
 	}
 
+	/*
+		Received a payload from socket containing chat notifications.
+		Called:
+			1. When page loads
+			2. pagination
+	*/
     function handleChatNotificationsData(notifications, new_page_number){
-    	setChatNotificationsCount(notifications)
     	if(notifications.length > 0){
     		clearNoChatNotificationsCard()
     		
     		notifications.forEach(notification => {
 
-				// append to notifications list
-				appendChatNotification(notification)
+				submitChatNotificationToCache(notification)
 
-				// If this timestamp is newer than the current saved one, set it.
-				// (this is how we know when to retrieve new notifications)
 				setChatOldestTimestamp(notification['timestamp'])
+				setChatNewestTimestamp(notification['timestamp'])
 			})
 			setChatPageNumber(new_page_number)
 	    }
 	}
 
+
+	/*
+		Received a payload from socket containing notifications currently in view.
+		Called every CHAT_NOTIFICATION_INTERVAL
+	*/
 	function refreshChatNotificationsData(notifications){
-		setChatNotificationsCount(notifications)
 		if(notifications.length > 0){
-			// clear the list because we are refreshing the visible notifications and also appending new ones
-			clearChatNotifications() 
+			clearNoChatNotificationsCard()
+			
 			notifications.forEach(notification => {
 
-				// append to notifications list
-				appendChatNotification(notification)
+				submitChatNotificationToCache(notification)
 
-				// If this timestamp is newer than the current saved one, set it.
-				// (this is how we know when to retrieve new notifications)
 				setChatOldestTimestamp(notification['timestamp'])
+				setChatNewestTimestamp(notification['timestamp'])
 			})
 		}
 	}
 
+	/*
+		Received a payload from socket containing NEW chat notifications
+		Called every CHAT_NOTIFICATION_INTERVAL
+	*/
+	function handleNewChatNotificationsData(notifications){
+		if(notifications.length > 0){
+			clearNoChatNotificationsCard()
+			notifications.forEach(notification => {
+
+				submitNewChatNotificationToCache(notification)
+
+				setChatOldestTimestamp(notification['timestamp'])
+				setChatNewestTimestamp(notification['timestamp'])
+			})
+		}
+	}
+
+	/*
+		Refresh the chat notifications that are currently visible
+	*/
 	function refreshChatNotifications(){
-		console.log("************refreshChatNotifications")
 		oldestTimestamp = document.getElementById("id_chat_oldest_timestamp").innerHTML
+		newestTimestamp = document.getElementById("id_chat_newest_timestamp").innerHTML
 		if("{{request.user.is_authenticated}}"){
 			notificationSocket.send(JSON.stringify({
 				"command": "refresh_chat_notifications",
 				"oldest_timestamp": oldestTimestamp,
+				"newest_timestamp": newestTimestamp,
 			}));
 		}
 	}
 
+	/*
+		Retrieve any new chat notifications
+		Called every CHAT_NOTIFICATION_INTERVAL seconds
+	*/
+	function getNewChatNotifications(){
+		newestTimestamp = document.getElementById("id_chat_newest_timestamp").innerHTML
+		if("{{request.user.is_authenticated}}"){
+			notificationSocket.send(JSON.stringify({
+				"command": "get_new_chat_notifications",
+				"newest_timestamp": newestTimestamp,
+			}));
+		}
+	}
+
+	/*
+		Retrieve the next page of chat notifications
+		Called when the user scrolls to the bottom of the popup menu.
+	*/
 	function getNextChatNotificationsPage(){
 		var pageNumber = document.getElementById("id_chat_page_number").innerHTML
-		console.log("getNextChatNotificationsPage: page number: " + pageNumber)
 		// -1 means exhausted or a query is currently in progress
 		if("{{request.user.is_authenticated}}" && pageNumber != "-1"){
 			notificationSocket.send(JSON.stringify({
@@ -110,12 +228,21 @@
 		}
 	}
 
+	/*
+		Start the functions that will be executed constantly
+	*/
 	function startChatNotificationService(){
 		if("{{request.user.is_authenticated}}" == "True"){
 			setInterval(refreshChatNotifications, CHAT_NOTIFICATION_INTERVAL)
+			setInterval(getNewChatNotifications, CHAT_NOTIFICATION_INTERVAL)
+			setInterval(getUnreadChatNotificationsCount, CHAT_NOTIFICATION_INTERVAL)
 		}
 	}
 	
+	/*
+		Sets the scroll listener for when user scrolls to bottom of notification menu.
+		It will retrieve the next page of results.
+	*/
 	function setOnChatNotificationScrollListener(){
 		var menu = document.getElementById("id_chat_notifications_container")
 		if(menu != null ){
@@ -131,20 +258,16 @@
 
 	setOnChatNotificationScrollListener()
 
-
-</script>
-
-<script src="{% static 'bootstrap/js/jquery.min.js' %}"></script>
-
-<!-- Pagination -->
-<script type="text/javascript">
-
-	
+	/*
+		Called when pagination is exhausted and there is no more notifications.
+	*/
 	function setChatPaginationExhausted(){
-		console.log("chat pagination exhausted.")
 		setChatPageNumber("-1")
 	}
 
+	/*
+		Sets the pagination page number.
+	*/
 	function setChatPageNumber(pageNumber){
 		document.getElementById("id_chat_page_number").innerHTML = pageNumber
 	}
@@ -160,9 +283,6 @@
 	}
 
 	onChatNotificationsPaginationTriggerListener()
-</script>
-
-<script type="text/javascript">
 
 
 	function chatRedirect(url){
@@ -171,12 +291,27 @@
 
 	/*
 		Keep track of the 'chat' oldest notification in view. 
-		When 'refreshChatNotifications' is called, it refreshes all the notifications newer than this date.
+		When 'refreshChatNotifications' is called, it refreshes all the notifications newer than this date but newer than 'id_chat_newest_timestamp.
 	*/
 	function setChatOldestTimestamp(timestamp){
 		element = document.getElementById("id_chat_oldest_timestamp")
 		current = element.innerHTML
 		if(Date.parse(timestamp) < Date.parse(current)){
+			element.innerHTML = timestamp
+		}
+	}
+
+	/*
+		Keep track of the 'chat' newest notification in view. 
+		When 'getNewChatNotifications' is called, it retrieves all the notifications newer than this date.
+	*/
+	function setChatNewestTimestamp(timestamp){
+		element = document.getElementById("id_chat_newest_timestamp")
+		current = element.innerHTML
+		if(Date.parse(timestamp) > Date.parse(current)){
+			element.innerHTML = timestamp
+		}
+		else if(current == ""){
 			element.innerHTML = timestamp
 		}
 	}
@@ -188,8 +323,98 @@
 		return new Promise(resolve => setTimeout(resolve, ms));
 	}
 
+	/*
+		Search for the notification in the list using it's id. Then update its properties.
+		I do not update the image_url since that makes the notifications "flicker".
+	*/
+	function refreshChatNotificationsList(notification){
+		notificationContainer = document.getElementById("id_chat_notifications_container")
 
-	function appendChatNotification(notification){
+		if(notificationContainer != null){
+			divs = notificationContainer.childNodes
+
+			divs.forEach(function(card){
+				// card
+				if(card.id == ("id_notification_" + notification['notification_id'])){
+					
+					switch(notification['notification_type']) {
+
+						case "UnreadChatRoomMessages":
+							refreshUnreadChatRoomMessagesCard(card, notification)
+							break;
+						default:
+							// code block
+					}
+				}
+			})
+		}
+	}
+
+	/*
+		Refresh a refreshUnreadChatRoomMessagesCard card with current data
+	*/
+	function refreshUnreadChatRoomMessagesCard(card, notification){
+
+		card.childNodes.forEach(function(element){
+
+			// DIV1
+			if(element.id == ("id_chat_div1_" + notification['notification_id'])){
+				element.childNodes.forEach(function(child){
+					if(child.id == ("id_chat_img_" + notification['notification_id'])){
+						// found profile image
+						// DO NOTHING... Don't want this to flicker
+					}
+
+					// DIV2
+					if(child.id == ("id_chat_div2_" + notification['notification_id'])){
+						child.childNodes.forEach(function(nextChild){
+							if(nextChild.id == ("id_chat_title_" + notification['notification_id'])){
+								// found title
+								nextChild.innerHTML = notification['from']['title']
+							}
+							if(nextChild.id == ("id_chat_message_" + notification['notification_id'])){
+								// found chat message
+								if(notification['verb'].length > 50){
+									nextChild.innerHTML = notification['verb'].slice(0, 50) + "..."
+								}
+								else{
+									nextChild.innerHTML = notification['verb']
+								}
+							}
+						})
+					}
+				})
+			}
+
+			// TIMESTAMP
+			if (element.id == ("id_timestamp_" + notification['notification_id'])){
+				element.innerHTML = notification['natural_timestamp']
+			}
+		})
+	}
+
+	/*
+		Append a chat notification to the TOP of the list.
+	*/
+	function appendTopChatNotification(notification){
+
+		switch(notification['notification_type']) {
+
+			case "UnreadChatRoomMessages":
+				chatNotificationContainer = document.getElementById("id_chat_notifications_container")
+				card = createUnreadChatRoomMessagesElement(notification)
+				chatNotificationContainer.insertBefore(card, chatNotificationContainer.childNodes[0]);
+				break;
+
+			default:
+				// code block
+		}
+	}
+
+	/*
+		Append a chat notification to the BOTTOM of the list.
+	*/
+	function appendBottomChatNotification(notification){
 
 		switch(notification['notification_type']) {
 
@@ -204,12 +429,12 @@
 		}
 	}
 
-	function setChatNotificationsCount(notifications){
-		console.log("setChatNotificationsCount: " + notifications.length)
+	function setChatNotificationsCount(count){
 		var countElement = document.getElementById("id_chat_notifications_count")
-		if(notifications.length > 0){
+		console.log("COUNT: " + count)
+		if(count > 0){
 			countElement.style.display = "block"
-			countElement.innerHTML = notifications.length
+			countElement.innerHTML = count
 		}
 		else{
 			countElement.style.display = "none"
@@ -220,40 +445,76 @@
 		Ex: "Hey what's up?"
 		Ex: "This is a message from John. How are you..."
 	*/
-	function createUnreadChatRoomMessagesElement(notification, notificationContainer){
+	function createUnreadChatRoomMessagesElement(notification){
 		card = createChatNotificationCard()
+		card.id = assignChatCardId(notification)
 		card.addEventListener("click", function(){
-			console.log("click: " + notification['actions']['redirect_url'])
 			chatRedirect(notification['actions']['redirect_url'])
 		})
 
 		var div1 = document.createElement("div")
 		div1.classList.add("d-flex", "flex-row", "align-items-start")
+		div1.id = assignChatDiv1Id(notification)
 
 		img = createChatProfileImageThumbnail(notification)
+		img.id = assignChatImgId(notification)
 		div1.appendChild(img)
 
 		var div2 = document.createElement("div")
 		div2.classList.add("d-flex", "flex-column")
+		div2.id = assignChatDiv2Id(notification)
 		
-		var span1 = document.createElement("span")
-		span1.classList.add("align-items-start")
-		span1.innerHTML = notification['from']['title']
-		div2.appendChild(span1)
+		var title = document.createElement("span")
+		title.classList.add("align-items-start")
+		title.innerHTML = notification['from']['title']
+		title.id = assignChatTitleId(notification)
+		div2.appendChild(title)
 
-		var span2 = document.createElement("span")
-		span2.classList.add("align-items-start", "pt-1", "small", "notification-chatroom-msg")
+		var chatRoomMessage = document.createElement("span")
+		chatRoomMessage.id = assignChatroomMessageId(notification)
+		chatRoomMessage.classList.add("align-items-start", "pt-1", "small", "notification-chatroom-msg")
 		if(notification['verb'].length > 50){
-			span2.innerHTML = notification['verb'].slice(0, 50) + "..."
+			chatRoomMessage.innerHTML = notification['verb'].slice(0, 50) + "..."
 		}
 		else{
-			span2.innerHTML = notification['verb']
+			chatRoomMessage.innerHTML = notification['verb']
 		}
-		div2.appendChild(span2)
+		div2.appendChild(chatRoomMessage)
 		div1.appendChild(div2)
 		card.appendChild(div1)
 		card.appendChild(createChatTimestampElement(notification))
 		return card
+	}
+
+	/**
+		Helpers for assigning ids to important elements.
+	**/
+	function assignChatDiv1Id(notification){
+		return "id_chat_div1_" + notification['notification_id']
+	}
+
+	function assignChatImgId(notification){
+		return "id_chat_img_" + notification['notification_id']
+	}
+
+	function assignChatTitleId(notification){
+		return "id_chat_title_" + notification['notification_id']
+	}
+
+	function assignChatroomMessageId(notification){
+		return "id_chat_message_" + notification['notification_id']
+	}
+
+	function assignChatDiv2Id(notification){
+		return "id_chat_div2_" + notification['notification_id']
+	}
+
+	function assignChatTimestampId(notification){
+		return "id_timestamp_" + notification['notification_id']
+	}
+
+	function assignChatCardId(notification){
+		return "id_notification_" + notification['notification_id']
 	}
 
 	/*
@@ -263,6 +524,7 @@
 		var timestamp = document.createElement("p")
 		timestamp.classList.add("small", "pt-2", "timestamp-text")
 		timestamp.innerHTML = notification['natural_timestamp']
+		timestamp.id = assignChatTimestampId(notification)
 		return timestamp
 	}
 
@@ -285,6 +547,7 @@
 		img = document.createElement("img")
 		img.classList.add("notification-thumbnail-image", "img-fluid", "rounded-circle", "mr-2")
 		img.src = notification['from']['image_url']
+		img.id = assignChatImgId(notification['notification_id'])
 		return img
 	}
 
