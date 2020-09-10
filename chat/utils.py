@@ -1,50 +1,41 @@
-from channels.db import database_sync_to_async
 from django.core.serializers.python import Serializer
-from django.conf import settings
+from django.contrib.humanize.templatetags.humanize import naturaltime, naturalday
+from django.utils import timezone
+from datetime import datetime
 
-from .exceptions import ClientError
-from .models import PrivateChatRoom, RoomChatMessage
-from friend.models import FriendList
+from chat.constants import *
 
-
-# This decorator turns this function from a synchronous function into an async one
-# we can call from our async consumers, that handles Django DBs correctly.
-# For more, see http://channels.readthedocs.io/en/latest/topics/databases.html
-@database_sync_to_async
-def get_room_or_error(room_id, user):
+def calculate_timestamp(timestamp):
     """
-    Tries to fetch a room for the user, checking permissions along the way.
+    1. Today or yesterday:
+        - EX: 'today at 10:56 AM'
+        - EX: 'yesterday at 5:19 PM'
+    2. other:
+        - EX: 05/06/2020
+        - EX: 12/28/2020
     """
-    # Check if the user is logged in
-    # if not user.is_authenticated:
-    #     raise ClientError("USER_HAS_TO_LOGIN", "You must login.")
-    # Find the room they requested (by ID)
-    try:
-        room = PrivateChatRoom.objects.get(pk=room_id)
-    except PrivateChatRoom.DoesNotExist:
-        raise ClientError("ROOM_INVALID", "Invalid room.")
-    # Check permissions
-
-    # Is this user allowed in the room? (must be user1 or user2)
-    if user != room.user1 and user != room.user2:
-        raise ClientError("ROOM_ACCESS_DENIED", "You do not have permission to join this room.")
-
-    # Are the users in this room friends?
-    friend_list = FriendList.objects.get(user=user).friends.all()
-    if not room.user1 in friend_list:
-        if not room.user2 in friend_list:
-            raise ClientError("ROOM_ACCESS_DENIED", "You must be friends to chat.")
-    return room
-
-
+    ts = ""
+    # Today or yesterday
+    if (naturalday(timestamp) == "today") or (naturalday(timestamp) == "yesterday"):
+        str_time = datetime.strftime(timestamp, "%I:%M %p")
+        str_time = str_time.strip("0")
+        ts = f"{naturalday(timestamp)} at {str_time}"
+    # other days
+    else:
+        str_time = datetime.strftime(timestamp, "%m/%d/%Y")
+        ts = f"{str_time}"
+    return str(ts)
 
 class LazyRoomChatMessageEncoder(Serializer):
     def get_dump_object(self, obj):
         dump_object = {}
+        dump_object.update({'msg_type': MSG_TYPE_MESSAGE})
         dump_object.update({'user_id': str(obj.user.id)})
         dump_object.update({'username': str(obj.user.username)})
         dump_object.update({'message': str(obj.content)})
         dump_object.update({'profile_image': str(obj.user.profile_image.url)})
+        # dump_object.update({'natural_timestamp': str(naturaltime(obj.timestamp))})
+        dump_object.update({'natural_timestamp': calculate_timestamp(obj.timestamp)})
         return dump_object
 
 

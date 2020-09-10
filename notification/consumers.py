@@ -160,14 +160,13 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
         except Exception as e:
             # Catch any errors and send it back
             errorData = {}
-            errorData['message'] = "An unknown error occurred while trying command: " + command
-            # try:
-            #     if e.code:
-            #         errorData['error'] = e.code
-            #     if e.message:
-            #         errorData['message'] = e.message
-            # except:
-            #     errorData['message'] = "An unknown error occurred while trying command: " + command
+            try:
+                if e.code:
+                    errorData['error'] = e.code
+                if e.message:
+                    errorData['message'] = e.message
+            except:
+                errorData['message'] = "An unknown error occurred while trying command: " + command
             await self.send_json(errorData)
 
 
@@ -460,9 +459,9 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
             chatmessage_ct = ContentType.objects.get_for_model(UnreadChatRoomMessages)
             notifications = Notification.objects.filter(target=user, content_type__in=[chatmessage_ct])
             
-            unread_count = 10
-            # if notifications:
-            #     unread_count = len(notifications.all())
+            unread_count = 0
+            if notifications:
+                unread_count = len(notifications.all())
             payload['count'] = unread_count
             return json.dumps(payload)
         else:

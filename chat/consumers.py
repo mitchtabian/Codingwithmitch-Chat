@@ -2,16 +2,36 @@ from django.contrib.auth import get_user_model
 from django.conf import settings
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from channels.db import database_sync_to_async
+from django.core.paginator import Paginator
+from django.core.serializers import serialize
+from django.utils import timezone
 
 import json
+from time import sleep
 
 from account.models import Account
 from chat.models import RoomChatMessage, PrivateChatRoom, UnreadChatRoomMessages
 from chat.exceptions import ClientError
-from chat.utils import get_room_or_error
 from chat.constants import *
+from chat.utils import LazyRoomChatMessageEncoder, calculate_timestamp
+from friend.models import FriendList
 
 User = get_user_model()
+
+DEFAULT_ROOM_CHAT_MESSAGE_PAGE_SIZE = 20
+
+
+"""
+Json payload identifiers:
+1. type
+2. messages_payload
+3. join
+4. leave
+5. send
+6. msg_type
+    - See chat.constants for all possible types
+
+"""
 
 
 # Example taken from:
@@ -53,8 +73,21 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                 # Leave the room
                 await self.leave_room(content["room"])
             elif command == "send":
+                print("SEND: " + str(content["message"]))
                 await self.send_room(content["room"], content["message"])
+            elif command == "get_room_chat_messages":
+                await self.display_progress_bar(True)
+                room = await get_room_or_error(content['room_id'], self.scope["user"])
+                payload = await get_room_chat_messages(room, content['page_number'])
+                if payload != None:
+                    payload = json.loads(payload)
+                    await self.send_messages_payload(payload['messages'], payload['new_page_number'])
+                else:
+                    raise ClientError(204,"Something went wrong retrieving the chatroom messages.")
+                await self.display_progress_bar(False)
+            
         except ClientError as e:
+            await self.display_progress_bar(False)
             # Catch any errors and send it back
             errorData = {}
             errorData['error'] = e.code
@@ -94,9 +127,9 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             return
 
         # Add user to "connected_users" list
-        await self.connect_user(room, self.scope["user"])
+        await connect_user(room, self.scope["user"])
 
-        await self.on_user_connected(room, self.scope["user"])
+        await on_user_connected(room, self.scope["user"])
 
         # Store that we're in the room
         self.rooms.add(room_id)
@@ -139,7 +172,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         room = await get_room_or_error(room_id, self.scope["user"])
 
         # Remove user from "connected_users" list
-        await self.disconnect_user(room, self.scope["user"])
+        await disconnect_user(room, self.scope["user"])
 
         #if settings.NOTIFY_USERS_ON_ENTER_OR_LEAVE_ROOMS:
         # Notify the group that someone left
@@ -181,10 +214,10 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 
         # get list of connected_users
         connected_users = room.connected_users.all()
-        await self.append_unread_msg_if_not_connected(room, room.user1, connected_users, message)
-        await self.append_unread_msg_if_not_connected(room, room.user2, connected_users, message)
+        await append_unread_msg_if_not_connected(room, room.user1, connected_users, message)
+        await append_unread_msg_if_not_connected(room, room.user2, connected_users, message)
 
-        await self.create_room_chat_message(room, self.scope["user"], message)
+        await create_room_chat_message(room, self.scope["user"], message)
         await self.channel_layer.group_send(
             room.group_name,
             {
@@ -213,6 +246,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                     "profile_image": event["profile_image"],
                     "username": event["username"],
                     "user_id": event["user_id"],
+                    "message": event["username"] + " connected.",
                 },
             )
 
@@ -231,6 +265,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                     "profile_image": event["profile_image"],
                     "username": event["username"],
                     "user_id": event["user_id"],
+                    "message": event["username"] + " disconnected.",
                 },
             )
 
@@ -242,6 +277,8 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         # Send a message down to the client
         print("ChatConsumer: chat_message from user #" + str(event["user_id"]))
 
+        timestamp = calculate_timestamp(timezone.now())
+
         await self.send_json(
             {
                 "msg_type": MSG_TYPE_MESSAGE,
@@ -250,49 +287,148 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                 "user_id": event["user_id"],
                 "profile_image": event["profile_image"],
                 "message": event["message"],
+                "natural_timestamp": timestamp,
             },
         )
 
-    @database_sync_to_async
-    def create_room_chat_message(self, room, user, message):
-        return RoomChatMessage.objects.create(user=user, room=room, content=message)
 
 
-    @database_sync_to_async
-    def connect_user(self, room, user):
-        # add user to connected_users list
-        account = Account.objects.get(pk=user.id)
-        return room.connect_user(account)
+
+    async def send_messages_payload(self, messages, new_page_number):
+        """
+        Send a payload of messages to the ui
+        """
+        print("ChatConsumer: send_messages_payload.")
+
+        await self.send_json(
+            {
+                "messages_payload": "messages_payload",
+                "messages": messages,
+                "new_page_number": new_page_number,
+            },
+        )
+
+    async def display_progress_bar(self, is_displayed):
+        """
+        1. is_displayed = True
+            - Display the progress bar on UI
+        2. is_displayed = False
+            - Hide the progress bar on UI
+        """
+        print("DISPLAY PROGRESS BAR: " + str(is_displayed))
+        await self.send_json(
+            {
+                "display_progress_bar": is_displayed
+            }
+        )
+
+@database_sync_to_async
+def create_room_chat_message(room, user, message):
+    return RoomChatMessage.objects.create(user=user, room=room, content=message)
 
 
-    @database_sync_to_async
-    def disconnect_user(self, room, user):
-        # remove from connected_users list
-        account = Account.objects.get(pk=user.id)
-        return room.disconnect_user(account)
+@database_sync_to_async
+def connect_user(room, user):
+    # add user to connected_users list
+    account = Account.objects.get(pk=user.id)
+    return room.connect_user(account)
 
 
-    # If the user is not connected to the chat, increment "unread messages" count
-    @database_sync_to_async
-    def append_unread_msg_if_not_connected(self, room, user, connected_users, message):
-        if not user in connected_users: 
-            unread_msgs = UnreadChatRoomMessages.objects.get(room=room, user=user)
-            unread_msgs.most_recent_message = message
-            unread_msgs.count += 1
-            unread_msgs.save()
-        return
+@database_sync_to_async
+def disconnect_user(room, user):
+    # remove from connected_users list
+    account = Account.objects.get(pk=user.id)
+    return room.disconnect_user(account)
 
-    # When a user connects, reset their unread message count
-    @database_sync_to_async
-    def on_user_connected(self, room, user):
-        # confirm they are in the connected users list
-        connected_users = room.connected_users.all()
-        if user in connected_users:
-            # reset count
-            unread_msgs = UnreadChatRoomMessages.objects.get(room=room, user=user)
-            unread_msgs.count = 0
-            unread_msgs.save()
-        return
+
+# If the user is not connected to the chat, increment "unread messages" count
+@database_sync_to_async
+def append_unread_msg_if_not_connected(room, user, connected_users, message):
+    if not user in connected_users: 
+        unread_msgs = UnreadChatRoomMessages.objects.get(room=room, user=user)
+        unread_msgs.most_recent_message = message
+        unread_msgs.count += 1
+        unread_msgs.save()
+    return
+
+# When a user connects, reset their unread message count
+@database_sync_to_async
+def on_user_connected(room, user):
+    # confirm they are in the connected users list
+    connected_users = room.connected_users.all()
+    if user in connected_users:
+        # reset count
+        unread_msgs = UnreadChatRoomMessages.objects.get(room=room, user=user)
+        unread_msgs.count = 0
+        unread_msgs.save()
+    return
+
+
+# This decorator turns this function from a synchronous function into an async one
+# we can call from our async consumers, that handles Django DBs correctly.
+# For more, see http://channels.readthedocs.io/en/latest/topics/databases.html
+@database_sync_to_async
+def get_room_or_error(room_id, user):
+    """
+    Tries to fetch a room for the user, checking permissions along the way.
+    """
+    # Check if the user is logged in
+    # if not user.is_authenticated:
+    #     raise ClientError("USER_HAS_TO_LOGIN", "You must login.")
+    # Find the room they requested (by ID)
+    try:
+        room = PrivateChatRoom.objects.get(pk=room_id)
+    except PrivateChatRoom.DoesNotExist:
+        raise ClientError("ROOM_INVALID", "Invalid room.")
+    # Check permissions
+
+    # Is this user allowed in the room? (must be user1 or user2)
+    if user != room.user1 and user != room.user2:
+        raise ClientError("ROOM_ACCESS_DENIED", "You do not have permission to join this room.")
+
+    # Are the users in this room friends?
+    friend_list = FriendList.objects.get(user=user).friends.all()
+    if not room.user1 in friend_list:
+        if not room.user2 in friend_list:
+            raise ClientError("ROOM_ACCESS_DENIED", "You must be friends to chat.")
+    return room
+
+
+@database_sync_to_async
+def get_room_chat_messages(room, page_number):
+    try:
+        qs = RoomChatMessage.objects.by_room(room)
+        p = Paginator(qs, DEFAULT_ROOM_CHAT_MESSAGE_PAGE_SIZE)
+
+        # sleep(1) # for testing
+        payload = {}
+        messages_data = None
+        new_page_number = int(page_number)  
+        if new_page_number <= p.num_pages:
+            new_page_number = new_page_number + 1
+            s = LazyRoomChatMessageEncoder()
+            payload['messages'] = s.serialize(p.page(page_number).object_list)
+        else:
+            payload['messages'] = "None"
+        payload['new_page_number'] = new_page_number
+        return json.dumps(payload)
+    except Exception as e:
+        print("EXCEPTION: " + str(e))
+        return None
+       
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
