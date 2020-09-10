@@ -400,7 +400,7 @@ def get_room_chat_messages(room, page_number):
         qs = RoomChatMessage.objects.by_room(room)
         p = Paginator(qs, DEFAULT_ROOM_CHAT_MESSAGE_PAGE_SIZE)
 
-        # sleep(1) # for testing
+        sleep(1) # for testing
         payload = {}
         messages_data = None
         new_page_number = int(page_number)  

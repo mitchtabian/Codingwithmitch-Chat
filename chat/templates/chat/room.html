@@ -43,6 +43,9 @@
 		font-size: 0.8em;
 		color: var(--secondary-text-color);
 	}
+	.timestamp-span:hover{
+		cursor: pointer;
+	}
 	.msg-p{
 		font-weight: 450;
 		margin-top: 5px;
@@ -80,6 +83,9 @@
 	}
 	.card {
 		border-radius: 12px;
+	}
+	#id_chatroom_loading_spinner{
+		position: absolute;
 	}
 </style>
 
@@ -282,11 +288,6 @@
 			msgP.innerHTML = m
 			// msgP.classList.add("d-flex")
 			msgP.classList.add("msg-p")
-
-			// set width to same as card header so long msgs will wrap
-			// var cardHeader = document.getElementById("id_room_title")
-			// console.log("card header: " + cardHeader.clientWidth)
-			// msgP.style.maxWidth = (parseInt(cardHeader.clientWidth) - 100) + "px"
 			div1.appendChild(msgP)
 		})
 
@@ -357,10 +358,6 @@
 		if(data.messages_payload){
 			handleMessagesPayload(data.messages, data.new_page_number)
 		}
-		// else {
-		// 	var textNode
-		// 	console.log("Cannot handle message!");
-		// }
 	};
 
 	chatSocket.addEventListener("open", function(e){
