@@ -89,6 +89,8 @@
 	}
 </style>
 
+
+
 <div class="container">
 	<div class="card">
 		<div class="d-flex flex-row align-items-center card-header" id="id_room_title">
@@ -128,8 +130,18 @@
 			</div>
 		</div>
 	</div>
+
+	<div class="" style="background: white;">
+		<pre><code class="kotlin">
+			fun someCode(): String{ 
+				return "Here is some kotlin code" 
+			}
+		</code></pre>
+	</div>
+	
 	
 </div>
+
 
 <script>
 
@@ -285,8 +297,8 @@
 		var messages = msg.split("\n")
 		messages.forEach(function(m){
 			var msgP = document.createElement("p")
-			msgP.innerHTML = m
-			// msgP.classList.add("d-flex")
+			// msgP.textContent = m
+			msgP.innerHTML = validateText(m)
 			msgP.classList.add("msg-p")
 			div1.appendChild(msgP)
 		})
@@ -303,6 +315,37 @@
 		if(!maintainPosition){
 			chatLog.scrollTop = chatLog.scrollHeight
 		}
+	}
+
+
+	/*
+		Build a <p> for messages using markdown
+		https://github.com/markdown-it/markdown-it
+	*/
+	function validateText(str)
+	{
+		var md = window.markdownit({
+			linkify:true,
+			highlight: function (string, lang) {
+				console.log("return STRING: " + string)
+			    if (lang && hljs.getLanguage(lang)) {
+			    	console.log("return " + string + " as " + hljs.getLanguage(lang))
+			      try {
+			        return '<pre class="kotlin"><code>' +
+			               hljs.highlight(lang, string, true).value +
+			               '</code></pre>';
+			        // console.log("<div class='kotlin'>Here is some kotlin code</div>")
+			        // return "<div class='kotlin'>"+md.utils.escapeHtml("YAYAYAYA KOTLIN CODE")+"</div>"
+			      } catch (__) {
+			      	console.log("return ERROR")
+			      }
+			    }
+
+			    return '<pre class="hljs"><code>' + md.utils.escapeHtml(string) + '</code></pre>';
+			  }
+		});
+		var result = md.render(str);
+		return result
 	}
 
 	function handleMessagesPayload(messages, new_page_number){
