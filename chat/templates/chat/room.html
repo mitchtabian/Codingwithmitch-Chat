@@ -7,7 +7,7 @@
 
 <style type="text/css">
 	.chat-log {
-		height: 300px;
+		height: 500px;
 		/*border: 1px solid #000;*/
 		overflow-x: hidden;
 		overflow-y: auto;
@@ -130,16 +130,6 @@
 			</div>
 		</div>
 	</div>
-
-	<div class="" style="background: white;">
-		<pre><code class="kotlin">
-			fun someCode(): String{ 
-				return "Here is some kotlin code" 
-			}
-		</code></pre>
-	</div>
-	
-	
 </div>
 
 
@@ -294,14 +284,10 @@
 
 		div1.appendChild(div2)
 
-		var messages = msg.split("\n")
-		messages.forEach(function(m){
-			var msgP = document.createElement("p")
-			// msgP.textContent = m
-			msgP.innerHTML = validateText(m)
-			msgP.classList.add("msg-p")
-			div1.appendChild(msgP)
-		})
+		var msgP = document.createElement("p")
+		msgP.innerHTML = validateText(msg)
+		msgP.classList.add("msg-p")
+		div1.appendChild(msgP)
 
 		newMessageDiv.appendChild(div1)
 
@@ -325,24 +311,17 @@
 	function validateText(str)
 	{
 		var md = window.markdownit({
-			linkify:true,
-			highlight: function (string, lang) {
-				console.log("return STRING: " + string)
-			    if (lang && hljs.getLanguage(lang)) {
-			    	console.log("return " + string + " as " + hljs.getLanguage(lang))
-			      try {
-			        return '<pre class="kotlin"><code>' +
-			               hljs.highlight(lang, string, true).value +
-			               '</code></pre>';
-			        // console.log("<div class='kotlin'>Here is some kotlin code</div>")
-			        // return "<div class='kotlin'>"+md.utils.escapeHtml("YAYAYAYA KOTLIN CODE")+"</div>"
-			      } catch (__) {
-			      	console.log("return ERROR")
-			      }
-			    }
-
-			    return '<pre class="hljs"><code>' + md.utils.escapeHtml(string) + '</code></pre>';
-			  }
+			highlight: function (str, lang) {
+				if (lang && hljs.getLanguage(lang)) {
+					try {
+						return '<pre class="hljs"><code>' +
+							hljs.highlight(lang, str, true).value +
+							'</code></pre>';
+					} catch (__) {}
+				}
+				return '<pre class="hljs"><code>' + md.utils.escapeHtml(str) + '</code></pre>';
+			},
+			linkify: true,
 		});
 		var result = md.render(str);
 		return result

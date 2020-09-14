@@ -298,7 +298,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         """
         Send a payload of messages to the ui
         """
-        print("ChatConsumer: send_messages_payload.")
+        print("ChatConsumer: send_messages_payload. ")
 
         await self.send_json(
             {

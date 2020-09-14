@@ -34,7 +34,6 @@ class LazyRoomChatMessageEncoder(Serializer):
         dump_object.update({'username': str(obj.user.username)})
         dump_object.update({'message': str(obj.content)})
         dump_object.update({'profile_image': str(obj.user.profile_image.url)})
-        # dump_object.update({'natural_timestamp': str(naturaltime(obj.timestamp))})
         dump_object.update({'natural_timestamp': calculate_timestamp(obj.timestamp)})
         return dump_object
 
