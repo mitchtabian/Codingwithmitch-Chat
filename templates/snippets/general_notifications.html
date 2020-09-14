@@ -16,9 +16,7 @@
 	.timestamp-text{
 		color: var(--secondary-text-color);
 	}
-	.notification-chatroom-msg{
-		color: var(--light-primary-text-color);
-	}
+	
 	#id_notifications_loading_spinner{
 		position: absolute;
 		margin-top: 40px;
@@ -29,14 +27,72 @@
 <p>GENERAL</p>
 {% endif %}
 <p class="{% if not debug %}d-none{% else %}d-flex{% endif %}" id="id_general_page_number">1</p>
-<p class="{% if not debug %}d-none{% else %}d-flex{% endif %}" id="id_general_oldest_timestamp">{{initial_timestamp}}</p>
+<p class="{% if not debug %}d-none{% else %}d-flex{% endif %}" id="id_general_oldest_timestamp"></p>
+<p class="{% if not debug %}d-none{% else %}d-flex{% endif %}" id="id_general_newest_timestamp"></p>
+
+<script src="{% static 'collections/collections.min.js' %}"></script>
 
 <script type="text/javascript">
+
 
 	const GENERAL_NOTIFICATION_INTERVAL = 4000
 	const GENERAL_NOTIFICATION_TIMEOUT = 5000
 
+	// Keep track of what notifications are currently visible to the user.
+	var generalCachedNotifList = new List([])
+
+	/*
+		Append to bottom. 
+		Used for
+			1. Page load
+			2. pagination
+			3. Refresh
+		Called by 'handleGeneralNotificationsData' &  'refreshGeneralNotificationsData'
+	*/
+	function submitGeneralNotificationToCache(notification){
+		var result = generalCachedNotifList.filter(function(n){ 
+			return n['notification_id'] === notification['notification_id']
+		})
+		// This notification does not already exist in the list
+		if(result.length == 0){
+			generalCachedNotifList.push(notification)
+
+			// append to bottom of list
+			appendBottomGeneralNotification(notification)
+		}
+		// This notification already exists in the list
+		else{
+			// find the div and update it.
+			refreshGeneralNotificationsList(notification)
+		}
+	}
+
+	/*
+		Append to top OR update a div that already exists.
+		Called by 'handleNewGeneralNotificationsData'
+	*/
+	function submitNewGeneralNotificationToCache(notification){
+		var result = generalCachedNotifList.filter(function(n){ 
+			return n['notification_id'] === notification['notification_id']
+		})
+		// This notification does not already exist in the list
+		if(result.length == 0){
+			generalCachedNotifList.push(notification)
+
+			// append to top of list
+			appendTopGeneralNotification(notification)
+		}
+		// This notification already exists in the list
+		else{
+			// find the div and update it.
+			refreshGeneralNotificationsList(notification)
+		}
+	}
 	
+	/*
+		Retrieve the first page of notifications.
+		Called when page loads.
+	*/
     function getFirstGeneralNotificationsPage(){
 		if("{{request.user.is_authenticated}}"){
 			notificationSocket.send(JSON.stringify({
@@ -47,8 +103,11 @@
 		startGeneralNotificationService()
 	}
 
-	 function getUnreadGeneralNotificationsCount(){
-	 	console.log("getUnreadGeneralNotificationsCount")
+	/*
+		Retrieve the number of unread notifications. (This is the red dot in the notifications icon)
+		Called every GENERAL_NOTIFICATION_INTERVAL
+	*/
+	function getUnreadGeneralNotificationsCount(){
 		if("{{request.user.is_authenticated}}"){
 			notificationSocket.send(JSON.stringify({
 				"command": "get_unread_general_notifications_count",
@@ -56,6 +115,9 @@
 		}
 	}
 
+	/*
+		Remove the element that says "There are no notifications".
+	*/
 	function clearNoGeneralNotificationsCard(){
 		var element = document.getElementById("id_no_general_notifications")
 		if(element != null && element != "undefined"){
@@ -63,51 +125,95 @@
 		}
 	}
 
+	/*
+		Received a payload from socket containing notifications.
+		Called:
+			1. When page loads
+			2. pagination
+	*/
     function handleGeneralNotificationsData(notifications, new_page_number){
     	if(notifications.length > 0){
     		clearNoGeneralNotificationsCard()
     		notifications.forEach(notification => {
 
-				// append to notifications list
-				appendGeneralNotification(notification)
+    			submitGeneralNotificationToCache(notification)
 
-				// If this timestamp is newer than the current saved one, set it.
-				// (this is how we know when to retrieve new notifications)
 				setGeneralOldestTimestamp(notification['timestamp'])
+				setGeneralNewestTimestamp(notification['timestamp'])
 			})
 			setGeneralPageNumber(new_page_number)
 	    }
 	}
 
+	/*
+		Received a payload from socket containing NEW notifications
+		Called every GENERAL_NOTIFICATION_INTERVAL
+	*/
+	function handleNewGeneralNotificationsData(notifications){
+    	if(notifications.length > 0){
+    		clearNoGeneralNotificationsCard()
+    		notifications.forEach(notification => {
+
+    			submitNewGeneralNotificationToCache(notification)
+
+				setGeneralOldestTimestamp(notification['timestamp'])
+				setGeneralNewestTimestamp(notification['timestamp'])
+			})
+	    }
+	}
+
+	/*
+		Received a payload from socket containing notifications currently in view.
+		Called every GENERAL_NOTIFICATION_INTERVAL
+	*/
 	function refreshGeneralNotificationsData(notifications){
 		if(notifications.length > 0){
-			// clear the list because we are refreshing the visible notifications and also appending new ones
-			clearGeneralNotifications() 
+			clearNoGeneralNotificationsCard()
 			notifications.forEach(notification => {
 
-				// append to notifications list
-				appendGeneralNotification(notification)
+				submitGeneralNotificationToCache(notification)
 
-				// If this timestamp is newer than the current saved one, set it.
-				// (this is how we know when to retrieve new notifications)
 				setGeneralOldestTimestamp(notification['timestamp'])
+				setGeneralNewestTimestamp(notification['timestamp'])
 			})
 		}
 	}
 
+	/*
+		Refresh the notifications that are currently visible
+	*/
 	function refreshGeneralNotifications(){
 		oldestTimestamp = document.getElementById("id_general_oldest_timestamp").innerHTML
+		newestTimestamp = document.getElementById("id_general_newest_timestamp").innerHTML
 		if("{{request.user.is_authenticated}}"){
 			notificationSocket.send(JSON.stringify({
 				"command": "refresh_general_notifications",
 				"oldest_timestamp": oldestTimestamp,
+				"newest_timestamp": newestTimestamp,
 			}));
 		}
 	}
 
+	/*
+		Retrieve any new notifications
+		Called every GENERAL_NOTIFICATION_INTERVAL seconds
+	*/
+	function getNewGeneralNotifications(){
+		newestTimestamp = document.getElementById("id_general_newest_timestamp").innerHTML
+		if("{{request.user.is_authenticated}}"){
+			notificationSocket.send(JSON.stringify({
+				"command": "get_new_general_notifications",
+				"newest_timestamp": newestTimestamp,
+			}));
+		}
+	}
+
+	/*
+		Retrieve the next page of notifications
+		Called when the user scrolls to the bottom of the popup menu.
+	*/
 	function getNextGeneralNotificationsPage(){
 		var pageNumber = document.getElementById("id_general_page_number").innerHTML
-		console.log("getNextGeneralNotificationsPage: page number: " + pageNumber)
 		// -1 means exhausted or a query is currently in progress
 		if("{{request.user.is_authenticated}}" && pageNumber != "-1"){
 			notificationSocket.send(JSON.stringify({
@@ -117,6 +223,9 @@
 		}
 	}
 
+	/*
+		Sets all the notifications currently visible as "read"
+	*/
 	function setGeneralNotificationsAsRead(){
 		if("{{request.user.is_authenticated}}"){
 			oldestTimestamp = document.getElementById("id_general_oldest_timestamp").innerHTML
@@ -127,13 +236,21 @@
 		}
 	}
 
+	/*
+		Start the functions that will be executed constantly
+	*/
 	function startGeneralNotificationService(){
 		if("{{request.user.is_authenticated}}" == "True"){
 			setInterval(refreshGeneralNotifications, GENERAL_NOTIFICATION_INTERVAL)
+			setInterval(getNewGeneralNotifications, GENERAL_NOTIFICATION_INTERVAL)
 			setInterval(getUnreadGeneralNotificationsCount, GENERAL_NOTIFICATION_INTERVAL)
 		}
 	}
 	
+	/*
+		Sets the scroll listener for when user scrolls to bottom of notification menu.
+		It will retrieve the next page of results.
+	*/
 	function setOnGeneralNotificationScrollListener(){
 		var menu = document.getElementById("id_general_notifications_container")
 		if(menu != null ){
@@ -149,47 +266,34 @@
 
 	setOnGeneralNotificationScrollListener()
 
-
-</script>
-
-<script src="{% static 'bootstrap/js/jquery.min.js' %}"></script>
-
-<!-- Pagination -->
-<script type="text/javascript">
-
-	
+	/*
+		Called when pagination is exhausted and there is no more notifications.
+	*/
 	function setGeneralPaginationExhausted(){
 		console.log("general pagination exhausted.")
 		setGeneralPageNumber("-1")
 	}
 
+	/*
+		Sets the pagination page number.
+	*/
 	function setGeneralPageNumber(pageNumber){
 		document.getElementById("id_general_page_number").innerHTML = pageNumber
 	}
 
-
-	function onGeneralNotificationsPaginationTriggerListener(){
-		window.onscroll = function(ev) {
-			// because of rounding we need to add 2. 1 might be OK but I'm using 2.
-			if ((window.innerHeight + window.scrollY + 2) >= document.body.scrollHeight) {
-				getNextGeneralNotificationsPage()
-			}
-		};
-	}
-
-	onGeneralNotificationsPaginationTriggerListener()
-</script>
-
-<script type="text/javascript">
-
+	/*
+		Accept a Friend request
+	*/
 	function sendAcceptFriendRequestToSocket(notification_id){
-		console.log("ACCEPT: " + notification_id)
 		notificationSocket.send(JSON.stringify({
 			"command": "accept_friend_request",
 			"notification_id": notification_id,
 		}));
 	}
 
+	/*
+		Decline a friend request
+	*/
 	function sendDeclineFriendRequestToSocket(notification_id){
 		notificationSocket.send(JSON.stringify({
 			"command": "decline_friend_request",
@@ -203,6 +307,7 @@
 
 	/*
 		Update a div with new notification data.
+		Called when the session user accepts/declines a friend request.
 	*/
 	function updateGeneralNotificationDiv(notification){
 		notificationContainer = document.getElementById("id_general_notifications_container")
@@ -223,12 +328,27 @@
 
 	/*
 		Keep track of the 'general' oldest notification in view. 
-		When 'refreshGeneralNotifications' is called, it refreshes all the notifications newer than this date.
+		When 'refreshGeneralNotifications' is called, it refreshes all the notifications newer than this date but newer than 'id_general_newest_timestamp.
 	*/
 	function setGeneralOldestTimestamp(timestamp){
 		element = document.getElementById("id_general_oldest_timestamp")
 		current = element.innerHTML
 		if(Date.parse(timestamp) < Date.parse(current)){
+			element.innerHTML = timestamp
+		}
+	}
+
+	/*
+		Keep track of the 'general' newest notification in view. 
+		When 'getNewGeneralNotifications' is called, it retrieves all the notifications newer than this date.
+	*/
+	function setGeneralNewestTimestamp(timestamp){
+		element = document.getElementById("id_general_newest_timestamp")
+		current = element.innerHTML
+		if(Date.parse(timestamp) > Date.parse(current)){
+			element.innerHTML = timestamp
+		}
+		else if(current == ""){
 			element.innerHTML = timestamp
 		}
 	}
@@ -240,8 +360,131 @@
 		return new Promise(resolve => setTimeout(resolve, ms));
 	}
 
+	/*
+		Search for the notification in the list using it's id. Then update its properties.
+		I do not update the image_url since that makes the notifications "flicker".
+	*/
+	function refreshGeneralNotificationsList(notification){
+		notificationContainer = document.getElementById("id_general_notifications_container")
 
-	function appendGeneralNotification(notification){
+		if(notificationContainer != null){
+			divs = notificationContainer.childNodes
+
+			divs.forEach(function(card){
+				// card
+				if(card.id == ("id_notification_" + notification['notification_id'])){
+					
+					switch(notification['notification_type']) {
+
+						case "FriendRequest":
+							refreshFriendRequestCard(card, notification)
+							break;
+
+						case "FriendList":
+							refreshFriendListCard(card, notification)
+							break;
+
+						default:
+							// code block
+					}
+				}
+			})
+		}
+	}
+
+	/*
+		Refresh a FriendRequest card with current data
+	*/
+	function refreshFriendRequestCard(card, notification){
+		card.childNodes.forEach(function(element){
+
+			// DIV1
+			if(element.id == ("id_general_div1_" + notification['notification_id'])){
+				element.childNodes.forEach(function(child){
+					if(child.id == ("id_general_img_" + notification['notification_id'])){
+						// found profile image
+						// DO NOTHING... Don't want this to flicker
+					}
+					if(child.id == ("id_general_verb_" + notification['notification_id'])){
+						// found verb
+						child.innerHTML = notification['verb']
+					}
+				})
+			}
+				
+			// DIV2
+			if (element.id == ("id_general_div2_" + notification['notification_id'])){
+				if(notification['is_active'] == "True"){
+						// do nothing
+				}
+				else{
+					// remove buttons b/c it has been answered
+					card.removeChild(element)
+				}
+			}
+
+			// TIMESTAMP
+			if (element.id == ("id_timestamp_" + notification['notification_id'])){
+				element.innerHTML = notification['natural_timestamp']
+			}
+		})
+	}
+
+	/*
+		Refresha a FriendList card with current data
+	*/
+	function refreshFriendListCard(card, notification){
+		card.childNodes.forEach(function(element){
+
+			// DIV1
+			if(element.id == ("id_general_div1_" + notification['notification_id'])){
+				element.childNodes.forEach(function(child){
+					if(child.id == ("id_general_img_" + notification['notification_id'])){
+						// found profile image
+						// DO NOTHING... Don't want this to flicker
+					}
+					if(child.id == ("id_general_verb_" + notification['notification_id'])){
+						// found verb
+						child.innerHTML = notification['verb']
+					}
+				})
+			}
+
+			// TIMESTAMP
+			if (element.id == ("id_timestamp_" + notification['notification_id'])){
+				element.innerHTML = notification['natural_timestamp']
+			}
+		})
+	}
+
+	/*
+		Append a general notification to the TOP of the list.
+	*/
+	function appendTopGeneralNotification(notification){
+
+		switch(notification['notification_type']) {
+
+			case "FriendRequest":
+				notificationContainer = document.getElementById("id_general_notifications_container")
+				card = createFriendRequestElement(notification)
+				notificationContainer.insertBefore(card, notificationContainer.childNodes[0]);
+				break;
+
+			case "FriendList":
+				notificationContainer = document.getElementById("id_general_notifications_container")
+				card = createFriendListElement(notification)
+				notificationContainer.insertBefore(card, notificationContainer.childNodes[0]);
+				break;
+
+			default:
+				// code block
+		}
+	}
+
+	/*
+		Append a general notification to the BOTTOM of the list.
+	*/
+	function appendBottomGeneralNotification(notification){
 
 		switch(notification['notification_type']) {
 
@@ -262,8 +505,10 @@
 		}
 	}
 
+	/*
+		Set the number of unread notifications.
+	*/
 	function setUnreadGeneralNotificationsCount(count){
-		console.log("setUnreadGeneralNotificationsCount: " + count)
 		var countElement = document.getElementById("id_general_notifications_count")
 		if(count > 0){
 			countElement.style.display = "block"
@@ -275,24 +520,26 @@
 	}
 
 	/*
+		Create a Notification Card for a FriendList payload
 		Ex: "You are now friends with Maizy."
 		Ex: "You are no longer friends with John."
-
 		Params:
 			1. redirect_url
 				- Will redirect to the other users account profile
 	*/
 	function createFriendListElement(notification, notificationContainer){
 		card = createGeneralNotificationCard()
+		card.id = assignGeneralCardId(notification)
 		card.addEventListener("click", function(){
 			generalRedirect(notification['actions']['redirect_url'])
 		})
 
-		var div = document.createElement("div")
-		div.classList.add("d-flex", "flex-row", "align-items-start")
+		var div1 = document.createElement("div")
+		div1.classList.add("d-flex", "flex-row", "align-items-start")
+		div1.id = assignGeneralDiv1Id(notification)
 
 		img = createGeneralProfileImageThumbnail(notification)
-		div.appendChild(img)
+		div1.appendChild(img)
 
 		span = document.createElement("span")
 		span.classList.add("align-items-start", "pt-1", "m-auto")
@@ -302,20 +549,21 @@
 		else{
 			span.innerHTML = notification['verb']
 		}
-		div.appendChild(span)
-		card.appendChild(div)
-		card.appendChild(createTimestampElement(notification))
+		span.id = assignGeneralVerbId(notification)
+		div1.appendChild(span)
+		card.appendChild(div1)
+		card.appendChild(createGeneralTimestampElement(notification))
 		return card
 	}
 
 	/*
+		Create a Notification Card for a FriendRequest payload
 		Ex: "John sent you a friend request."
 		Ex: "You declined John's friend request."
 		Ex: "You accepted John's friend request."
 		Ex: "You cancelled the friend request to Kiba."
 		Ex: "Maizy accepted your friend request."
 		Ex: "Maizy declined your friend request."
-
 		Params:
 			1. redirect_url
 				- Will redirect to the other users profile
@@ -324,7 +572,7 @@
 		card = createGeneralNotificationCard()
 
 		// assign id b/c we need to find this div if they accept/decline the friend request
-		card.id = "id_notification_" + notification['notification_id']
+		card.id = assignGeneralCardId(notification)
 		card.addEventListener("click", function(){
 			generalRedirect(notification['actions']['redirect_url'])
 		})
@@ -335,6 +583,7 @@
 			//console.log("found an active friend request")
 			div1 = document.createElement("div")
 			div1.classList.add("d-flex", "flex-row", "align-items-start")
+			div1.id = assignGeneralDiv1Id(notification)
 			
 			img = createGeneralProfileImageThumbnail(notification)
 			div1.appendChild(img)
@@ -342,11 +591,13 @@
 			span = document.createElement("span")
 			span.classList.add("m-auto")
 			span.innerHTML = notification['verb']
+			span.id = assignGeneralVerbId(notification)
 			div1.appendChild(span)
 			card.appendChild(div1)
 
 			div2 = document.createElement("div")
 			div2.classList.add("d-flex", "flex-row", "mt-2")
+			div2.id = assignGeneralDiv2Id(notification)
 
 			pos_action = document.createElement("a")
 			pos_action.classList.add("btn", "btn-primary", "mr-2")
@@ -356,6 +607,7 @@
 				e.stopPropagation();
 				sendAcceptFriendRequestToSocket(notification['notification_id'])
 			})
+			pos_action.id = assignGeneralPosActionId(notification)
 			div2.appendChild(pos_action)
 
 			neg_action = document.createElement("a")
@@ -366,6 +618,7 @@
 				e.stopPropagation();
 				sendDeclineFriendRequestToSocket(notification['notification_id'])
 			})
+			neg_action.id = assignGeneralNegActionId(notification)
 			div2.appendChild(neg_action)
 			card.appendChild(div2)
 		}
@@ -373,30 +626,67 @@
 		else{
 			var div1 = document.createElement("div")
 			div1.classList.add("d-flex", "flex-row", "align-items-start")
+			div1.id = assignGeneralDiv1Id(notification)
 
-			img = document.createElement("img")
-			img.classList.add("notification-thumbnail-image", "img-fluid", "rounded-circle", "mr-2")
-			img.src = notification['from']['image_url']
+			img = createGeneralProfileImageThumbnail(notification)
+			img.id = assignGeneralImgId(notification)
 			div1.appendChild(img)
 
 			span = document.createElement("span")
 			span.classList.add("m-auto")
 			span.innerHTML = notification['verb']
+			span.id = assignGeneralVerbId(notification)
 			div1.appendChild(span)
 			card.appendChild(div1)
 		}
-		card.appendChild(createTimestampElement(notification))
+		card.appendChild(createGeneralTimestampElement(notification))
 
 		return card
+	}
+
+	/**
+		Helpers for assigning ids to important elements.
+	**/
+	function assignGeneralDiv1Id(notification){
+		return "id_general_div1_" + notification['notification_id']
+	}
+
+	function assignGeneralImgId(notification){
+		return "id_general_img_" + notification['notification_id']
+	}
+
+	function assignGeneralVerbId(notification){
+		return "id_general_verb_" + notification['notification_id']
+	}
+
+	function assignGeneralDiv2Id(notification){
+		return "id_general_div2_" + notification['notification_id']
+	}
+
+	function assignGeneralPosActionId(notification){
+		return "id_general_pos_action_" + notification['notification_id']
+	}
+
+	function assignGeneralNegActionId(notification){
+		return "id_general_neg_action_" + notification['notification_id']
+	}
+
+	function assignGeneralTimestampId(notification){
+		return "id_timestamp_" + notification['notification_id']
+	}
+
+	function assignGeneralCardId(notification){
+		return "id_notification_" + notification['notification_id']
 	}
 
 	/*
 		Timestamp at the bottom of each notification card
 	*/
-	function createTimestampElement(notification){
+	function createGeneralTimestampElement(notification){
 		var timestamp = document.createElement("p")
 		timestamp.classList.add("small", "pt-2", "timestamp-text")
 		timestamp.innerHTML = notification['natural_timestamp']
+		timestamp.id = assignGeneralTimestampId(notification)
 		return timestamp
 	}
 
@@ -418,8 +708,8 @@
 	function createGeneralProfileImageThumbnail(notification){
 		img = document.createElement("img")
 		img.classList.add("notification-thumbnail-image", "img-fluid", "rounded-circle", "mr-2")
-		console.log("SETTING IMAGE: " + notification['from']['image_url'])
 		img.src = notification['from']['image_url']
+		img.id = assignGeneralImgId(notification['notification_id'])
 		return img
 	}
 
@@ -433,7 +723,10 @@
 		}
 	}
 
-
+	/*
+		Initialize the general notification menu
+		Called when page loads.
+	*/
 	function setupGeneralNotificationsMenu(){
 		var notificationContainer = document.getElementById("id_general_notifications_container")
 
@@ -452,6 +745,10 @@
 		}
 	}
 
+	/*
+		Set the inital timestamp value for id_general_oldest_timestamp.
+		This timestamp is used to determine what constitutes a "NEW" notification or an "OLD" notification.
+	*/
 	function setInitialTimestamp(){
 		// ('%Y-%m-%d %H:%M:%S.%f')
 		var today = new Date();
@@ -478,7 +775,6 @@
 		var ms = "000000"
 		var date = today.getFullYear()+'-'+month+'-'+day + " " + hours + ":" + minutes + ":" + seconds + "." + ms
 		document.getElementById("id_general_oldest_timestamp").innerHTML = date
-
 	}
 
 	setInitialTimestamp()

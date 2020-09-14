@@ -9,6 +9,7 @@ GENERAL_MSG_TYPE_NOTIFICATIONS_REFRESH_PAYLOAD = 2  # Retrieved all 'general' no
 GENERAL_MSG_TYPE_REFRESH_NOTIFICATIONS = 3  # Send msg to the template to refresh the general notifications currently in view
 GENERAL_MSG_TYPE_GET_UNREAD_NOTIFICATIONS_COUNT = 4  # Send the number of unread "general" notifications to the template
 GENERAL_MSG_TYPE_UPDATED_NOTIFICATION = 5  # Update a notification that has been altered (Ex: Accept/decline a friend request)
+GENERAL_MSG_TYPE_GET_NEW_GENERAL_NOTIFICATIONS = 6  # Get any new notifications
 
 
 
@@ -19,6 +20,12 @@ GENERAL_MSG_TYPE_UPDATED_NOTIFICATION = 5  # Update a notification that has been
 CHAT_MSG_TYPE_NOTIFICATIONS_PAYLOAD = 10  # New 'chat' notifications data payload incoming
 CHAT_MSG_TYPE_PAGINATION_EXHAUSTED = 11  # No more 'chat' notifications to retrieve
 CHAT_MSG_TYPE_NOTIFICATIONS_REFRESH_PAYLOAD = 12  # Retrieved all 'chat' notifications newer than the oldest visible on screen
+CHAT_MSG_TYPE_GET_NEW_NOTIFICATIONS = 13  # Get any new chat notifications
+CHAT_MSG_TYPE_GET_UNREAD_NOTIFICATIONS_COUNT = 14 # number of chat notifications
+
+
+
+
 
 
 

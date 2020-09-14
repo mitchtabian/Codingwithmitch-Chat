@@ -25,7 +25,7 @@ class LazyNotificationEncoder(Serializer):
 					'redirect_url': str(obj.redirect_url),
 				},
 				"from": {
-					"image_url": str(obj.image_url)
+					"image_url": str(obj.from_user.profile_image.url)
 				}
 			})
 		if obj.get_content_object_type() == "FriendList":
@@ -40,7 +40,7 @@ class LazyNotificationEncoder(Serializer):
 					'redirect_url': str(obj.redirect_url),
 				},
 				"from": {
-					"image_url": str(obj.image_url)
+					"image_url": str(obj.from_user.profile_image.url)
 				}
 			})
 		if obj.get_content_object_type() == "UnreadChatRoomMessages":

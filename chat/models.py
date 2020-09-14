@@ -65,7 +65,7 @@ class RoomChatMessage(models.Model):
     user                = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     room                = models.ForeignKey(PrivateChatRoom, on_delete=models.CASCADE)
     timestamp           = models.DateTimeField(auto_now_add=True)
-    content             = models.CharField(max_length=255, unique=False, blank=False,)
+    content             = models.TextField(unique=False, blank=False,)
 
     objects = RoomChatMessageManager()
 
@@ -157,7 +157,7 @@ def increment_unread_msg_count(sender, instance, **kwargs):
             except Notification.DoesNotExist:
                 instance.notifications.create(
                     target=instance.user,
-                    image_url=other_user.profile_image.url,
+                    from_user=other_user,
                     redirect_url=f"{settings.BASE_URL}/chat/{instance.room.id}/", # we want to go to the chatroom
                     verb=instance.most_recent_message,
                     content_type=content_type,

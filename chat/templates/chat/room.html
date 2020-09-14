@@ -7,7 +7,7 @@
 
 <style type="text/css">
 	.chat-log {
-		height: 300px;
+		height: 500px;
 		/*border: 1px solid #000;*/
 		overflow-x: hidden;
 		overflow-y: auto;
@@ -15,28 +15,6 @@
 		background-color: #fff;
 		font-size: 0.9em;
 		flex-direction: column-reverse;
-
-	}
-	#id_connected_users_container{
-		flex-basis: 150px;
-		height: 300px;
-		/*border: 1px solid #000;*/
-		overflow-x: hidden;
-		overflow-y: auto;
-		padding: 10px;
-		background-color: #fff;
-		font-size: 0.9em;
-	}
-	#id_chatroom_loading_spinner{
-		position: absolute;
-		margin-top: 40px;
-	}
-	#id_online_users_title{
-		font-weight: 550;
-		color: green;
-	}
-	#chat-log-container {
-		height: 300px;
 	}
 	.chat-message-input-container{
 		/*border: 1px solid #000;*/
@@ -47,6 +25,11 @@
 		outline: none;
 		border: 1px solid #fff;
 		border-top: 2px solid var(--main-background-color);
+		
+	}
+	.message-container{
+		margin-top: 10px;
+		justify-content: start;
 	}
 	.username-span{
 		font-weight: 600;
@@ -55,15 +38,23 @@
 		margin-left: 5px;
 		margin-right: 5px;
 	}
-	.msg-span{
-		font-weight: 450;
-		margin-top: 0px;
-		margin-bottom: auto;
-		white-space: normal;
+	.timestamp-span{
+		font-weight: 400;
+		font-size: 0.8em;
+		color: var(--secondary-text-color);
 	}
-	.message-container{
-		margin-top: 10px;
-		justify-content: start;
+	.timestamp-span:hover{
+		cursor: pointer;
+	}
+	.msg-p{
+		font-weight: 450;
+		margin-top: 5px;
+		margin-bottom: auto;
+		margin-left: 5px;
+		margin-right: 5px;
+		white-space: normal;
+		-ms-word-break: break-all;
+		word-break: break-all;
 	}
 	.profile-image{
 		width: 33px;
@@ -90,10 +81,15 @@
 	.material-icons:hover{
 		cursor: pointer;
 	}
-	.card{
+	.card {
 		border-radius: 12px;
 	}
+	#id_chatroom_loading_spinner{
+		position: absolute;
+	}
 </style>
+
+
 
 <div class="container">
 	<div class="card">
@@ -111,8 +107,8 @@
 		{% endif %}
 		
 		</div>
-		<div class="d-flex flex-row card-body p-1">
-			<div class="d-flex flex-column flex-grow-1" id="id_chat_log_container">
+		<div class="card-body p-1">
+			<div class="d-flex flex-column" id="id_chat_log_container">
 				
 				<div class="d-flex flex-row justify-content-center" id="id_chatroom_loading_spinner_container">
 					<div class="spinner-border text-primary"  id="id_chatroom_loading_spinner" role="status"  style="display: none; ">
@@ -123,10 +119,9 @@
 					
 				</div>
 				<span class="{% if not debug %}d-none{% endif %} page-number" id="id_page_number">1</span>
-				<span class="{% if not debug %}d-none{% endif %} has-joined-room" id="id_has_joined_room">False</span>
 				
 				<div class="d-flex flex-row chat-message-input-container">
-					<input class="flex-grow-1 chat-message-input" id="id_chat_message_input" type="text">
+					<textarea class="flex-grow-1 chat-message-input" id="id_chat_message_input"></textarea>
 					<button class="btn btn-primary chat-message-submit-button">
 						<span id="id_chat_message_submit" class="material-icons">send
 						</span>
@@ -135,8 +130,8 @@
 			</div>
 		</div>
 	</div>
-	
 </div>
+
 
 <script>
 
@@ -145,102 +140,75 @@
 		setPageNumber("-1")
 	}
 
-	function setHasJoinedRoom(hasJoinedRoom){
-		document.getElementById("id_has_joined_room").innerHTML = hasJoinedRoom
-	}
-
+	/*
+		Retrieve the chat room messages given the page number.
+	*/
 	function getRoomChatMessages(){
-		console.log("getRoomChatMessages called.")
 		var pageNumber = document.getElementById("id_page_number").innerHTML
-		var hasJoinedRoom = document.getElementById("id_has_joined_room").innerHTML
-		var requestData = {
-			"page_number": pageNumber,
-			"room_id": "{{room_id}}",
-			"has_joined_room": hasJoinedRoom,
-		}
-		console.log("page number: " + pageNumber)
 		if(pageNumber != "-1"){
-			displayChatroomLoadingSpinner(true)
 			setPageNumber("-1") // loading in progress
-			$.ajax({
-					type: 'GET',
-					dataType: "json",
-					url: "{% url 'chat:get-room-chat-messages' room_id=room_id %}",
-					data: requestData,
-					timeout: 5000,
-					success: function(data) {
-						console.log("SUCCESS", data)
-						var newMessages = data['messages']
-						if (newMessages != null && newMessages != "None"){
-							newMessages.forEach(message => appendChatMessage(0, message['message'], message['username'], message['user_id'], message['profile_image'], true, false))
-							var newPageNumber = data['page_number']
-							setPageNumber(newPageNumber)
-						}
-						else{
-							setPaginationExhausted() // no more messages
-						}
-					},
-					error: function(data) {
-						console.error("ERROR...", data)
-					},
-					complete: function(data){
-						console.log("on complete")
-						displayChatroomLoadingSpinner(false)
-					}
-				});
+			chatSocket.send(JSON.stringify({
+				"command": "get_room_chat_messages",
+				"room_id": "{{room_id}}",
+				"page_number": pageNumber,
+			}));
 		}
+		
 	}
 
 	function setPageNumber(pageNumber){
 		document.getElementById("id_page_number").innerHTML = pageNumber
 	}
 
+	/*
+		Get the next page of chat messages when scrolls to bottom
+	*/
 	document.getElementById("id_chat_log").addEventListener("scroll", function(e){
-		var position = document.getElementById("id_chat_log").scrollTop
-		if(position == 0){
-			getRoomChatMessages()
-		}
-	})
-
-	function appendChatMessage(messageType, message, uName, user_id, pImage, maintainPosition, isNewMessage){
 		var chatLog = document.getElementById("id_chat_log")
+		chatLog.addEventListener("scroll", function(e){
+			// Opposite as general_notifications.html because we start from bottom (so we need Math.abs)
+			if ((Math.abs(chatLog.scrollTop) + 2) >= (chatLog.scrollHeight - chatLog.offsetHeight)) {
+				getRoomChatMessages()
+			}
+		});
+	})
+	function appendChatMessage(data, maintainPosition, isNewMessage){
+		messageType = data['msg_type']
+		message = data['message']
+		uName = data['username']
+		user_id = data['user_id']
+		profile_image = data['profile_image']
+		timestamp = data['natural_timestamp']
+		console.log("append chat message: " + messageType)
+		
 		var msg = "";
 		var username = ""
-		var profile_image = "{% static 'media/profile_images/logo_1080_1080.png' %}";
+
+		// determine what type of msg it is
 		switch (messageType) {
 			case 0:
-				profile_image = pImage
+				// new chatroom msg
 				username = uName + ": "
 				msg = message + '\n'
+				createChatMessageElement(msg, username, profile_image, user_id, timestamp, maintainPosition, isNewMessage)
 				break;
 			case 1:
-				// Warning / Advice messages
-				msg = "WARNING: " + message + '\n'
+				// User joined room
+				createConnectedDisconnectedElement(message, profile_image, user_id)
 				break;
 			case 2:
-				// Alert / Danger messages
-				msg = "ALERT: " + message + '\n'
-				break;
-			case 3:
-				// "Muted" messages
-				msg = "Muted: " + message + '\n'
-				break;
-			case 4:
-				// User joined room
-				profile_image = pImage
-				username = uName + ": "
-				msg = " connected.\n"
-				break;
-			case 5:
 				// User left room
-				profile_image = pImage
-				username = uName + ": "
-				msg = " disconnected.\n"
+				createConnectedDisconnectedElement(message, profile_image, user_id)
 				break;
 			default:
 				console.log("Unsupported message type!");
 				return;
 		}
+	}
+
+	function createConnectedDisconnectedElement(msg, profile_image, user_id){
+		var chatLog = document.getElementById("id_chat_log")
+
 		var newMessageDiv = document.createElement("div")
 		newMessageDiv.classList.add("d-flex")
 		newMessageDiv.classList.add("flex-row")
@@ -254,8 +222,47 @@
 		profileImage.classList.add("rounded-circle")
 		profileImage.classList.add("img-fluid")
 		profileImage.src = profile_image
-		profileImage.id = uName
 		newMessageDiv.appendChild(profileImage)
+
+		var usernameSpan = document.createElement("span")
+		usernameSpan.innerHTML = msg
+		usernameSpan.classList.add("username-span")
+		usernameSpan.addEventListener("click", function(e){
+			selectUser(user_id)
+		})
+		newMessageDiv.appendChild(usernameSpan)
+
+		chatLog.insertBefore(newMessageDiv, chatLog.firstChild)
+ 	}
+
+	/*
+		Build a new ChatMessage element and append to the list
+	*/
+	function createChatMessageElement(msg, username, profile_image, user_id, timestamp, maintainPosition, isNewMessage){
+		var chatLog = document.getElementById("id_chat_log")
+
+		var newMessageDiv = document.createElement("div")
+		newMessageDiv.classList.add("d-flex")
+		newMessageDiv.classList.add("flex-row")
+		newMessageDiv.classList.add("message-container")
+
+		var profileImage = document.createElement("img")
+		profileImage.addEventListener("click", function(e){
+			selectUser(user_id)
+		})
+		profileImage.classList.add("profile-image")
+		profileImage.classList.add("rounded-circle")
+		profileImage.classList.add("img-fluid")
+		profileImage.src = profile_image
+		newMessageDiv.appendChild(profileImage)
+
+		var div1 = document.createElement("div")
+		div1.classList.add("d-flex")
+		div1.classList.add("flex-column")
+
+		var div2 = document.createElement("div")
+		div2.classList.add("d-flex")
+		div2.classList.add("flex-row")
 
 		var usernameSpan = document.createElement("span")
 		usernameSpan.innerHTML = username
@@ -263,12 +270,26 @@
 		usernameSpan.addEventListener("click", function(e){
 			selectUser(user_id)
 		})
-		newMessageDiv.appendChild(usernameSpan)
+		div2.appendChild(usernameSpan)
 
-		var msgSpan = document.createElement("span")
-		msgSpan.innerHTML = msg
-		msgSpan.classList.add("msg-span")
-		newMessageDiv.appendChild(msgSpan)
+		var timestampSpan = document.createElement("span")
+		timestampSpan.innerHTML = timestamp
+		timestampSpan.classList.add("timestamp-span")
+		timestampSpan.classList.add("d-flex")
+		timestampSpan.classList.add("align-items-center")
+		timestampSpan.addEventListener("click", function(e){
+			selectUser(user_id)
+		})
+		div2.appendChild(timestampSpan)
+
+		div1.appendChild(div2)
+
+		var msgP = document.createElement("p")
+		msgP.innerHTML = validateText(msg)
+		msgP.classList.add("msg-p")
+		div1.appendChild(msgP)
+
+		newMessageDiv.appendChild(div1)
 
 		if(isNewMessage){
 			chatLog.insertBefore(newMessageDiv, chatLog.firstChild)
@@ -282,6 +303,42 @@
 		}
 	}
 
+
+	/*
+		Build a <p> for messages using markdown
+		https://github.com/markdown-it/markdown-it
+	*/
+	function validateText(str)
+	{
+		var md = window.markdownit({
+			highlight: function (str, lang) {
+				if (lang && hljs.getLanguage(lang)) {
+					try {
+						return '<pre class="hljs"><code>' +
+							hljs.highlight(lang, str, true).value +
+							'</code></pre>';
+					} catch (__) {}
+				}
+				return '<pre class="hljs"><code>' + md.utils.escapeHtml(str) + '</code></pre>';
+			},
+			linkify: true,
+		});
+		var result = md.render(str);
+		return result
+	}
+
+	function handleMessagesPayload(messages, new_page_number){
+		if(messages != null && messages != "undefined"){
+			setPageNumber(new_page_number)
+			messages.forEach(function(message){
+				appendChatMessage(message, true, false)
+			})
+		}
+		else{
+			setPaginationExhausted() // no more messages
+		}
+	}
+
 	// Correctly decide between ws:// and wss://
 	var ws_scheme = window.location.protocol == "https:" ? "wss" : "ws";
 	var ws_path = ws_scheme + '://' + window.location.host + "/chat/{{room_id}}/"; // development
@@ -292,9 +349,13 @@
 	// Handle incoming messages
 	chatSocket.onmessage = function(message) {
 		// Decode the JSON
-		console.log("Got chat websocket message " + message.data);
-		// console.log("Got websocket message.");
+		// console.log("Got chat websocket message " + message.data);
+		console.log("Got websocket message.");
 		var data = JSON.parse(message.data);
+
+		// display the progress bar?
+		displayChatroomLoadingSpinner(data.display_progress_bar)
+
 		// Handle errors (ClientError)
 		if (data.error) {
 			console.error(data.error + ": " + data.message)
@@ -304,21 +365,20 @@
 		// Handle joining (Client perspective)
 		if (data.join) {
 			console.log("Joining room " + data.join);
-			setHasJoinedRoom("True")
 			getRoomChatMessages()
 		}
 		// Handle leaving (client perspective)
-		else if (data.leave) {
+		if (data.leave) {
 			// do nothing
 			console.log("Leaving room " + data.leave);
 		}
 		// Handle getting a message
-		else if (data.message || data.msg_type != 0) {
-			appendChatMessage(data.msg_type, data.message, data.username, data.user_id, data.profile_image, false, true)
+		if (data.message) {
+			appendChatMessage(data, false, true)
 		}
-		else {
-			var textNode
-			console.log("Cannot handle message!");
+		// new payload of messages coming in from backend
+		if(data.messages_payload){
+			handleMessagesPayload(data.messages, data.new_page_number)
 		}
 	};
 
@@ -352,16 +412,21 @@
     }
 
     
-	document.querySelector('#id_chat_message_input').focus();
-	document.querySelector('#id_chat_message_input').onkeyup = function(e) {
-		if (e.keyCode === 13) {  // enter, return
-			document.querySelector('#id_chat_message_submit').click();
+	document.getElementById('id_chat_message_input').focus();
+	document.getElementById('id_chat_message_input').onkeyup = function(e) {
+		if (e.keyCode === 13 && e.shiftKey) {  // enter + return
+			// Handled automatically by textarea
+		}
+		else if(e.keyCode === 13 && !e.shiftKey){ // enter + !return
+			document.getElementById('id_chat_message_submit').click();
 		}
 	};
 	
-	document.querySelector('#id_chat_message_submit').onclick = function(e) {
-		const messageInputDom = document.querySelector('#id_chat_message_input');
+	document.getElementById('id_chat_message_submit').onclick = function(e) {
+
+		const messageInputDom = document.getElementById('id_chat_message_input');
 		const message = messageInputDom.value;
+		console.log("SENDING A PAYLOAD " + message)
 		chatSocket.send(JSON.stringify({
 			"command": "send",
 			"room": "{{room_id}}",
@@ -382,10 +447,7 @@
 		win.focus()
 	}
 
-
-
 	function displayChatroomLoadingSpinner(isDisplayed){
-		console.log("display spinner " + isDisplayed)
 		var spinner = document.getElementById("id_chatroom_loading_spinner")
 		if(isDisplayed){
 			spinner.style.display = "block"
@@ -394,6 +456,7 @@
 			spinner.style.display = "none"
 		}
 	}
+
 
 </script>
 
