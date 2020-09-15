@@ -56,7 +56,7 @@
 			
 			<div class="card-center px-2">
 				<a class="profile-link" href="{% url 'account:view' user_id=friend.0.pk %}">
-					<h4 class="card-title">{{friend.0.username}}</h4>
+					<h4 class="card-title">{{friend.0.username|truncatechars:50}}</h4>
 				</a>
 				{% if friend.1 %}
 				<a href="#" onclick="createOrReturnPrivateChat('{{friend.0.id}}')">Send a Message</a>

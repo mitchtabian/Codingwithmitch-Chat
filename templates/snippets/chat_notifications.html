@@ -320,6 +320,7 @@
 		usage: await sleep(1000)
 	*/
 	function sleep(ms) {
+		console.log("sleeping for " + ms + " ms.")
 		return new Promise(resolve => setTimeout(resolve, ms));
 	}
 

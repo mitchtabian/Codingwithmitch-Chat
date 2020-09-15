@@ -149,8 +149,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         })
 
         if self.scope["user"].is_authenticated:
-            # if settings.NOTIFY_USERS_ON_ENTER_OR_LEAVE_ROOMS:
-                # Notify the group that someone joined
+            # Notify the group that someone joined
             await self.channel_layer.group_send(
                 room.group_name,
                 {
@@ -174,7 +173,6 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         # Remove user from "connected_users" list
         await disconnect_user(room, self.scope["user"])
 
-        #if settings.NOTIFY_USERS_ON_ENTER_OR_LEAVE_ROOMS:
         # Notify the group that someone left
         await self.channel_layer.group_send(
             room.group_name,
@@ -290,8 +288,6 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                 "natural_timestamp": timestamp,
             },
         )
-
-
 
 
     async def send_messages_payload(self, messages, new_page_number):

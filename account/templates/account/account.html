@@ -73,7 +73,7 @@
 		  <div class="card-body">
 		  	<div class="d-flex flex-column justify-content-center p-4">
 		  		<div class="image-container mx-auto mb-4">
-		  			<img class="border border-dark rounded-circle img-fluid mx-auto d-block profile-image" src="{{profile_image.url}}" alt="codingwithmitch logo">
+		  			<img class="d-block border border-dark rounded-circle img-fluid mx-auto profile-image" src="{{profile_image}}" alt="codingwithmitch logo" id="id_profile_image">
 		  		</div>
 		  		<p class="mt-4 mb-1 field-heading">Email</p>
 		  		{%  if is_self %}
@@ -186,6 +186,33 @@
 </div>
 
 <script type="text/javascript">
+
+
+	// preloadImage("{{profile_image}}", preloadCallback)
+
+	// function preloadCallback(src){
+	// 	var img = document.getElementById('id_profile_image')
+	// 	img.src = src
+	// }
+
+	// function preloadImage(imgSrc, callback){
+	// 	console.log("attempting to load " + imgSrc)
+
+	// 	var objImagePreloader = new Image();
+
+	// 	objImagePreloader.src = imgSrc;
+	// 	if(objImagePreloader.complete){
+	// 		callback(objImagePreloader.src);
+	// 		objImagePreloader.onload = function(){};
+	// 	}
+	// 	else{
+	// 		objImagePreloader.onload = function() {
+	// 			callback(objImagePreloader.src);
+	// 			//    clear onLoad, IE behaves irratically with animated gifs otherwise
+	// 			objImagePreloader.onload=function(){};
+	// 		}
+	// 	}
+	// }
 
 	function onFriendRequestSent(){
 		location.reload();
