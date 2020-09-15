@@ -10,24 +10,20 @@ import json
 from time import sleep
 
 from account.models import Account
-from chat.models import RoomChatMessage, PrivateChatRoom, UnreadChatRoomMessages
+from public_chat.models import PublicRoomChatMessage, PublicChatRoom
 from chat.exceptions import ClientError
-from chat.constants import *
+from public_chat.constants import *
 from chat.utils import LazyRoomChatMessageEncoder, calculate_timestamp
-from friend.models import FriendList
 
 User = get_user_model()
-
 
 
 """
 Json payload identifiers:
 1. type
 2. messages_payload
-3. join
-4. leave
-5. send
-6. msg_type
+3. send
+4. msg_type
     - See chat.constants for all possible types
 
 """
@@ -35,21 +31,13 @@ Json payload identifiers:
 
 # Example taken from:
 # https://github.com/andrewgodwin/channels-examples/blob/master/multichat/chat/consumers.py
-class ChatConsumer(AsyncJsonWebsocketConsumer):
+class PublicChatConsumer(AsyncJsonWebsocketConsumer):
 
     async def connect(self):
         """
         Called when the websocket is handshaking as part of initial connection.
         """
-        print("ChatConsumer: connect: " + str(self.scope["user"]))
-
-        # if not self.scope["user"].is_authenticated:
-        #     await self.close()
-        # else:
-        #     # Accept the connection
-        #     await self.accept()
-        #     # Store which rooms the user has joined on this connection
-        #     self.rooms = set()
+        print("PublicChatConsumer: connect: " + str(self.scope["user"]))
 
         # let everyone connect. But limit read/write to authenticated users
         await self.accept()
@@ -62,7 +50,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         for us and pass it as the first argument.
         """
         # Messages will have a "command" key we can switch on
-        print("ChatConsumer: receive_json")
+        print("PublicChatConsumer: receive_json")
         command = content.get("command", None)
         try:
             if command == "join":
@@ -72,11 +60,10 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                 # Leave the room
                 await self.leave_room(content["room"])
             elif command == "send":
-                print("SEND: " + str(content["message"]))
                 await self.send_room(content["room"], content["message"])
             elif command == "get_room_chat_messages":
                 await self.display_progress_bar(True)
-                room = await get_room_or_error(content['room_id'], self.scope["user"])
+                room = await get_room_or_error(content['room_id'])
                 payload = await get_room_chat_messages(room, content['page_number'])
                 if payload != None:
                     payload = json.loads(payload)
@@ -100,7 +87,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         Called when the WebSocket closes for any reason.
         """
         # Leave all the rooms we are still in
-        print("ChatConsumer: disconnect")
+        print("PublicChatConsumer: disconnect")
         try:
             for room_id in list(self.rooms):
                 await self.leave_room(room_id)
@@ -114,9 +101,10 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         """
         # The logged-in user is in our scope thanks to the authentication ASGI middleware (AuthMiddlewareStack)
         
-        print("ChatConsumer: join_room")
+        print("PublicChatConsumer: join_room")
+        is_auth = await is_authenticated(self.scope["user"])
         try:
-            room = await get_room_or_error(room_id, self.scope["user"])
+            room = await get_room_or_error(room_id)
         except ClientError as e:
             errorData = {}
             errorData['error'] = e.code
@@ -125,10 +113,11 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             await self.send_json(errorData)
             return
 
-        # Add user to "connected_users" list
-        await connect_user(room, self.scope["user"])
+        sessionId = get_session_id(self.scope)
 
-        await on_user_connected(room, self.scope["user"])
+        # Add user to "users" list for room
+        # await connect_user(room, self.scope["user"])
+        await connect_user(room, sessionId)
 
         # Store that we're in the room
         self.rooms.add(room_id)
@@ -139,26 +128,19 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         )
 
         # Instruct their client to finish opening the room
-        print("JOIN: " + str(self.scope["user"].id)) 
         await self.send_json({
-            "join": str(room.id),
-            "profile_image": self.scope["user"].profile_image.url,
-            "username": self.scope["user"].username,
-            "user_id": self.scope["user"].id,
+            "join": str(room.id)
         })
 
-        if self.scope["user"].is_authenticated:
-            # Notify the group that someone joined
-            await self.channel_layer.group_send(
-                room.group_name,
-                {
-                    "type": "chat.join",
-                    "room_id": room_id,
-                    "profile_image": self.scope["user"].profile_image.url,
-                    "username": self.scope["user"].username,
-                    "user_id": self.scope["user"].id,
-                }
-            )
+        # send the new user count to the room
+        num_connected_users = await get_num_connected_users(room)
+        await self.channel_layer.group_send(
+            room.group_name,
+            {
+                "type": "connected.user.count",
+                "connected_user_count": num_connected_users,
+            }
+        )
 
 
     async def leave_room(self, room_id):
@@ -166,23 +148,14 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         Called by receive_json when someone sent a leave command.
         """
         # The logged-in user is in our scope thanks to the authentication ASGI middleware
-        print("ChatConsumer: leave_room")
-        room = await get_room_or_error(room_id, self.scope["user"])
+        print("PublicChatConsumer: leave_room")
+        room = await get_room_or_error(room_id)
+
+        sessionId = get_session_id(self.scope)
 
         # Remove user from "connected_users" list
-        await disconnect_user(room, self.scope["user"])
-
-        # Notify the group that someone left
-        await self.channel_layer.group_send(
-            room.group_name,
-            {
-                "type": "chat.leave",
-                "room_id": room_id,
-                "profile_image": self.scope["user"].profile_image.url,
-                "username": self.scope["user"].username,
-                "user_id": self.scope["user"].id,
-            }
-        )
+        # await disconnect_user(room, self.scope["user"])
+        await disconnect_user(room, sessionId)
 
         # Remove that we're in the room
         self.rooms.discard(room_id)
@@ -191,30 +164,45 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             room.group_name,
             self.channel_name,
         )
-        # Instruct their client to finish closing the room
-        await self.send_json({
-            "leave": str(room.id),
-        })
 
+        # send the new user count to the room
+        num_connected_users = await get_num_connected_users(room)
+        await self.channel_layer.group_send(
+            room.group_name,
+            {
+                "type": "connected.user.count",
+                "connected_user_count": num_connected_users,
+            }
+        )
 
+    async def connected_user_count(self, event):
+        """
+        Called to send the number of connected users to the room.
+        This number is displayed in the room so other users know how many users are connected to the chat.
+        """
+        # Send a message down to the client
+        print("PublicChatConsumer: connected_user_count: count: " + str(event["connected_user_count"]))
+        await self.send_json(
+            {
+                "msg_type": MSG_TYPE_CONNECTED_USER_COUNT,
+                "connected_user_count": event["connected_user_count"]
+            },
+        )
 
     async def send_room(self, room_id, message):
         """
         Called by receive_json when someone sends a message to a room.
         """
         # Check they are in this room
-        print("ChatConsumer: send_room")
+        print("PublicChatConsumer: send_room")
         if room_id not in self.rooms:
             raise ClientError("ROOM_ACCESS_DENIED", "Room access denied")
+        if not await is_authenticated(self.scope["user"]):
+            raise ClientError("AUTH_ERROR", "You must be authenticated to chat.")
         # Get the room and send to the group about it
-        room = await get_room_or_error(room_id, self.scope["user"])
+        room = await get_room_or_error(room_id)
 
-        # get list of connected_users
-        connected_users = room.connected_users.all()
-        await append_unread_msg_if_not_connected(room, room.user1, connected_users, message)
-        await append_unread_msg_if_not_connected(room, room.user2, connected_users, message)
-
-        await create_room_chat_message(room, self.scope["user"], message)
+        await create_public_room_chat_message(room, self.scope["user"], message)
         await self.channel_layer.group_send(
             room.group_name,
             {
@@ -227,59 +215,18 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             }
         )
 
-
-    # These helper methods are named by the types we send - so chat.join becomes chat_join
-    async def chat_join(self, event):
-        """
-        Called when someone has joined our chat.
-        """
-        # Send a message down to the client
-        print("ChatConsumer: chat_join: " + str(self.scope["user"].id))
-        if event["username"]:
-            await self.send_json(
-                {
-                    "msg_type": MSG_TYPE_ENTER,
-                    "room": event["room_id"],
-                    "profile_image": event["profile_image"],
-                    "username": event["username"],
-                    "user_id": event["user_id"],
-                    "message": event["username"] + " connected.",
-                },
-            )
-
-
-    async def chat_leave(self, event):
-        """
-        Called when someone has left our chat.
-        """
-        # Send a message down to the client
-        print("ChatConsumer: chat_leave: " + str(event["username"]))
-        if event["username"]:
-            await self.send_json(
-                {
-                    "msg_type": MSG_TYPE_LEAVE,
-                    "room": event["room_id"],
-                    "profile_image": event["profile_image"],
-                    "username": event["username"],
-                    "user_id": event["user_id"],
-                    "message": event["username"] + " disconnected.",
-                },
-            )
-
-
     async def chat_message(self, event):
         """
         Called when someone has messaged our chat.
         """
         # Send a message down to the client
-        print("ChatConsumer: chat_message from user #" + str(event["user_id"]))
+        print("PublicChatConsumer: chat_message from user #" + str(event["user_id"]))
 
         timestamp = calculate_timestamp(timezone.now())
 
         await self.send_json(
             {
                 "msg_type": MSG_TYPE_MESSAGE,
-                "room": event["room_id"],
                 "username": event["username"],
                 "user_id": event["user_id"],
                 "profile_image": event["profile_image"],
@@ -293,7 +240,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         """
         Send a payload of messages to the ui
         """
-        print("ChatConsumer: send_messages_payload. ")
+        print("PublicChatConsumer: send_messages_payload. ")
 
         await self.send_json(
             {
@@ -317,82 +264,63 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             }
         )
 
-@database_sync_to_async
-def create_room_chat_message(room, user, message):
-    return RoomChatMessage.objects.create(user=user, room=room, content=message)
+
+def get_session_id(scope):
+    sessionIdData = str(scope['headers'][10])
+    # sessionId = 32 characters
+    return sessionIdData[sessionIdData.find("sessionid=") + 10 :sessionIdData.find("sessionid=") + 42]
 
 
 @database_sync_to_async
-def connect_user(room, user):
-    # add user to connected_users list
-    account = Account.objects.get(pk=user.id)
-    return room.connect_user(account)
+def create_public_room_chat_message(room, user, message):
+    return PublicRoomChatMessage.objects.create(user=user, room=room, content=message)
 
 
 @database_sync_to_async
-def disconnect_user(room, user):
-    # remove from connected_users list
-    account = Account.objects.get(pk=user.id)
-    return room.disconnect_user(account)
+def connect_user(room, sessionId):
+    """
+    Add the session_key param from request to identify this user
+    https://docs.djangoproject.com/en/3.1/topics/http/sessions/
+    """
+    return room.connect_user(sessionId)
 
-
-# If the user is not connected to the chat, increment "unread messages" count
 @database_sync_to_async
-def append_unread_msg_if_not_connected(room, user, connected_users, message):
-    if not user in connected_users: 
-        unread_msgs = UnreadChatRoomMessages.objects.get(room=room, user=user)
-        unread_msgs.most_recent_message = message
-        unread_msgs.count += 1
-        unread_msgs.save()
-    return
+def disconnect_user(room, sessionId):
+    """
+    Remove the session_key param from request to identify this user
+    https://docs.djangoproject.com/en/3.1/topics/http/sessions/
+    """
+    return room.disconnect_user(sessionId)
+    
 
-# When a user connects, reset their unread message count
 @database_sync_to_async
-def on_user_connected(room, user):
-    # confirm they are in the connected users list
-    connected_users = room.connected_users.all()
-    if user in connected_users:
-        # reset count
-        unread_msgs = UnreadChatRoomMessages.objects.get(room=room, user=user)
-        unread_msgs.count = 0
-        unread_msgs.save()
-    return
+def get_num_connected_users(room):
+    if room.users:
+        print("NUM CONNECTED USERS: " + str(len(room.users)))
+        return len(room.users)
+    return 0
 
 
 # This decorator turns this function from a synchronous function into an async one
 # we can call from our async consumers, that handles Django DBs correctly.
 # For more, see http://channels.readthedocs.io/en/latest/topics/databases.html
 @database_sync_to_async
-def get_room_or_error(room_id, user):
+def get_room_or_error(room_id):
     """
-    Tries to fetch a room for the user, checking permissions along the way.
+    Tries to fetch a room for the user
     """
-    # Check if the user is logged in
-    # if not user.is_authenticated:
-    #     raise ClientError("USER_HAS_TO_LOGIN", "You must login.")
-    # Find the room they requested (by ID)
     try:
-        room = PrivateChatRoom.objects.get(pk=room_id)
-    except PrivateChatRoom.DoesNotExist:
+        room = PublicChatRoom.objects.get(pk=room_id)
+    except PublicChatRoom.DoesNotExist:
         raise ClientError("ROOM_INVALID", "Invalid room.")
-    # Check permissions
 
-    # Is this user allowed in the room? (must be user1 or user2)
-    if user != room.user1 and user != room.user2:
-        raise ClientError("ROOM_ACCESS_DENIED", "You do not have permission to join this room.")
-
-    # Are the users in this room friends?
-    friend_list = FriendList.objects.get(user=user).friends.all()
-    if not room.user1 in friend_list:
-        if not room.user2 in friend_list:
-            raise ClientError("ROOM_ACCESS_DENIED", "You must be friends to chat.")
     return room
 
 
 @database_sync_to_async
 def get_room_chat_messages(room, page_number):
     try:
-        qs = RoomChatMessage.objects.by_room(room)
+        qs = PublicRoomChatMessage.objects.by_room(room)
         p = Paginator(qs, DEFAULT_ROOM_CHAT_MESSAGE_PAGE_SIZE)
 
         sleep(1) # for testing
@@ -412,7 +340,11 @@ def get_room_chat_messages(room, page_number):
         return None
        
 
-
+@database_sync_to_async
+def is_authenticated(user):
+    if user.is_authenticated:
+        return True
+    return False
 
 
 

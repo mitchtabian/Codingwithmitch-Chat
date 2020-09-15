@@ -6,6 +6,7 @@ from datetime import datetime
 
 from notification.models import Notification
 from friend.models import FriendRequest
+from public_chat.models import PublicChatRoom
 
 DEBUG = False
 
@@ -15,9 +16,11 @@ def home_screen_view(request):
 	if user.is_authenticated:
 		context['debug'] = DEBUG
 
+	# Retrieve the "General" chat room
+	obj, created = PublicChatRoom.objects.get_or_create(title="General")
+	context['public_chat'] = obj
+
 	return render(request, "personal/home.html", context)
-
-
 
 
 

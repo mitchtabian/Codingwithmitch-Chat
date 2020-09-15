@@ -1,17 +1,9 @@
-<!-- PrivateChatRoom -->
-<!-- Chat room for 1 on 1 conversations -->
-
-{% extends 'base.html' %}
-{% load static %}
-
-{% block content %}
-
-<script src="{% static 'bootstrap/js/jquery.min.js' %}"></script>
+<!-- PublicChatRoom -->
+<!-- Chat room for many to many conversations -->
 
 <style type="text/css">
 	.chat-log {
 		height: 500px;
-		/*border: 1px solid #000;*/
 		overflow-x: hidden;
 		overflow-y: auto;
 		padding: 10px;
@@ -84,57 +76,58 @@
 	.material-icons:hover{
 		cursor: pointer;
 	}
-	.card {
-		border-radius: 12px;
-	}
 	#id_chatroom_loading_spinner{
 		position: absolute;
+	}
+	.connected-users{
+		color: red;
+	}
+	.connected-users-icon{
+		color: red;
+	}
+	.connected-users-icon:hover{
+		cursor: default;
 	}
 </style>
 
 
+<div class="card mt-3">
 
-<div class="container">
-	<div class="card">
-		<div class="d-flex flex-row align-items-center card-header" id="id_room_title">
-		{% if request.user == user1 %}
-		<a class="d-flex flex-row" href="{% url 'account:view' user_id=user2.id%}" target="_blank">
-			<img class="profile-image rounded-circle img-fluid" src="{{user2.profile_image.url}}">
-			<h3>&nbsp;{{user2.username}}&nbsp;</h3>
-		</a>
-		{% else %}
-		<a class="d-flex flex-row" href="{% url 'account:view' user_id=user1.id%}" target="_blank">
-			<img class="profile-image rounded-circle img-fluid" src="{{user1.profile_image.url}}">
-			<h3>&nbsp;{{user1.username}}&nbsp;</h3>
-		</a>
-		{% endif %}
-		
+	<div class="card-header">
+		<div class="d-flex flex-row justify-content-between">
+			<h3 class="">Public Chat</h3>
+			<div class="d-flex flex-row align-items-center">
+				<span class="material-icons m-auto pr-1 connected-users-icon">person_outline</span>
+				<span class="m-auto connected-users" id="id_connected_users"></span>
+			</div>
+			
 		</div>
-		<div class="card-body p-1">
-			<div class="d-flex flex-column" id="id_chat_log_container">
+		
+	</div>
+
+	<div class="card-body p-1">
+		<div class="d-flex flex-column" id="id_chat_log_container">
+						
+			<div class="d-flex flex-row justify-content-center" id="id_chatroom_loading_spinner_container">
+				<div class="spinner-border text-primary"  id="id_chatroom_loading_spinner" role="status"  style="display: none; ">
+					<span class="sr-only">Loading...</span>
+				</div>
+			</div>
+			<div class="d-flex chat-log" id="id_chat_log">
 				
-				<div class="d-flex flex-row justify-content-center" id="id_chatroom_loading_spinner_container">
-					<div class="spinner-border text-primary"  id="id_chatroom_loading_spinner" role="status"  style="display: none; ">
-						<span class="sr-only">Loading...</span>
-					</div>
-				</div>
-				<div class="d-flex chat-log" id="id_chat_log">
-					
-				</div>
-				<span class="{% if not debug %}d-none{% endif %} page-number" id="id_page_number">1</span>
-				
-				<div class="d-flex flex-row chat-message-input-container">
-					<textarea class="flex-grow-1 chat-message-input" id="id_chat_message_input"></textarea>
-					<button class="btn btn-primary chat-message-submit-button">
-						<span id="id_chat_message_submit" class="material-icons">send
-						</span>
-					</button>
-				</div>
+			</div>
+			<span class="{% if not debug %}d-none{% endif %} page-number" id="id_page_number">1</span>
+			
+			<div class="d-flex flex-row chat-message-input-container">
+				<textarea class="flex-grow-1 chat-message-input" id="id_chat_message_input"></textarea>
+				<button class="btn btn-primary chat-message-submit-button">
+					<span id="id_chat_message_submit" class="material-icons">send
+					</span>
+				</button>
 			</div>
 		</div>
 	</div>
 </div>
-
 
 <script>
 
@@ -150,7 +143,7 @@
 		var pageNumber = document.getElementById("id_page_number").innerHTML
 		if(pageNumber != "-1"){
 			setPageNumber("-1") // loading in progress
-			chatSocket.send(JSON.stringify({
+			public_chat_socket.send(JSON.stringify({
 				"command": "get_room_chat_messages",
 				"room_id": "{{room_id}}",
 				"page_number": pageNumber,
@@ -175,6 +168,8 @@
 			}
 		});
 	})
+
+
 	function appendChatMessage(data, maintainPosition, isNewMessage){
 		messageType = data['msg_type']
 		message = data['message']
@@ -182,61 +177,15 @@
 		user_id = data['user_id']
 		profile_image = data['profile_image']
 		timestamp = data['natural_timestamp']
-		console.log("append chat message: " + messageType)
+		console.log("append public_chat_socket message: " + messageType)
 		
 		var msg = "";
 		var username = ""
 
-		// determine what type of msg it is
-		switch (messageType) {
-			case 0:
-				// new chatroom msg
-				username = uName + ": "
-				msg = message + '\n'
-				createChatMessageElement(msg, username, profile_image, user_id, timestamp, maintainPosition, isNewMessage)
-				break;
-			case 1:
-				// User joined room
-				createConnectedDisconnectedElement(message, profile_image, user_id)
-				break;
-			case 2:
-				// User left room
-				createConnectedDisconnectedElement(message, profile_image, user_id)
-				break;
-			default:
-				console.log("Unsupported message type!");
-				return;
-		}
+		username = uName + ": "
+		msg = message + '\n'
+		createChatMessageElement(msg, username, profile_image, user_id, timestamp, maintainPosition, isNewMessage)
 	}
-
-	function createConnectedDisconnectedElement(msg, profile_image, user_id){
-		var chatLog = document.getElementById("id_chat_log")
-
-		var newMessageDiv = document.createElement("div")
-		newMessageDiv.classList.add("d-flex")
-		newMessageDiv.classList.add("flex-row")
-		newMessageDiv.classList.add("message-container")
-
-		var profileImage = document.createElement("img")
-		profileImage.addEventListener("click", function(e){
-			selectUser(user_id)
-		})
-		profileImage.classList.add("profile-image")
-		profileImage.classList.add("rounded-circle")
-		profileImage.classList.add("img-fluid")
-		profileImage.src = profile_image
-		newMessageDiv.appendChild(profileImage)
-
-		var usernameSpan = document.createElement("span")
-		usernameSpan.innerHTML = msg
-		usernameSpan.classList.add("username-span")
-		usernameSpan.addEventListener("click", function(e){
-			selectUser(user_id)
-		})
-		newMessageDiv.appendChild(usernameSpan)
-
-		chatLog.insertBefore(newMessageDiv, chatLog.firstChild)
- 	}
 
 	/*
 		Build a new ChatMessage element and append to the list
@@ -319,21 +268,24 @@
 		}
 	}
 
+	function setConnectedUsersCount(count){
+		element = document.getElementById("id_connected_users")
+		element.innerHTML = count
+	}
+
 	// Correctly decide between ws:// and wss://
 	var ws_scheme = window.location.protocol == "https:" ? "wss" : "ws";
-	var ws_path = ws_scheme + '://' + window.location.host + "/chat/{{room_id}}/"; // development
-	//var ws_path = ws_scheme + '://' + window.location.host + ":8001/chat/{{room_id}}/"; // production
+	var ws_path = ws_scheme + '://' + window.location.host + "/public_chat/{{room_id}}/"; // development
+	//var ws_path = ws_scheme + '://' + window.location.host + ":8001/public_chat/{{room_id}}/"; // production
 	// console.log("Connecting to " + ws_path);
-	var chatSocket = new WebSocket(ws_path);
+	var public_chat_socket = new WebSocket(ws_path);
 
 	// Handle incoming messages
-	chatSocket.onmessage = function(message) {
+	public_chat_socket.onmessage = function(message) {
 		// Decode the JSON
 		// console.log("Got chat websocket message " + message.data);
-		console.log("Got websocket message.");
+		console.log("Got public websocket message.");
 		var data = JSON.parse(message.data);
-
-		console.log("msg_type: " + data.msg_type)
 
 		// display the progress bar?
 		displayChatroomLoadingSpinner(data.display_progress_bar)
@@ -346,17 +298,16 @@
 		}
 		// Handle joining (Client perspective)
 		if (data.join) {
-			console.log("Joining room " + data.join);
+			console.log("Joining public room " + data.join);
 			getRoomChatMessages()
 		}
-		// Handle leaving (client perspective)
-		if (data.leave) {
-			// do nothing
-			console.log("Leaving room " + data.leave);
-		}
 		// Handle getting a message
-		if (data.msg_type != "undefined") {
+		if (data.msg_type == 0) {
 			appendChatMessage(data, false, true)
+		}
+		// Handle getting the connected_user count
+		if (data.msg_type == 1) {
+			setConnectedUsersCount(data['connected_user_count'])
 		}
 		// new payload of messages coming in from backend
 		if(data.messages_payload){
@@ -364,33 +315,33 @@
 		}
 	};
 
-	chatSocket.addEventListener("open", function(e){
-		console.log("ChatSocket OPEN")
+	public_chat_socket.addEventListener("open", function(e){
+		console.log("Public Public ChatSocket OPEN")
 		// join chat room
 		if("{{request.user.is_authenticated}}"){
-			chatSocket.send(JSON.stringify({
+			public_chat_socket.send(JSON.stringify({
 				"command": "join",
 				"room": "{{room_id}}"
 			}));
 		}
 	})
 
-	chatSocket.onclose = function(e) {
-		console.error('Chat socket closed unexpectedly');
+	public_chat_socket.onclose = function(e) {
+		console.error('Public ChatSocket closed unexpectedly');
 	};
 
-	chatSocket.onOpen = function(e){
-		console.log("ChatSocket onOpen", e)
+	public_chat_socket.onOpen = function(e){
+		console.log("Public ChatSocket onOpen", e)
 	}
 
-	chatSocket.onerror = function(e){
-        console.log('ChatSocket error', e)
+	public_chat_socket.onerror = function(e){
+        console.log('Public ChatSocket error', e)
     }
 
-    if (chatSocket.readyState == WebSocket.OPEN) {
-    	console.log("ChatSocket OPEN")
-    } else if (chatSocket.readyState == WebSocket.CONNECTING){
-        console.log("ChatSocket connecting..")
+    if (public_chat_socket.readyState == WebSocket.OPEN) {
+    	console.log("Public ChatSocket OPEN")
+    } else if (public_chat_socket.readyState == WebSocket.CONNECTING){
+        console.log("Public ChatSocket connecting..")
     }
 
     
@@ -408,8 +359,7 @@
 
 		const messageInputDom = document.getElementById('id_chat_message_input');
 		const message = messageInputDom.value;
-		console.log("SENDING A PAYLOAD " + message)
-		chatSocket.send(JSON.stringify({
+		public_chat_socket.send(JSON.stringify({
 			"command": "send",
 			"room": "{{room_id}}",
 			"message": message
@@ -468,4 +418,20 @@
 
 
 
-{% endblock content %}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
