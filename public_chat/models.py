@@ -26,6 +26,8 @@ class PublicChatRoom(models.Model):
 			self.users.append(session_id)
 			self.save()
 			is_user_added = True
+		elif session_id in self.users:
+			is_user_added = True
 		return is_user_added 
 
 
@@ -47,7 +49,7 @@ class PublicChatRoom(models.Model):
 		Returns the Channels Group name that sockets should subscribe to to get sent
 		messages as they are generated.
 		"""
-		return "room-%s" % self.id
+		return "PublicChatRoom-%s" % self.id
 
 
 class PublicRoomChatMessageManager(models.Manager):

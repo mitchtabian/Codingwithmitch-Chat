@@ -26,6 +26,7 @@ Json payload identifiers:
 4. msg_type
     - See chat.constants for all possible types
 
+
 """
 
 
@@ -38,10 +39,9 @@ class PublicChatConsumer(AsyncJsonWebsocketConsumer):
         Called when the websocket is handshaking as part of initial connection.
         """
         print("PublicChatConsumer: connect: " + str(self.scope["user"]))
-
         # let everyone connect. But limit read/write to authenticated users
         await self.accept()
-        self.rooms = set()
+        self.room_id = None
 
 
     async def receive_json(self, content):
@@ -86,11 +86,11 @@ class PublicChatConsumer(AsyncJsonWebsocketConsumer):
         """
         Called when the WebSocket closes for any reason.
         """
-        # Leave all the rooms we are still in
+        # leave the room
         print("PublicChatConsumer: disconnect")
         try:
-            for room_id in list(self.rooms):
-                await self.leave_room(room_id)
+            if self.room_id != None:
+                await self.leave_room(self.room_id)
         except Exception:
             pass
 
@@ -116,11 +116,11 @@ class PublicChatConsumer(AsyncJsonWebsocketConsumer):
         sessionId = get_session_id(self.scope)
 
         # Add user to "users" list for room
-        # await connect_user(room, self.scope["user"])
-        await connect_user(room, sessionId)
+        is_joined = await connect_user(room, sessionId)
+        if is_joined:
+            # Store that we're in the room
+            self.room_id = room.id
 
-        # Store that we're in the room
-        self.rooms.add(room_id)
         # Add them to the group so they get room messages
         await self.channel_layer.group_add(
             room.group_name,
@@ -153,12 +153,11 @@ class PublicChatConsumer(AsyncJsonWebsocketConsumer):
 
         sessionId = get_session_id(self.scope)
 
-        # Remove user from "connected_users" list
-        # await disconnect_user(room, self.scope["user"])
+        # Remove user from "users" list
         await disconnect_user(room, sessionId)
 
         # Remove that we're in the room
-        self.rooms.discard(room_id)
+        self.room_id = None
         # Remove them from the group so they no longer get room messages
         await self.channel_layer.group_discard(
             room.group_name,
@@ -195,10 +194,14 @@ class PublicChatConsumer(AsyncJsonWebsocketConsumer):
         """
         # Check they are in this room
         print("PublicChatConsumer: send_room")
-        if room_id not in self.rooms:
+        if self.room_id != None:
+            if str(room_id) != str(self.room_id):
+                raise ClientError("ROOM_ACCESS_DENIED", "Room access denied")
+            if not await is_authenticated(self.scope["user"]):
+                raise ClientError("AUTH_ERROR", "You must be authenticated to chat.")
+        else:
             raise ClientError("ROOM_ACCESS_DENIED", "Room access denied")
-        if not await is_authenticated(self.scope["user"]):
-            raise ClientError("AUTH_ERROR", "You must be authenticated to chat.")
+
         # Get the room and send to the group about it
         room = await get_room_or_error(room_id)
 
@@ -265,6 +268,13 @@ class PublicChatConsumer(AsyncJsonWebsocketConsumer):
         )
 
 
+def get_room_id(scope):
+    value = str(self.scope['url_route']).replace("'", '"')
+    value = value.replace("()", '"()"')
+    value = json.loads(value)
+    print("PublicChatConsumer: room_id: " + str(value['kwargs']['room_id']))
+    return value['kwargs']['room_id']
+
 def get_session_id(scope):
     sessionIdData = str(scope['headers'][10])
     # sessionId = 32 characters
@@ -323,7 +333,6 @@ def get_room_chat_messages(room, page_number):
         qs = PublicRoomChatMessage.objects.by_room(room)
         p = Paginator(qs, DEFAULT_ROOM_CHAT_MESSAGE_PAGE_SIZE)
 
-        sleep(1) # for testing
         payload = {}
         messages_data = None
         new_page_number = int(page_number)  

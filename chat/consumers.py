@@ -43,17 +43,11 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         """
         print("ChatConsumer: connect: " + str(self.scope["user"]))
 
-        # if not self.scope["user"].is_authenticated:
-        #     await self.close()
-        # else:
-        #     # Accept the connection
-        #     await self.accept()
-        #     # Store which rooms the user has joined on this connection
-        #     self.rooms = set()
-
         # let everyone connect. But limit read/write to authenticated users
         await self.accept()
-        self.rooms = set()
+
+        # the room_id will define what it means to be "connected". If it is not None, then the user is connected.
+        self.room_id = None
 
 
     async def receive_json(self, content):
@@ -72,7 +66,6 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                 # Leave the room
                 await self.leave_room(content["room"])
             elif command == "send":
-                print("SEND: " + str(content["message"]))
                 await self.send_room(content["room"], content["message"])
             elif command == "get_room_chat_messages":
                 await self.display_progress_bar(True)
@@ -99,14 +92,14 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         """
         Called when the WebSocket closes for any reason.
         """
-        # Leave all the rooms we are still in
+        # Leave the room
         print("ChatConsumer: disconnect")
         try:
-            for room_id in list(self.rooms):
-                await self.leave_room(room_id)
-        except Exception:
+            if self.room_id != None:
+                await self.leave_room(self.room_id)
+        except Exception as e:
+            print("EXCEPTION: " + str(e))
             pass
-
 
     async def join_room(self, room_id):
         """
@@ -114,7 +107,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         """
         # The logged-in user is in our scope thanks to the authentication ASGI middleware (AuthMiddlewareStack)
         
-        print("ChatConsumer: join_room")
+        print("ChatConsumer: join_room: " + str(room_id))
         try:
             room = await get_room_or_error(room_id, self.scope["user"])
         except ClientError as e:
@@ -125,13 +118,14 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             await self.send_json(errorData)
             return
 
-        # Add user to "connected_users" list
+        # Add user to "users" list for room
         await connect_user(room, self.scope["user"])
+
+        # Store that we're in the room
+        self.room_id = room.id
 
         await on_user_connected(room, self.scope["user"])
 
-        # Store that we're in the room
-        self.rooms.add(room_id)
         # Add them to the group so they get room messages
         await self.channel_layer.group_add(
             room.group_name,
@@ -139,7 +133,6 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         )
 
         # Instruct their client to finish opening the room
-        print("JOIN: " + str(self.scope["user"].id)) 
         await self.send_json({
             "join": str(room.id),
             "profile_image": self.scope["user"].profile_image.url,
@@ -185,7 +178,8 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         )
 
         # Remove that we're in the room
-        self.rooms.discard(room_id)
+        self.room_id = None
+
         # Remove them from the group so they no longer get room messages
         await self.channel_layer.group_discard(
             room.group_name,
@@ -202,10 +196,15 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         """
         Called by receive_json when someone sends a message to a room.
         """
-        # Check they are in this room
         print("ChatConsumer: send_room")
-        if room_id not in self.rooms:
+
+        # Check they are in this room
+        if self.room_id != None:
+            if str(room_id) != str(self.room_id):
+                raise ClientError("ROOM_ACCESS_DENIED", "Room access denied")
+        else:
             raise ClientError("ROOM_ACCESS_DENIED", "Room access denied")
+        
         # Get the room and send to the group about it
         room = await get_room_or_error(room_id, self.scope["user"])
 
