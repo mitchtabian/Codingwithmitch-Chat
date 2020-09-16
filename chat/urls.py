@@ -7,7 +7,7 @@ from chat.views import(
 
 urlpatterns = [
     path('create_or_return_private_chat/', create_or_return_private_chat, name='create-or-return-private-chat'),
-    path('<room_id>/', private_chat_room_room_view, name='private-chat-room'),
+    path('', private_chat_room_room_view, name='private-chat-room'),
 ]
 
 app_name = 'chat'

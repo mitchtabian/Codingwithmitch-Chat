@@ -6,10 +6,9 @@ from django.http import HttpResponse
 from urllib.parse import urlencode
 import json
 
-
+from friend.models import FriendList
 from account.models import Account
 from chat.models import PrivateChatRoom, RoomChatMessage
-
 
 
 
@@ -17,25 +16,25 @@ DEBUG = False
 
 
 def private_chat_room_room_view(request, *args, **kwargs):
-	room_id = kwargs.get("room_id")
+	room_id = request.GET.get("room_id")
 	user = request.user
 	if not user.is_authenticated:
 		base_url = reverse('login')
-		query_string =  urlencode({'next': f"/chat/{room_id}/"})
+		query_string =  urlencode({'next': f"/chat/?room_id={room_id}"})
 		url = f"{base_url}?{query_string}"
 		return redirect(url)
+
 	context = {}
-	context["BASE_URL"] = settings.BASE_URL
-	context["room_id"] = room_id
+
 	try:
-		room = PrivateChatRoom.objects.get(pk=room_id)
-	except:
-		return HttpResponse("There's nothing here.")
-	# # I like this way to not allow users to join chats but you can use socket also.
-	# if room.user1 != user and room.user2 != user:
-	# 	return HttpResponse("You do not have permission to join that chat room.")
-	context['user1'] = room.user1
-	context['user2'] = room.user2
+		friend_list = FriendList.objects.get(user=user)
+		context['friends'] = friend_list.friends.all()
+	except FriendList.DoesNotExist:
+		pass
+
+	context["BASE_URL"] = settings.BASE_URL
+	if room_id:
+		context["room_id"] = room_id
 	context['debug'] = DEBUG
 	return render(request, "chat/room.html", context)
 

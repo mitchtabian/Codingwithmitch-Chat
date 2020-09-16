@@ -10,6 +10,7 @@ import json
 from time import sleep
 
 from account.models import Account
+from account.utils import LazyAccountEncoder
 from chat.models import RoomChatMessage, PrivateChatRoom, UnreadChatRoomMessages
 from chat.exceptions import ClientError
 from chat.constants import *
@@ -62,11 +63,14 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             if command == "join":
                 # Make them join the room
                 await self.join_room(content["room"])
+
             elif command == "leave":
                 # Leave the room
                 await self.leave_room(content["room"])
+
             elif command == "send":
                 await self.send_room(content["room"], content["message"])
+
             elif command == "get_room_chat_messages":
                 await self.display_progress_bar(True)
                 room = await get_room_or_error(content['room_id'], self.scope["user"])
@@ -77,6 +81,16 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                 else:
                     raise ClientError(204,"Something went wrong retrieving the chatroom messages.")
                 await self.display_progress_bar(False)
+
+            elif command == "get_user_info":
+                room = await get_room_or_error(content['room_id'], self.scope["user"])
+                payload = await get_user_info(room, self.scope["user"])
+                if payload != None:
+                    payload = json.loads(payload)
+                    await self.send_user_info_payload(payload['user_info'])
+                else:
+                    raise ClientError(204,"Something went wrong retrieving the other users account details.")
+
             
         except ClientError as e:
             await self.display_progress_bar(False)
@@ -302,6 +316,18 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             },
         )
 
+    async def send_user_info_payload(self, user_info):
+        """
+        Send a payload of user information to the ui
+        """
+        print("ChatConsumer: send_user_info_payload. ")
+
+        await self.send_json(
+            {
+                "user_info": user_info,
+            },
+        )
+
     async def display_progress_bar(self, is_displayed):
         """
         1. is_displayed = True
@@ -394,7 +420,6 @@ def get_room_chat_messages(room, page_number):
         qs = RoomChatMessage.objects.by_room(room)
         p = Paginator(qs, DEFAULT_ROOM_CHAT_MESSAGE_PAGE_SIZE)
 
-        sleep(1) # for testing
         payload = {}
         messages_data = None
         new_page_number = int(page_number)  
@@ -411,7 +436,25 @@ def get_room_chat_messages(room, page_number):
         return None
        
 
+@database_sync_to_async
+def get_user_info(room, user):
+    """
+    Retrieve the user info for the user you are chatting with
+    """
+    try:
+        # Determine who is who
+        other_user = room.user1
+        if other_user == user:
+            other_user = room.user2
 
+        payload = {}
+        s = LazyAccountEncoder()
+        # convert to list for serializer and select first entry (there will be only 1)
+        payload['user_info'] = s.serialize([other_user])[0] 
+        return json.dumps(payload)
+    except Exception as e:
+        print("EXCEPTION: " + str(e))
+        return None    
 
 
 
