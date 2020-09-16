@@ -23,6 +23,13 @@
 		position: absolute;
 		margin-top: 40px;
 	}
+	.chat-dropdown-header:hover{
+		cursor: pointer;
+		background: var(--main-background-color);
+	}
+	.chat-dropdown-header{
+		color: var(--light-primary-text-color);
+	}
 </style>
 
 {% if debug %}
@@ -320,6 +327,7 @@
 		usage: await sleep(1000)
 	*/
 	function sleep(ms) {
+		console.log("sleeping for " + ms + " ms.")
 		return new Promise(resolve => setTimeout(resolve, ms));
 	}
 
@@ -568,6 +576,8 @@
 		var notificationContainer = document.getElementById("id_chat_notifications_container")
 
 		if(notificationContainer != null){
+			setupChatDropdownHeader()
+
 			card = createChatNotificationCard("id_no_chat_notifications")
 
 			var div = document.createElement("div")
@@ -581,6 +591,35 @@
 			notificationContainer.appendChild(card)
 
 			setChatNotificationsCount([])
+		}
+	}
+
+	/*
+		Add a header to the dropdown so users can visit /chat/
+	*/
+	function setupChatDropdownHeader(){
+		var notificationContainer = document.getElementById("id_chat_notifications_container")
+
+		if(notificationContainer != null){
+
+			var div = document.createElement("div")
+			div.classList.add("chat-dropdown-header", "d-flex", "flex-row", "justify-content-end", "m-auto", "align-items-end")
+			div.addEventListener("click", function(e){
+				var url = "{% url 'chat:private-chat-room' %}"
+				console.log("redirecT: " + url)
+				chatRedirect(url)
+			})
+
+			span1 = document.createElement("span")
+			span1.classList.add("mr-2")
+			span1.innerHTML = "Go to chat"
+			div.appendChild(span1)
+
+			span2 = document.createElement("span")
+			span2.classList.add("material-icons", "mr-2")
+			span2.innerHTML = "open_with"
+			div.appendChild(span2)
+			notificationContainer.appendChild(div)
 		}
 	}
 

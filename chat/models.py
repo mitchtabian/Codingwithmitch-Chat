@@ -50,7 +50,7 @@ class PrivateChatRoom(models.Model):
         Returns the Channels Group name that sockets should subscribe to to get sent
         messages as they are generated.
         """
-        return f"room-{self.id}"
+        return f"PrivateChatRoom-{self.id}"
 
 
 class RoomChatMessageManager(models.Manager):

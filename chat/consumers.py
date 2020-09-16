@@ -10,6 +10,7 @@ import json
 from time import sleep
 
 from account.models import Account
+from account.utils import LazyAccountEncoder
 from chat.models import RoomChatMessage, PrivateChatRoom, UnreadChatRoomMessages
 from chat.exceptions import ClientError
 from chat.constants import *
@@ -18,7 +19,6 @@ from friend.models import FriendList
 
 User = get_user_model()
 
-DEFAULT_ROOM_CHAT_MESSAGE_PAGE_SIZE = 20
 
 
 """
@@ -44,17 +44,11 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         """
         print("ChatConsumer: connect: " + str(self.scope["user"]))
 
-        # if not self.scope["user"].is_authenticated:
-        #     await self.close()
-        # else:
-        #     # Accept the connection
-        #     await self.accept()
-        #     # Store which rooms the user has joined on this connection
-        #     self.rooms = set()
-
         # let everyone connect. But limit read/write to authenticated users
         await self.accept()
-        self.rooms = set()
+
+        # the room_id will define what it means to be "connected". If it is not None, then the user is connected.
+        self.room_id = None
 
 
     async def receive_json(self, content):
@@ -69,12 +63,14 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             if command == "join":
                 # Make them join the room
                 await self.join_room(content["room"])
+
             elif command == "leave":
                 # Leave the room
                 await self.leave_room(content["room"])
+
             elif command == "send":
-                print("SEND: " + str(content["message"]))
                 await self.send_room(content["room"], content["message"])
+
             elif command == "get_room_chat_messages":
                 await self.display_progress_bar(True)
                 room = await get_room_or_error(content['room_id'], self.scope["user"])
@@ -85,6 +81,16 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                 else:
                     raise ClientError(204,"Something went wrong retrieving the chatroom messages.")
                 await self.display_progress_bar(False)
+
+            elif command == "get_user_info":
+                room = await get_room_or_error(content['room_id'], self.scope["user"])
+                payload = await get_user_info(room, self.scope["user"])
+                if payload != None:
+                    payload = json.loads(payload)
+                    await self.send_user_info_payload(payload['user_info'])
+                else:
+                    raise ClientError(204,"Something went wrong retrieving the other users account details.")
+
             
         except ClientError as e:
             await self.display_progress_bar(False)
@@ -100,14 +106,14 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         """
         Called when the WebSocket closes for any reason.
         """
-        # Leave all the rooms we are still in
+        # Leave the room
         print("ChatConsumer: disconnect")
         try:
-            for room_id in list(self.rooms):
-                await self.leave_room(room_id)
-        except Exception:
+            if self.room_id != None:
+                await self.leave_room(self.room_id)
+        except Exception as e:
+            print("EXCEPTION: " + str(e))
             pass
-
 
     async def join_room(self, room_id):
         """
@@ -115,7 +121,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         """
         # The logged-in user is in our scope thanks to the authentication ASGI middleware (AuthMiddlewareStack)
         
-        print("ChatConsumer: join_room")
+        print("ChatConsumer: join_room: " + str(room_id))
         try:
             room = await get_room_or_error(room_id, self.scope["user"])
         except ClientError as e:
@@ -126,13 +132,14 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             await self.send_json(errorData)
             return
 
-        # Add user to "connected_users" list
+        # Add user to "users" list for room
         await connect_user(room, self.scope["user"])
+
+        # Store that we're in the room
+        self.room_id = room.id
 
         await on_user_connected(room, self.scope["user"])
 
-        # Store that we're in the room
-        self.rooms.add(room_id)
         # Add them to the group so they get room messages
         await self.channel_layer.group_add(
             room.group_name,
@@ -140,7 +147,6 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         )
 
         # Instruct their client to finish opening the room
-        print("JOIN: " + str(self.scope["user"].id)) 
         await self.send_json({
             "join": str(room.id),
             "profile_image": self.scope["user"].profile_image.url,
@@ -149,8 +155,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         })
 
         if self.scope["user"].is_authenticated:
-            # if settings.NOTIFY_USERS_ON_ENTER_OR_LEAVE_ROOMS:
-                # Notify the group that someone joined
+            # Notify the group that someone joined
             await self.channel_layer.group_send(
                 room.group_name,
                 {
@@ -174,7 +179,6 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         # Remove user from "connected_users" list
         await disconnect_user(room, self.scope["user"])
 
-        #if settings.NOTIFY_USERS_ON_ENTER_OR_LEAVE_ROOMS:
         # Notify the group that someone left
         await self.channel_layer.group_send(
             room.group_name,
@@ -188,7 +192,8 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         )
 
         # Remove that we're in the room
-        self.rooms.discard(room_id)
+        self.room_id = None
+
         # Remove them from the group so they no longer get room messages
         await self.channel_layer.group_discard(
             room.group_name,
@@ -205,10 +210,15 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         """
         Called by receive_json when someone sends a message to a room.
         """
-        # Check they are in this room
         print("ChatConsumer: send_room")
-        if room_id not in self.rooms:
+
+        # Check they are in this room
+        if self.room_id != None:
+            if str(room_id) != str(self.room_id):
+                raise ClientError("ROOM_ACCESS_DENIED", "Room access denied")
+        else:
             raise ClientError("ROOM_ACCESS_DENIED", "Room access denied")
+        
         # Get the room and send to the group about it
         room = await get_room_or_error(room_id, self.scope["user"])
 
@@ -292,8 +302,6 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         )
 
 
-
-
     async def send_messages_payload(self, messages, new_page_number):
         """
         Send a payload of messages to the ui
@@ -305,6 +313,18 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                 "messages_payload": "messages_payload",
                 "messages": messages,
                 "new_page_number": new_page_number,
+            },
+        )
+
+    async def send_user_info_payload(self, user_info):
+        """
+        Send a payload of user information to the ui
+        """
+        print("ChatConsumer: send_user_info_payload. ")
+
+        await self.send_json(
+            {
+                "user_info": user_info,
             },
         )
 
@@ -400,7 +420,6 @@ def get_room_chat_messages(room, page_number):
         qs = RoomChatMessage.objects.by_room(room)
         p = Paginator(qs, DEFAULT_ROOM_CHAT_MESSAGE_PAGE_SIZE)
 
-        sleep(1) # for testing
         payload = {}
         messages_data = None
         new_page_number = int(page_number)  
@@ -417,7 +436,25 @@ def get_room_chat_messages(room, page_number):
         return None
        
 
+@database_sync_to_async
+def get_user_info(room, user):
+    """
+    Retrieve the user info for the user you are chatting with
+    """
+    try:
+        # Determine who is who
+        other_user = room.user1
+        if other_user == user:
+            other_user = room.user2
 
+        payload = {}
+        s = LazyAccountEncoder()
+        # convert to list for serializer and select first entry (there will be only 1)
+        payload['user_info'] = s.serialize([other_user])[0] 
+        return json.dumps(payload)
+    except Exception as e:
+        print("EXCEPTION: " + str(e))
+        return None    
 
 
 

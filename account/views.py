@@ -62,7 +62,7 @@ def account_view(request, *args, **kwargs):
 		context['id'] = account.id
 		context['username'] = account.username
 		context['email'] = account.email
-		context['profile_image'] = account.profile_image
+		context['profile_image'] = account.profile_image.url
 		context['hide_email'] = account.hide_email
 
 		friend_list = FriendList.objects.get(user=account)

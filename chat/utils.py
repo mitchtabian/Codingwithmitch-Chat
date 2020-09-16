@@ -26,6 +26,7 @@ def calculate_timestamp(timestamp):
         ts = f"{str_time}"
     return str(ts)
 
+
 class LazyRoomChatMessageEncoder(Serializer):
     def get_dump_object(self, obj):
         dump_object = {}

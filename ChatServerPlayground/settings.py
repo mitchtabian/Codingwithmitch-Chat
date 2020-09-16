@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     "account",
     "friend",
     "notification",
+    'public_chat',
 
 
     # Django and third party apps

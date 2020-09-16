@@ -12,32 +12,27 @@
 	}
 </style>
 
+
+
 <div class="container">
 
 	<!-- MEDIUM+ SCREENS -->
 	<div class="main d-none d-md-flex flex-column">
 		<div class="card p-4 align-items-start">
 
-			<h3>This website is in development</h3>
-			<p>If something isn't working that's probably because I broke it.</p>
-
-			<!-- <h3 class="pb-4">Welcome to Codingwithmitch Chat!</h3>
-			<p class="pb-4">In this course you'll learn to build a real-time chat website using <a href="https://developer.mozilla.org/en-US/docs/Web/API/WebSocket" target="_blank" rel="nofollow">WebSockets</a> and <a href="https://channels.readthedocs.io/en/latest/" target="_blank" rel="nofollow">Django Channels</a>.</p>
+			<h3 class="pb-4">Welcome to Codingwithmitch Chat!</h3>
+			<p class="pb-2">In this course you'll learn to build a real-time chat website using <a href="https://developer.mozilla.org/en-US/docs/Web/API/WebSocket" target="_blank" rel="nofollow">WebSockets</a> and <a href="https://channels.readthedocs.io/en/latest/" target="_blank" rel="nofollow">Django Channels</a>.</p>
 			<a class="btn btn-info d-flex flex-row align-items-start" href="#" target="_blank">
 				<span class="d-flex material-icons pr-2">build</span>
 				<span class="d-flex">Learn more</span>
-			</a> -->
-
+			</a>
 		</div>
 
-		{% if not request.user.is_authenticated %}
-		<div class="card p-4 mt-2">
-			<h3 class="pb-4">First time here?</h3>
-			<p>To use this website to it's fullest, you need to <a href="{% url 'register' %}?next=home">register an account</a>.</p>
-			
-		</div>
-		{% endif %}
-		
+		{% include 'public_chat/snippets/public_chat_room.html' with room_id=public_chat.id %}
+
+		{% include 'chat/snippets/bottom_chat.html' %}
+
+
 	</div>
 
 	
@@ -50,6 +45,12 @@
 	</div>
 	<!-- END SMALL SCREENS -->
 </div>
+
+<script type="text/javascript">
+	// document.getElementById("id_hiden_chat_box").addEventListener("click", function(e){
+	// 	document.getElementById("id_chat_content").slideToggle()
+	// })
+</script>
 
 
 {% endblock content %}
