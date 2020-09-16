@@ -145,7 +145,7 @@
 				<div class="card-body p-1">	
 					<div class="d-flex flex-column friends-list-container ">
 						{% for friend in friends %}
-						<div class="d-flex flex-row p-2 friend-container flex-grow-1" onclick="onSelectFriend('{{friend.id}}')">
+						<div class="d-flex flex-row p-2 friend-container flex-grow-1" onclick="onSelectFriend('{{friend.id}}')" id="id_friend_container_{{friend.id}}">
 							<img class="profile-image rounded-circle img-fluid" src="{{friend.profile_image.url}}">
 							<div class="d-flex flex-row">
 								<span class="username-span">{{friend.username}}</span>
@@ -491,8 +491,13 @@
 	function handleUserInfoPayload(user_info){
 		document.getElementById("id_other_username").innerHTML = user_info['username']
 		document.getElementById("id_other_user_profile_image").src = user_info['profile_image']
+		document.getElementById("id_other_user_profile_image").classList.remove("d-none")
 		document.getElementById("id_user_info_container").href= "{% url 'account:view' user_id=53252623623632623 %}".replace("53252623623632623", user_info['id'])
-		
+	}
+
+	function highlightFriend(userId){
+		// select new friend
+		document.getElementById("id_friend_container_" + userId).style.background = "#f2f2f2"
 	}
 
 	document.getElementById('id_chat_message_input').focus();
@@ -541,7 +546,22 @@
 	}
 
 	function onSelectFriend(userId){
+		displayChatroomLoadingSpinner(true)
 		createOrReturnPrivateChat(userId)
+		clearHighlightedFriend()
+		highlightFriend(userId)
+	}
+
+	function clearHighlightedFriend(){
+		{% if friends %}
+			{% for friend in friends %}
+				document.getElementById("id_friend_container_{{friend.id}}").style.background = ""
+			{% endfor %}
+		{% endif %}
+
+		// clear the profile image and username of current chat
+		document.getElementById("id_other_user_profile_image").classList.add("d-none")
+		document.getElementById("id_other_username").innerHTML = ""
 	}
 
 	function createOrReturnPrivateChat(id){
