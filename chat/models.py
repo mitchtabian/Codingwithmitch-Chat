@@ -158,7 +158,7 @@ def increment_unread_msg_count(sender, instance, **kwargs):
                 instance.notifications.create(
                     target=instance.user,
                     from_user=other_user,
-                    redirect_url=f"{settings.BASE_URL}/chat/{instance.room.id}/", # we want to go to the chatroom
+                    redirect_url=f"{settings.BASE_URL}/chat/?room_id={instance.room.id}", # we want to go to the chatroom
                     verb=instance.most_recent_message,
                     content_type=content_type,
                 )
