@@ -8,36 +8,37 @@ class PublicChatRoom(models.Model):
 	# Room title
 	title 				= models.CharField(max_length=255, unique=True, blank=False,)
 
-	# All users who are currently connected to the chat and authenticated
-	# They are identified by a unique session_key that is attached as a request header
-	users 				= ArrayField(models.CharField(max_length=255), default=list, blank=True, help_text="session id's of users who are connected to chat room.")
-
+	# all users who are authenticated and viewing the chat
+	users 				= models.ManyToManyField(settings.AUTH_USER_MODEL, help_text="users who are connected to chat room.")
 
 	def __str__(self):
 		return self.title
 
 
-	def connect_user(self, session_id):
+	def connect_user(self, user):
 		"""
 		return true if user is added to the users list
 		"""
 		is_user_added = False
-		if not session_id in self.users:
-			self.users.append(session_id)
+		if not user in self.users.all():
+			self.users.add(user)
 			self.save()
 			is_user_added = True
-		elif session_id in self.users:
+		elif user in self.users.all():
 			is_user_added = True
 		return is_user_added 
 
+	# def connect_guest(self, ip):
 
-	def disconnect_user(self, session_id):
+
+
+	def disconnect_user(self, user):
 		"""
 		return true if user is removed from the users list
 		"""
 		is_user_removed = False
-		if session_id in self.users:
-			self.users.remove(session_id)
+		if user in self.users.all():
+			self.users.remove(user)
 			self.save()
 			is_user_removed = True
 		return is_user_removed 

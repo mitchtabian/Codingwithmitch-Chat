@@ -166,7 +166,7 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
                 if e.message:
                     errorData['message'] = e.message
             except:
-                errorData['message'] = "An unknown error occurred while trying command: " + command
+                errorData['message'] = "An error occurred while trying command: " + command + ". " + str(e)
             await self.send_json(errorData)
 
 

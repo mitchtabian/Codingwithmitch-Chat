@@ -40,6 +40,15 @@
 		margin-left: 5px;
 		margin-right: 5px;
 	}
+	.friend-message-span{
+		font-weight: 380;
+		margin-top: 0px;
+		margin-bottom: auto;
+		margin-left: 5px;
+		margin-right: 5px;
+		font-size: 0.6em;
+		color: var(--light-primary-text-color);
+	}
 	.timestamp-span{
 		font-weight: 400;
 		font-size: 0.8em;
@@ -144,11 +153,12 @@
 				</div>
 				<div class="card-body p-1">	
 					<div class="d-flex flex-column friends-list-container ">
-						{% for friend in friends %}
-						<div class="d-flex flex-row p-2 friend-container flex-grow-1" onclick="onSelectFriend('{{friend.id}}')" id="id_friend_container_{{friend.id}}">
-							<img class="profile-image rounded-circle img-fluid" src="{{friend.profile_image.url}}">
-							<div class="d-flex flex-row">
-								<span class="username-span">{{friend.username}}</span>
+						{% for x in m_and_f %}
+						<div class="d-flex flex-row p-2 friend-container flex-grow-1" onclick="onSelectFriend('{{x.friend.id}}')" id="id_friend_container_{{x.friend.id}}">
+							<img class="profile-image rounded-circle img-fluid" src="{{x.friend.profile_image.url}}" >
+							<div class="d-flex flex-column">
+								<span class="username-span">{{x.friend.username}}</span>
+								<span class="friend-message-span">{{x.message|truncatechars:20}}</span>
 							</div>
 						</div>
 						{% endfor %}
@@ -172,8 +182,8 @@
 		{% if room_id %}
 			setupWebSocket("{{room_id}}")
 		{% else %}
-			{% if friends %}
-				onSelectFriend("{{friends.first.id}}")
+			{% if m_and_f %}
+				onSelectFriend("{{m_and_f.0.friend.id}}")
 			{% endif %}
 		{% endif %}
 	}
@@ -553,9 +563,9 @@
 	}
 
 	function clearHighlightedFriend(){
-		{% if friends %}
-			{% for friend in friends %}
-				document.getElementById("id_friend_container_{{friend.id}}").style.background = ""
+		{% if m_and_f %}
+			{% for x in m_and_f %}
+				document.getElementById("id_friend_container_{{x.friend.id}}").style.background = ""
 			{% endfor %}
 		{% endif %}
 
