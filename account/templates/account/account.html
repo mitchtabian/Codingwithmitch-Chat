@@ -187,31 +187,8 @@
 
 <script type="text/javascript">
 
-
-	preloadImage("{{profile_image|safe}}", preloadCallback)
-
-	function preloadCallback(src){
-		var img = document.getElementById('id_profile_image')
-		img.src = src
-	}
-
-	function preloadImage(imgSrc, callback){
-		console.log("attempting to load " + imgSrc)
-
-		var objImagePreloader = new Image();
-		objImagePreloader.src = imgSrc;
-		if(objImagePreloader.complete){
-			callback(objImagePreloader.src);
-			objImagePreloader.onload = function(){};
-		}
-		else{
-			objImagePreloader.onload = function() {
-				callback(objImagePreloader.src);
-				//    clear onLoad, IE behaves irratically with animated gifs otherwise
-				objImagePreloader.onload=function(){};
-			}
-		}
-	}
+	// called from base_js.html
+	preloadImage("{{profile_image|safe}}", 'id_profile_image')
 
 	function onFriendRequestSent(){
 		location.reload();
