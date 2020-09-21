@@ -318,7 +318,7 @@
 		if(Date.parse(timestamp) > Date.parse(current)){
 			element.innerHTML = timestamp
 		}
-		else if(current == ""){
+		else if(current == "" || current == null || current == "undefined"){
 			element.innerHTML = timestamp
 		}
 	}
@@ -405,13 +405,21 @@
 		Append a chat notification to the TOP of the list.
 	*/
 	function appendTopChatNotification(notification){
-
 		switch(notification['notification_type']) {
 
 			case "UnreadChatRoomMessages":
 				chatNotificationContainer = document.getElementById("id_chat_notifications_container")
 				card = createUnreadChatRoomMessagesElement(notification)
-				chatNotificationContainer.insertBefore(card, chatNotificationContainer.childNodes[0]);
+
+				if(chatNotificationContainer.childNodes.length > 2){
+					// Append as the SECOND child. First child is the "go to chatroom" button
+					var index = chatNotificationContainer.childNodes.length - 1
+					chatNotificationContainer.insertBefore(card, chatNotificationContainer.childNodes[index]);
+				}
+				else {
+					chatNotificationContainer.appendChild(card)
+				}
+				
 				break;
 
 			default:
@@ -606,7 +614,6 @@
 			div.classList.add("chat-dropdown-header", "d-flex", "flex-row", "justify-content-end", "m-auto", "align-items-end")
 			div.addEventListener("click", function(e){
 				var url = "{% url 'chat:private-chat-room' %}"
-				console.log("redirecT: " + url)
 				chatRedirect(url)
 			})
 
@@ -650,6 +657,7 @@
 		var ms = "000000"
 		var date = today.getFullYear()+'-'+month+'-'+day + " " + hours + ":" + minutes + ":" + seconds + "." + ms
 		document.getElementById("id_chat_oldest_timestamp").innerHTML = date
+		document.getElementById("id_chat_newest_timestamp").innerHTML = date
 
 	}
 

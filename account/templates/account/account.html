@@ -73,7 +73,7 @@
 		  <div class="card-body">
 		  	<div class="d-flex flex-column justify-content-center p-4">
 		  		<div class="image-container mx-auto mb-4">
-		  			<img class="d-block border border-dark rounded-circle img-fluid mx-auto profile-image" alt="codingwithmitch logo" id="id_profile_image">
+		  			<img class="d-block border border-dark rounded-circle img-fluid mx-auto profile-image" alt="codingwithmitch logo" id="id_profile_image" src="{% static 'codingwithmitch/dummy_image.png' %}">
 		  		</div>
 		  		<p class="mt-4 mb-1 field-heading">Email</p>
 		  		{%  if is_self %}
@@ -187,31 +187,8 @@
 
 <script type="text/javascript">
 
-
-	preloadImage("{{profile_image|safe}}", preloadCallback)
-
-	function preloadCallback(src){
-		var img = document.getElementById('id_profile_image')
-		img.src = src
-	}
-
-	function preloadImage(imgSrc, callback){
-		console.log("attempting to load " + imgSrc)
-
-		var objImagePreloader = new Image();
-		objImagePreloader.src = imgSrc;
-		if(objImagePreloader.complete){
-			callback(objImagePreloader.src);
-			objImagePreloader.onload = function(){};
-		}
-		else{
-			objImagePreloader.onload = function() {
-				callback(objImagePreloader.src);
-				//    clear onLoad, IE behaves irratically with animated gifs otherwise
-				objImagePreloader.onload=function(){};
-			}
-		}
-	}
+	// called from base_js.html
+	preloadImage("{{profile_image|safe}}", 'id_profile_image')
 
 	function onFriendRequestSent(){
 		location.reload();

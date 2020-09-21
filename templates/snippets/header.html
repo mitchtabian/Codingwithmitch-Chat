@@ -83,7 +83,8 @@
 								<div class="d-flex notifications-icon-container rounded-circle align-items-center mr-3" id="id_chat_notification_dropdown_toggle" data-toggle="dropdown">
 									<span id="id_chat_notifications_count" class="notify-badge"></span>
 									<span class="d-flex material-icons notifications-material-icon m-auto align-items-center">chat</span>
-									<div class="dropdown-menu scrollable-menu" aria-labelledby="id_chat_notification_dropdown_toggle" id="id_chat_notifications_container">										
+									<div class="dropdown-menu scrollable-menu" aria-labelledby="id_chat_notification_dropdown_toggle" id="id_chat_notifications_container">
+											
 									</div>
 								</div>
 							</div>
@@ -164,7 +165,7 @@
 	// Handle incoming messages
 	notificationSocket.onmessage = function(message) {
 		// Decode the JSON
-		//console.log("Got websocket message " + message.data);
+		// console.log("Got websocket message " + message.data);
 		console.log("Got notification websocket message.");
 		var data = JSON.parse(message.data);
 		

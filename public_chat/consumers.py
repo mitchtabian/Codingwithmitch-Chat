@@ -7,6 +7,7 @@ from django.core.serializers import serialize
 from django.utils import timezone
 
 import json
+import logging
 from time import sleep
 
 from account.models import Account
@@ -60,6 +61,8 @@ class PublicChatConsumer(AsyncJsonWebsocketConsumer):
                 # Leave the room
                 await self.leave_room(content["room"])
             elif command == "send":
+                if len(content["message"].lstrip()) == 0:
+                    raise ClientError(422,"You can't send an empty message.")
                 await self.send_room(content["room"], content["message"])
             elif command == "get_room_chat_messages":
                 await self.display_progress_bar(True)
@@ -113,13 +116,12 @@ class PublicChatConsumer(AsyncJsonWebsocketConsumer):
             await self.send_json(errorData)
             return
 
-        sessionId = get_session_id(self.scope)
-
         # Add user to "users" list for room
-        is_joined = await connect_user(room, sessionId)
-        if is_joined:
-            # Store that we're in the room
-            self.room_id = room.id
+        if self.scope["user"].is_authenticated:
+            await connect_user(room, self.scope["user"])
+
+        # Store that we're in the room
+        self.room_id = room.id
 
         # Add them to the group so they get room messages
         await self.channel_layer.group_add(
@@ -151,10 +153,9 @@ class PublicChatConsumer(AsyncJsonWebsocketConsumer):
         print("PublicChatConsumer: leave_room")
         room = await get_room_or_error(room_id)
 
-        sessionId = get_session_id(self.scope)
-
         # Remove user from "users" list
-        await disconnect_user(room, sessionId)
+        if self.scope["user"].is_authenticated:
+            await disconnect_user(room, self.scope["user"])
 
         # Remove that we're in the room
         self.room_id = None
@@ -275,39 +276,24 @@ def get_room_id(scope):
     print("PublicChatConsumer: room_id: " + str(value['kwargs']['room_id']))
     return value['kwargs']['room_id']
 
-def get_session_id(scope):
-    sessionIdData = str(scope['headers'][10])
-    # sessionId = 32 characters
-    return sessionIdData[sessionIdData.find("sessionid=") + 10 :sessionIdData.find("sessionid=") + 42]
-
-
 @database_sync_to_async
 def create_public_room_chat_message(room, user, message):
     return PublicRoomChatMessage.objects.create(user=user, room=room, content=message)
 
 
 @database_sync_to_async
-def connect_user(room, sessionId):
-    """
-    Add the session_key param from request to identify this user
-    https://docs.djangoproject.com/en/3.1/topics/http/sessions/
-    """
-    return room.connect_user(sessionId)
+def connect_user(room, user):
+    return room.connect_user(user)
 
 @database_sync_to_async
-def disconnect_user(room, sessionId):
-    """
-    Remove the session_key param from request to identify this user
-    https://docs.djangoproject.com/en/3.1/topics/http/sessions/
-    """
-    return room.disconnect_user(sessionId)
+def disconnect_user(room, user):
+    return room.disconnect_user(user)
     
 
 @database_sync_to_async
 def get_num_connected_users(room):
     if room.users:
-        print("NUM CONNECTED USERS: " + str(len(room.users)))
-        return len(room.users)
+        return len(room.users.all())
     return 0
 
 

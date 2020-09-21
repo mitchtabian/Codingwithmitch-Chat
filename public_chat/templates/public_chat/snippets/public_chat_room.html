@@ -1,5 +1,6 @@
 <!-- PublicChatRoom -->
 <!-- Chat room for many to many conversations -->
+{% load static %}
 
 <style type="text/css">
 	.chat-log {
@@ -90,6 +91,10 @@
 	}
 </style>
 
+{% if debug %}
+PUBLIC CHAT
+{% endif %}
+<span class="{% if not debug %}d-none{% endif %} page-number" id="id_page_number">1</span>
 
 <div class="card mt-3">
 
@@ -116,8 +121,7 @@
 			<div class="d-flex chat-log" id="id_chat_log">
 				
 			</div>
-			<span class="{% if not debug %}d-none{% endif %} page-number" id="id_page_number">1</span>
-			
+
 			<div class="d-flex flex-row chat-message-input-container">
 				<textarea class="flex-grow-1 chat-message-input" id="id_chat_message_input"></textarea>
 				<button class="btn btn-primary chat-message-submit-button">
@@ -172,6 +176,7 @@
 
 	function appendChatMessage(data, maintainPosition, isNewMessage){
 		messageType = data['msg_type']
+		msg_id = data['msg_id']
 		message = data['message']
 		uName = data['username']
 		user_id = data['user_id']
@@ -183,13 +188,13 @@
 
 		username = uName + ": "
 		msg = message + '\n'
-		createChatMessageElement(msg, username, profile_image, user_id, timestamp, maintainPosition, isNewMessage)
+		createChatMessageElement(msg, msg_id, username, profile_image, user_id, timestamp, maintainPosition, isNewMessage)
 	}
 
 	/*
 		Build a new ChatMessage element and append to the list
 	*/
-	function createChatMessageElement(msg, username, profile_image, user_id, timestamp, maintainPosition, isNewMessage){
+	function createChatMessageElement(msg, msg_id, username, profile_image, user_id, timestamp, maintainPosition, isNewMessage){
 		var chatLog = document.getElementById("id_chat_log")
 
 		var newMessageDiv = document.createElement("div")
@@ -204,7 +209,9 @@
 		profileImage.classList.add("profile-image")
 		profileImage.classList.add("rounded-circle")
 		profileImage.classList.add("img-fluid")
-		profileImage.src = profile_image
+		profileImage.src = "https://open-chat-spaces.nyc3.digitaloceanspaces.com/open-chat-static/codingwithmitch/dummy_image.png"
+		var profile_image_id = "id_profile_image_" + msg_id
+		profileImage.id = profile_image_id
 		newMessageDiv.appendChild(profileImage)
 
 		var div1 = document.createElement("div")
@@ -252,6 +259,9 @@
 		if(!maintainPosition){
 			chatLog.scrollTop = chatLog.scrollHeight
 		}
+
+		// now that a default image is showing, load the actual image.
+		preloadImage(profile_image, profile_image_id) // called from base_js.html
 	}
 
 
@@ -274,8 +284,11 @@
 
 	// Correctly decide between ws:// and wss://
 	var ws_scheme = window.location.protocol == "https:" ? "wss" : "ws";
-	var ws_path = ws_scheme + '://' + window.location.host + "/public_chat/{{room_id}}/"; // development
-	//var ws_path = ws_scheme + '://' + window.location.host + ":8001/public_chat/{{room_id}}/"; // production
+	{% if debug_mode %}
+		var ws_path = ws_scheme + '://' + window.location.host + "/public_chat/{{room_id}}/"; // development
+	{% else %}
+		var ws_path = ws_scheme + '://' + window.location.host + ":8001/public_chat/{{room_id}}/"; // production
+	{% endif %}
 	// console.log("Connecting to " + ws_path);
 	var public_chat_socket = new WebSocket(ws_path);
 

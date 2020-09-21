@@ -32,7 +32,6 @@
 
 	function OnGetOrCreateChatroomSuccess(chatroomId){
 		console.log("CHATROOM ID: " + chatroomId)
-		// Weird work-around for passing arg to url
 		var url = "{% url 'chat:private-chat-room' %}?room_id=" + chatroomId
 		var win = window.open(url)
 		win.focus()

@@ -20,6 +20,8 @@ def home_screen_view(request):
 	obj, created = PublicChatRoom.objects.get_or_create(title="General")
 	context['public_chat'] = obj
 
+	context['debug_mode'] = settings.DEBUG
+
 	return render(request, "personal/home.html", context)
 
 
