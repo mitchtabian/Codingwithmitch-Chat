@@ -122,8 +122,3 @@ Postgres needs to run as a service on your machine. Since I'm using windows I wi
 ## Install Redis (Required for Django Channels)
 
 TODO: continue...
-
-
-
-
-
