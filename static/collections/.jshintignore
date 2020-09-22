@@ -1,7 +1,0 @@
-**/lcov-report/**
-**/node_modules/**
-**/packages/**
-**/spec/**
-**/reporter/**
-**/support/**
-**/report/**
