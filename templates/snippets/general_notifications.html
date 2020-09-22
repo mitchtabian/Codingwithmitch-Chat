@@ -479,6 +479,8 @@
 			default:
 				// code block
 		}
+
+		preloadImage(notification['from']['image_url'], assignGeneralImgId(notification))
 	}
 
 	/*
@@ -503,6 +505,7 @@
 			default:
 				// code block
 		}
+		preloadImage(notification['from']['image_url'], assignGeneralImgId(notification))
 	}
 
 	/*
@@ -527,7 +530,7 @@
 			1. redirect_url
 				- Will redirect to the other users account profile
 	*/
-	function createFriendListElement(notification, notificationContainer){
+	function createFriendListElement(notification){
 		card = createGeneralNotificationCard()
 		card.id = assignGeneralCardId(notification)
 		card.addEventListener("click", function(){
@@ -553,6 +556,7 @@
 		div1.appendChild(span)
 		card.appendChild(div1)
 		card.appendChild(createGeneralTimestampElement(notification))
+
 		return card
 	}
 
@@ -568,7 +572,7 @@
 			1. redirect_url
 				- Will redirect to the other users profile
 	*/
-	function createFriendRequestElement(notification, notificationContainer){
+	function createFriendRequestElement(notification){
 		card = createGeneralNotificationCard()
 
 		// assign id b/c we need to find this div if they accept/decline the friend request
@@ -706,10 +710,11 @@
 		Circular image icon that can be in a notification card
 	*/
 	function createGeneralProfileImageThumbnail(notification){
-		img = document.createElement("img")
+		var img = document.createElement("img")
 		img.classList.add("notification-thumbnail-image", "img-fluid", "rounded-circle", "mr-2")
-		img.src = notification['from']['image_url']
-		img.id = assignGeneralImgId(notification['notification_id'])
+		// img.src = notification['from']['image_url']
+		img.src = "https://open-chat-spaces.nyc3.digitaloceanspaces.com/open-chat-static/codingwithmitch/dummy_image.png"
+		img.id = assignGeneralImgId(notification)
 		return img
 	}
 
