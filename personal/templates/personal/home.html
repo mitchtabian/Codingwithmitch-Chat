@@ -1,7 +1,33 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div>
-	HOME
+<style type="text/css">
+	.my-grid{
+		border: 1px solid black;
+	}
+	.my-grid-item{
+		border: 1px solid blue;
+	}
+</style>
+
+<!-- Flexbox: https://css-tricks.com/snippets/css/a-guide-to-flexbox/ -->
+<div class="container">
+	<div class="my-grid d-flex flex-row justify-content-between">
+	<!-- <div class="my-grid d-flex flex-row justify-content-end"> -->
+		<p class="my-grid-item m-auto">Item</p>
+		<p class="my-grid-item m-auto">Item</p>
+		<p class="my-grid-item m-auto">Item</p>
+		<p class="my-grid-item m-auto">Item</p>
+		<p class="my-grid-item m-auto">Item</p>
+	</div>
+
+	<div class="my-grid d-flex flex-column mt-4">
+		<p class="my-grid-item mx-auto my-1 p-1">Item</p>
+		<p class="my-grid-item mx-auto my-1 p-1">Item</p>
+		<p class="my-grid-item mx-auto my-1 p-1">Item</p>
+		<p class="my-grid-item mx-auto my-1 p-1">Item</p>
+		<p class="my-grid-item mx-auto my-1 p-1">Item</p>
+	</div>
+	
 </div>
 {% endblock content %}
