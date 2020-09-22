@@ -3,7 +3,7 @@ See this project in production: https://open-chat.xyz/
 
 
 # Important Notes
-1. See **Getting Started Guide** below for how to set this project up on windows.
+1. See **[Getting Started Guide](#getting-started-guide)** below for how to set this project up on windows.
 1. Create at least one user before running
 	`python manage.py createsuperuser` or create a regular user using shell: 
 
