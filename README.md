@@ -120,5 +120,33 @@ Postgres needs to run as a service on your machine. Since I'm using windows I wi
 
 
 ## Install Redis (Required for Django Channels)
+Redis does not work "out of the box" on windows. There is a number of ways to get it working but by far the easiest is to use Menurai.
+1. Links:
+	1. download: https://www.memurai.com/get-memurai
+	1. docs: https://docs.memurai.com/en/installation.html
+1. Just download the executable and run it.
 
-TODO: continue...
+
+## Django Channels setup
+This will have it's own lecture in the course later on.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
