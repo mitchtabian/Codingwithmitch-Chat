@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+
+
+<style type="text/css">
+
+  .card-signin {
+	  width: 100%;
+	  max-width: 400px;
+	  padding: 15px;
+	  margin: auto;
+  }
+  
+  .form-signin input[type="email"] {
+    margin-bottom: 10px;
+    border-bottom-right-radius: 0;
+    border-bottom-left-radius: 0;
+  }
+  .form-signin input[type="password"] {
+    margin-bottom: -1px;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+  }
+
+
+</style>
+
+<div class="container-fluid">
+	<div class="row justify-content-center">
+		<div class="card card-signin">
+		  <div class="card-body">
+		    <form class="form-signin" method="post">{% csrf_token %}
+				<div class="d-flex flex-column pb-3">
+				<img class="img-fluid mx-auto d-block" src="{% static 'codingwithmitch/logo_250_250_transparent.png' %}" alt="codingwithmitch logo" width="72" height="72">
+				</div>
+				<input type="email" name="email" id="inputEmail" class="form-control" placeholder="Email address" required autofocus>
+
+				<input type="password" name="password" id="inputPassword" class="form-control" placeholder="Password" required>
+
+				{% for field in login_form %}
+				<p>
+				{% for error in field.errors %}
+				<p style="color: red">{{ error }}</p>
+				{% endfor %}
+				</p>
+				{% endfor %}
+				{% if login_form.non_field_errors %}
+				<div style="color: red">
+				<p>{{login_form.non_field_errors}}</p>
+				</div>
+
+				{% endif %}
+
+				<button class="btn btn-lg btn-primary btn-block" type="submit">Log in</button>
+				</form>
+
+				<div class="d-flex flex-column my-4">
+					<a class="m-auto" href="#">Reset password</a>
+				</div>
+		  </div>
+		</div>
+		
+	</div>
+</div>
+
+
+
+
+
+
+{% endblock content %}
