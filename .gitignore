@@ -1,3 +1,4 @@
 **/migrations/**
 !**/migrations
 !**/migrations/__init__.py
+**/__pycache__**
