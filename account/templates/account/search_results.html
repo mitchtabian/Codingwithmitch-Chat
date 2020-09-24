@@ -1,0 +1,124 @@
+<!-- This is basically exactly the same as friend_list.html -->
+
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+
+
+<style type="text/css">
+	.profile-image{
+		max-height: 100px;
+		max-width: 100px;
+	}
+	.profile-image{
+		border-radius: 12px;
+	}
+	.card{
+		border-radius: 12px;
+	}
+	.friends-text{
+		color: #000;
+		font-weight: 500;
+	}
+	.friends-text-container{
+		border: 1px solid #cccccc;
+		border-radius: 12px;
+	}
+	.friends-btn:hover {
+		background-color: #bfbfbf;
+		border-color: #bfbfbf;
+	}
+	.dropdown-toggle::after { 
+		content: none; 
+	}
+	.profile-link{
+		color: #000;
+	}
+	.checkmark-icon{
+		color: green;
+	}
+	.cancel-icon{
+		color: red;
+	}
+</style>
+
+<div class="container">
+	<div class="card p-2">
+
+		{% if accounts %}
+		<div class="d-flex flex-row flex-wrap">
+		{% for account in accounts %}
+		<div class="card flex-row flex-grow-1 p-2 mx-2 my-2 align-items-center">
+			<a class="profile-link" href="{% url 'account:view' user_id=account.0.id %}">
+				<div class="card-image m-2">
+					<img class="img-fluid profile-image" src="{{account.0.profile_image.url}}" alt="">
+				</div>
+			</a>
+			<a class="profile-link" href="{% url 'account:view' user_id=account.0.id %}">
+				<div class="card-center px-2">
+					<h4 class="card-title">{{account.0.username}}</h4>
+					{% if account.1 %}
+					<p class="card-text"><a href="#" onclick="createOrReturnPrivateChat('{{account.0.id}}')">Send a Message</a></p>
+					{% endif %}
+					
+				</div>
+			</a>
+			<div class="d-flex flex-row card-right flex-grow-1 justify-content-end mx-2">
+				{% if account.1 %}
+					<div class="d-flex flex-row friends-text-container p-3">
+						<p class="friends-text m-auto">
+							Friends 
+						</p>
+						<span class="material-icons checkmark-icon m-auto pl-2">
+						check_circle_outline
+						</span>
+					</div>
+				{% else %}
+					{% if account.0 !=  request.user %}
+						<div class="d-flex flex-row friends-text-container p-3">
+							<p class="friends-text m-auto">
+								Not Friends 
+							</p>
+							<span class="material-icons cancel-icon m-auto pl-2">cancel</span>
+						</div>
+					{% endif %}
+				{% endif %}
+				{% if account.0 == request.user %}
+					<div class="d-flex flex-row friends-text-container p-3">
+						<p class="friends-text m-auto">
+							This is you 
+						</p>
+						<span class="material-icons m-auto pl-2">
+						person_pin
+						</span>
+					</div>
+				{% endif %}
+			</div>
+		</div>
+		{% if forloop.counter|divisibleby:2 %}
+		</div><div class="d-flex flex-row flex-wrap">
+		{% endif %}
+		
+		{% endfor %}
+		
+		{% else %} <!-- If no friends -->
+		<div class="d-flex flex-row flex-grow-1 justify-content-center align-items-center p-4">
+			<p>No results</p>
+		</div>
+		{% endif %}
+		</div>
+	</div>
+	
+</div>
+
+
+{#%  include 'chat/create_or_return_private_chat.html' %#}
+
+<script type="text/javascript">
+	function createOrReturnPrivateChat(user_id){
+		// Just a placeholder
+	}
+</script>
+
+{% endblock content %}

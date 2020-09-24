@@ -6,6 +6,24 @@ from django.conf import settings
 from account.forms import RegistrationForm, AccountAuthenticationForm
 from account.models import Account
 
+
+# This is basically almost exactly the same as friends/friend_list_view
+def account_search_view(request, *args, **kwargs):
+	context = {}
+	if request.method == "GET":
+		search_query = request.GET.get("q")
+		if len(search_query) > 0:
+			search_results = Account.objects.filter(email__icontains=search_query).filter(username__icontains=search_query).distinct()
+			user = request.user
+			accounts = [] # [(account1, True), (account2, False), ...]
+			for account in search_results:
+				accounts.append((account, False)) # you have no friends yet
+			context['accounts'] = accounts
+				
+	return render(request, "account/search_results.html", context)
+
+
+
 def register_view(request, *args, **kwargs):
 	user = request.user
 	if user.is_authenticated: 
