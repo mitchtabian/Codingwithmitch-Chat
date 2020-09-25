@@ -184,11 +184,11 @@
 		{% else %}
 			{% if m_and_f %}
 				onSelectFriend("{{m_and_f.0.friend.id}}")
-				{% for x in m_and_f %}
-					preloadImage("{{x.friend.profile_image.url|safe}}", "id_friend_img_{{x.friend.id}}")
-				{% endfor %}
 			{% endif %}
 		{% endif %}
+		{% for x in m_and_f %}
+			preloadImage("{{x.friend.profile_image.url|safe}}", "id_friend_img_{{x.friend.id}}")
+		{% endfor %}
 	}
 
 	function closeWebSocket(){
