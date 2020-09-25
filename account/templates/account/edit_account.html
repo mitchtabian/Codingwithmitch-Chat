@@ -48,7 +48,7 @@
 						<div class="text" id="id_text">Edit</div>
 					</div>
 		  		</div>
-		  		<form class="form-signin" method="post">{% csrf_token %}
+		  		<form class="form-signin" method="post" enctype="multipart/form-data">{% csrf_token %}
 		  			<input class="d-none" type="file" name="profile_image" id="id_profile_image" onchange="readURL(this)">
 			  		<h6 class="mt-4 field-heading">Email</h6>
 			  		<input type="email" name="email" id="id_input_email" class="form-control" placeholder="Email address" required autofocus value={{form.initial.email}}>
