@@ -45,14 +45,7 @@ def get_default_profile_image():
 	#return "profile_images/logo_1080_1080.png" # Development
 	return "codingwithmitch/logo_1080_1080.png" # Production
 
-# Redundant
-class OverwriteStorage(FileSystemStorage):
 
-	def get_available_name(self, name, max_length=None):
-		if self.exists(name):
-			os.remove(os.path.join(settings.MEDIA_ROOT, name))
-		return name
-		
 class Account(AbstractBaseUser):
 	email 					= models.EmailField(verbose_name="email", max_length=60, unique=True)
 	username 				= models.CharField(max_length=30, unique=True)
