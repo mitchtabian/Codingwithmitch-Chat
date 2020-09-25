@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+
+
+<style type="text/css">
+	.image-container{
+		max-width: 250px;
+		height: auto;
+		position: relative;
+	}
+	.field-heading{
+		color: #737373;
+	}
+	#id_confirm{
+		color: green;
+	}
+	#id_confirm:hover {
+		opacity: 0.3;
+	}
+	#id_cancel:hover {
+		opacity: 0.3;
+	}
+	#id_cancel{
+		color: red;
+	}
+	.material-icons{
+		font-size: 30px;
+	}
+	.material-icons:hover{
+		cursor: pointer;
+	}
+</style>
+
+<div class="container-fluid">
+	<div class="row justify-content-center">
+		<div class="card profile-card">
+		  <div class="card-body">
+		  	<div class="d-flex flex-column justify-content-center p-4">
+		  		<div class="mb-2" id="id_image_crop_confirm">
+		  			<span id="id_cancel" class="material-icons">cancel</span>
+		  			<span id="id_confirm" class="material-icons">check</span>
+		  		</div>
+		  		<div class="image-container" id="id_image_container">
+	  				<img class="border border-dark rounded-circle img-fluid mx-auto profile-image" id="id_profile_image" src="{{form.initial.profile_image.url}}" alt="codingwithmitch logo">
+					<div class="middle" id="id_middle_container">
+						<div class="text" id="id_text">Edit</div>
+					</div>
+		  		</div>
+		  		<form class="form-signin" method="post">{% csrf_token %}
+		  			<input class="d-none" type="file" id="id_profile_image_file_selector" name="profile_image_file_selector" onchange="readURL(this)">
+			  		<h6 class="mt-4 field-heading">Email</h6>
+			  		<input type="email" name="email" id="id_input_email" class="form-control" placeholder="Email address" required autofocus value={{form.initial.email}}>
+			  		<h6 class="mt-4 field-heading">Username</h6>
+			  		<input type="text" name="username" id="id_input_username" class="form-control" placeholder="Username" required
+					value="{{form.initial.username}}">
+					<div class="mt-4 checkbox">
+						<label>
+							<input type="checkbox" name="hide_email" id="id_input_hide_email" {% if form.initial.hide_email %}checked{%endif%}>
+							Hide Email
+						</label>
+			  			
+					</div>
+
+					{% for field in form %}
+					<p>
+					{% for error in field.errors %}
+					<p style="color: red">{{ error }}</p>
+					{% endfor %}
+					</p>
+					{% endfor %}
+					{% if form.non_field_errors %}
+					<div style="color: red">
+					<p>{{form.non_field_errors}}</p>
+					</div>
+
+					{% endif %}
+
+					<div class="d-flex flex-column mt-4">
+						<button class="mt-4 btn btn-primary flex-grow-1" type="submit">Save</button>
+					</div>
+					
+				</form>
+
+		  	</div>
+		  </div>
+		</div>
+	</div>
+</div>
+
+
+<script type="text/javascript">
+	function readURL(imageUrl){
+		// TODO
+	}
+</script>
+
+
+{% endblock content %}
+
+
+
+
+
+
+
+
+

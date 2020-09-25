@@ -90,7 +90,7 @@
 
 		  		<!-- If Auth user is viewing their own profile -->
 		  		{% if is_self %}
-		  		<a  class="mt-4 btn btn-primary" href="#">Update</a>
+		  		<a  class="mt-4 btn btn-primary" href="{% url 'account:edit' user_id=id %}">Update</a>
 				<div class="d-flex flex-column mt-4">
 					<a class="m-auto" href="{% url 'password_change' %}">Change password</a>
 				</div>
