@@ -11,6 +11,9 @@
 	<link href="https://fonts.googleapis.com/css2?family=Material+Icons"
       rel="stylesheet">
 
+    <!-- Cropperjs -->
+    <link rel="stylesheet" href="{% static 'cropperjs/dist/cropper.min.css' %}">
+
 </head>
 
 <body>
@@ -19,6 +22,13 @@
 {% include 'snippets/base_js.html' %}
 {% include 'snippets/header.html' %}
 
+<div class="container" id="id_loading_spinner" style="display: none">
+	<div class="d-flex flex-row mx-auto flex-grow-1 justify-content-center">
+		<div class="spinner-border text-primary" role="status">
+			<span class="sr-only">Loading...</span>
+		</div>
+	</div>
+</div>
 
 <!-- Body -->
 <style type="text/css">
@@ -38,7 +48,19 @@
 
 <script src="{% static 'bootstrap/js/jquery.min.js' %}"></script>
 <script src="{% static 'bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+<script type="module" src="{% static 'cropperjs/dist/cropper.min.js' %}"></script>
 
+<script type="text/javascript">
+	function displayLoadingSpinner(isDisplayed){
+		var spinner = document.getElementById("id_loading_spinner")
+		if(isDisplayed){
+			spinner.style.display = "block"
+		}
+		else{
+			spinner.style.display = "none"
+		}
+	}
+</script>
 
 </body>
 
