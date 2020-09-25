@@ -145,9 +145,6 @@ TODO: continue...
 
 # Third party libs:
 ### CDN 
-1. Cropper js
-   - https://github.com/fengyuanchen/cropperjs
-   - CDN: https://cdnjs.com/libraries/markdown-it
 1. Highlight.js
    - https://highlightjs.org/usage/
    - CDN: https://cdnjs.com/libraries/highlight.js
@@ -156,6 +153,8 @@ TODO: continue...
    - CDN: https://cdnjs.com/libraries/markdown-it
 
 ### Without CDN
+1. Cropper js
+   - https://github.com/fengyuanchen/cropperjs
 1. Javascript Collections
    - https://www.collectionsjs.com/
 
