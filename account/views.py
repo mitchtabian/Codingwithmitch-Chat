@@ -15,6 +15,9 @@ from django.core import files
 
 from account.forms import RegistrationForm, AccountAuthenticationForm, AccountUpdateForm
 from account.models import Account
+from friend.utils import get_friend_request_or_false
+from friend.friend_request_status import FriendRequestStatus
+from friend.models import FriendList, FriendRequest
 
 
 TEMP_PROFILE_IMAGE_NAME = "temp_profile_image.png"
@@ -112,11 +115,11 @@ def get_redirect_if_exists(request):
 def account_view(request, *args, **kwargs):
 	"""
 	- Logic here is kind of tricky
-		is_self (boolean)
-			is_friend (boolean)
-				-1: NO_REQUEST_SENT
-				0: THEM_SENT_TO_YOU
-				1: YOU_SENT_TO_THEM
+		is_self
+		is_friend
+			-1: NO_REQUEST_SENT
+			0: THEM_SENT_TO_YOU
+			1: YOU_SENT_TO_THEM
 	"""
 	context = {}
 	user_id = kwargs.get("user_id")
@@ -131,20 +134,54 @@ def account_view(request, *args, **kwargs):
 		context['profile_image'] = account.profile_image.url
 		context['hide_email'] = account.hide_email
 
+		try:
+			friend_list = FriendList.objects.get(user=account)
+		except FriendList.DoesNotExist:
+			friend_list = FriendList(user=account)
+			friend_list.save()
+		friends = friend_list.friends.all()
+		context['friends'] = friends
+	
 		# Define template variables
 		is_self = True
 		is_friend = False
+		request_sent = FriendRequestStatus.NO_REQUEST_SENT.value # range: ENUM -> friend/friend_request_status.FriendRequestStatus
+		friend_requests = None
 		user = request.user
 		if user.is_authenticated and user != account:
 			is_self = False
+			if friends.filter(pk=user.id):
+				is_friend = True
+			else:
+				is_friend = False
+				# CASE1: Request has been sent from THEM to YOU: FriendRequestStatus.THEM_SENT_TO_YOU
+				if get_friend_request_or_false(sender=account, receiver=user) != False:
+					request_sent = FriendRequestStatus.THEM_SENT_TO_YOU.value
+					context['pending_friend_request_id'] = get_friend_request_or_false(sender=account, receiver=user).id
+				# CASE2: Request has been sent from YOU to THEM: FriendRequestStatus.YOU_SENT_TO_THEM
+				elif get_friend_request_or_false(sender=user, receiver=account) != False:
+					request_sent = FriendRequestStatus.YOU_SENT_TO_THEM.value
+				# CASE3: No request sent from YOU or THEM: FriendRequestStatus.NO_REQUEST_SENT
+				else:
+					request_sent = FriendRequestStatus.NO_REQUEST_SENT.value
+		
 		elif not user.is_authenticated:
 			is_self = False
+		else:
+			try:
+				friend_requests = FriendRequest.objects.filter(receiver=user, is_active=True)
+			except:
+				pass
 			
 		# Set the template variables to the values
 		context['is_self'] = is_self
 		context['is_friend'] = is_friend
+		context['request_sent'] = request_sent
+		context['friend_requests'] = friend_requests
 		context['BASE_URL'] = settings.BASE_URL
 		return render(request, "account/account.html", context)
+
+
 
 def save_temp_profile_image_from_base64String(imageString, user):
 	INCORRECT_PADDING_EXCEPTION = "Incorrect padding"
