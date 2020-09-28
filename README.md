@@ -125,6 +125,17 @@ Redis does not work "out of the box" on windows. There is a number of ways to ge
 	1. download: https://www.memurai.com/get-memurai
 	1. docs: https://docs.memurai.com/en/installation.html
 1. Just download the executable and run it.
+1. Update settings with `CHANNEL_LAYERS` configuration
+	```
+	CHANNEL_LAYERS = {
+	    'default': {
+	        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+	        'CONFIG': {
+	            "hosts": [('127.0.0.1', 6379)],
+	        },
+	    },
+	}
+	```
 
 
 ## Django Channels setup
