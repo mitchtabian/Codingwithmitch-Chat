@@ -22,6 +22,8 @@ from friend.models import FriendList, FriendRequest
 
 TEMP_PROFILE_IMAGE_NAME = "temp_profile_image.png"
 
+
+
 # This is basically almost exactly the same as friends/friend_list_view
 def account_search_view(request, *args, **kwargs):
 	context = {}

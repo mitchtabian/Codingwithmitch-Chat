@@ -128,10 +128,39 @@ Redis does not work "out of the box" on windows. There is a number of ways to ge
 
 
 ## Django Channels setup
-This will have it's own lecture in the course later on.
-
-
-
+Follow https://channels.readthedocs.io/en/latest/installation.html
+1. `python -m pip install -U channels`
+1. Add channels to installed apps
+	```
+	INSTALLED_APPS = (
+	    'django.contrib.auth',
+	    'django.contrib.contenttypes',
+	    'django.contrib.sessions',
+	    'django.contrib.sites',
+	    ...
+	    'channels',
+	)
+	```
+1. create default routing file `ChatServerPlayground/routing.py`
+	```
+	from channels.auth import AuthMiddlewareStack
+	from channels.routing import ProtocolTypeRouter, URLRouter
+	from channels.security.websocket import AllowedHostsOriginValidator
+	from django.urls import path
+	application = ProtocolTypeRouter({
+		'websocket': AllowedHostsOriginValidator(
+			AuthMiddlewareStack(
+				# URLRouter([...]) # Empty for now because we don't have a consumer yet.
+			)
+		),
+	})
+	```
+	Learn more here: <a href="https://channels.readthedocs.io/en/latest/topics/routing.html?highlight=ProtocolTypeRouter#protocoltyperouter">`ProtocolTypeRouter`</a>, <a href="https://channels.readthedocs.io/en/latest/topics/security.html?highlight=AllowedHostsOriginValidator">`AllowedHostsOriginValidator`</a>, <a href="https://channels.readthedocs.io/en/latest/one-to-two.html?highlight=AuthMiddlewareStack#http-sessions-and-django-auth">`AuthMiddlewareStack`</a> and <a href="https://channels.readthedocs.io/en/latest/topics/routing.html?highlight=urlrouter">`URLRouter`</a>
+1. set your ASGI_APPLICATION in `settings.py`
+	```
+	ASGI_APPLICATION = "ChatServerPlayground.routing.application"
+	```
+1. Now you create Consumers and add to the `URLRouter` list.
 
 
 
