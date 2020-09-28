@@ -82,7 +82,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'ChatServerPlayground.wsgi.application'
 
-ASGI_APPLICATION = "ChatServerPlayground.routing.application"
+ASGI_APPLICATION = 'ChatServerPlayground.routing.application'
 
 CHANNEL_LAYERS = {
     'default': {

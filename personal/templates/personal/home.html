@@ -2,34 +2,74 @@
 
 {% block content %}
 <style type="text/css">
-	.my-grid{
-		border: 1px solid black;
-	}
-	.my-grid-item{
-		border: 1px solid blue;
-	}
+.chat-log {
+	height: 500px;
+	overflow-x: hidden;
+	overflow-y: auto;
+	padding: 10px;
+	background-color: #fff;
+	font-size: 0.9em;
+	flex-direction: column-reverse;
+}
 </style>
 
-<!-- Flexbox: https://css-tricks.com/snippets/css/a-guide-to-flexbox/ -->
 <div class="container">
-	<div class="my-grid d-flex flex-row justify-content-between">
-	<!-- <div class="my-grid d-flex flex-row justify-content-end"> -->
-		<p class="my-grid-item m-auto">Item</p>
-		<p class="my-grid-item m-auto">Item</p>
-		<p class="my-grid-item m-auto">Item</p>
-		<p class="my-grid-item m-auto">Item</p>
-		<p class="my-grid-item m-auto">Item</p>
-	</div>
-
-	<div class="my-grid d-flex flex-column mt-4">
-		<p class="my-grid-item mx-auto my-1 p-1">Item</p>
-		<p class="my-grid-item mx-auto my-1 p-1">Item</p>
-		<p class="my-grid-item mx-auto my-1 p-1">Item</p>
-		<p class="my-grid-item mx-auto my-1 p-1">Item</p>
-		<p class="my-grid-item mx-auto my-1 p-1">Item</p>
+	<div class="d-flex flex-column">
+		<div class="d-flex chat-log">
+			
+		</div>
+		<div class="d-flex chat-message-input-container">
+			<textarea class="flex-grow-1 chat-message-input" id="id_chat_message_input"></textarea>
+			<button class="btn btn-primary chat-message-submit-button">
+				<span id="id_chat_message_submit" class="material-icons">send
+				</span>
+			</button>
+		</div>
 	</div>
 </div>
 
+<script type="text/javascript">
+	
+	setupPublicChatWebSocket()
+
+	function setupPublicChatWebSocket(){
+		// Correctly decide between ws:// and wss://
+		var ws_scheme = window.location.protocol == "https:" ? "wss" : "ws";
+		{% if debug_mode %}
+			var ws_path = ws_scheme + '://' + window.location.host + "/public_chat/{{room_id}}/"; // development
+		{% else %}
+			var ws_path = ws_scheme + '://' + window.location.host + ":8001/public_chat/{{room_id}}/"; // production
+		{% endif %}
+		var public_chat_socket = new WebSocket(ws_path);
+
+		// Handle incoming messages
+		public_chat_socket.onmessage = function(message) {
+			console.log("Got chat websocket message " + message.data);
+		};
+
+		public_chat_socket.addEventListener("open", function(e){
+			console.log("Public ChatSocket OPEN")
+		})
+
+		public_chat_socket.onclose = function(e) {
+			console.error('Public ChatSocket closed.');
+		};
+
+		public_chat_socket.onOpen = function(e){
+			console.log("Public ChatSocket onOpen", e)
+		}
+
+		public_chat_socket.onerror = function(e){
+	        console.log('Public ChatSocket error', e)
+	    }
+
+	    if (public_chat_socket.readyState == WebSocket.OPEN) {
+	    	console.log("Public ChatSocket OPEN")
+	    } else if (public_chat_socket.readyState == WebSocket.CONNECTING){
+	        console.log("Public ChatSocket connecting..")
+	    }
+	}
+</script>
 
 
 {% endblock content %}
