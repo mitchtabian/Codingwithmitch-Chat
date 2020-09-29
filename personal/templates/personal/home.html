@@ -94,6 +94,11 @@
 				showClientErrorModal(data.message)
 				return;
 			}
+			// Handle joining (Client perspective)
+			if (data.join) {
+				console.log("Joining public room " + data.join);
+				// TODO: Query previous chatroom messages
+			}
 
 			// Handle getting a message
 			if (data.msg_type == 0) {
@@ -102,7 +107,14 @@
 		};
 
 		public_chat_socket.addEventListener("open", function(e){
-			console.log("Public ChatSocket OPEN")
+		console.log("Public Public ChatSocket OPEN")
+			// join chat room
+			if("{{request.user.is_authenticated}}"){
+				public_chat_socket.send(JSON.stringify({
+					"command": "join",
+					"room": "{{room_id}}"
+				}));
+			}
 		})
 
 		public_chat_socket.onclose = function(e) {
@@ -138,7 +150,8 @@
 			const message = messageInputDom.value;
 			public_chat_socket.send(JSON.stringify({
 				"command": "send",
-				"message": message
+				"message": message,
+				"room_id": "{{room_id}}"
 			}));
 			messageInputDom.value = '';
 		};
