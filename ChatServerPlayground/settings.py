@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'channels',
+    'django.contrib.humanize',
 ]
 
 MIDDLEWARE = [

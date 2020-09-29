@@ -44,6 +44,14 @@
 	margin-top: 10px;
 	justify-content: start;
 }
+.timestamp-span{
+	font-weight: 400;
+	font-size: 0.8em;
+	color: var(--secondary-text-color);
+}
+.timestamp-span:hover{
+	cursor: pointer;
+}
 </style>
 
 <div class="container">
@@ -141,13 +149,14 @@
 		uName = data['username']
 		user_id = data['user_id']
 		profile_image = data['profile_image']
+		timestamp = data['natural_timestamp']
 		
 		var msg = message + '\n';
 		var username = uName + ": "
-		createChatMessageElement(msg, username, profile_image, user_id)
+		createChatMessageElement(msg, username, profile_image, user_id, timestamp)
 	}
 
-	function createChatMessageElement(msg, username, profile_image, user_id){
+	function createChatMessageElement(msg, username, profile_image, user_id, timestamp){
 		var chatLog = document.getElementById("id_chat_log")
 
 		var newMessageDiv = document.createElement("div")
@@ -180,6 +189,16 @@
 		usernameSpan.classList.add("username-span")
 		usernameSpan.innerHTML = username
 		div2.appendChild(usernameSpan)
+
+		var timestampSpan = document.createElement("span")
+		timestampSpan.innerHTML = timestamp
+		timestampSpan.classList.add("timestamp-span")
+		timestampSpan.classList.add("d-flex")
+		timestampSpan.classList.add("align-items-center")
+		timestampSpan.addEventListener("click", function(e){
+			selectUser(user_id)
+		})
+		div2.appendChild(timestampSpan)
 
 		div1.appendChild(div2)
 
