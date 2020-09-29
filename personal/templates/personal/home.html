@@ -11,11 +11,17 @@
 	font-size: 0.9em;
 	flex-direction: column-reverse;
 }
+.profile-image{
+	width: 33px;
+	height: 33px;
+	margin-top: 0px;
+	margin-bottom: auto;
+}
 </style>
 
 <div class="container">
 	<div class="d-flex flex-column">
-		<div class="d-flex chat-log">
+		<div class="d-flex chat-log" id="id_chat_log">
 			
 		</div>
 		<div class="d-flex chat-message-input-container">
@@ -45,6 +51,8 @@
 		// Handle incoming messages
 		public_chat_socket.onmessage = function(message) {
 			console.log("Got chat websocket message " + message.data);
+			var data = JSON.parse(message.data);
+			appendChatMessage(data)
 		};
 
 		public_chat_socket.addEventListener("open", function(e){
@@ -68,8 +76,82 @@
 	    } else if (public_chat_socket.readyState == WebSocket.CONNECTING){
 	        console.log("Public ChatSocket connecting..")
 	    }
+
+		document.getElementById('id_chat_message_input').focus();
+		document.getElementById('id_chat_message_input').onkeyup = function(e) {
+			if (e.keyCode === 13 && e.shiftKey) {  // enter + return
+				// Handled automatically by textarea
+			}
+			else if(e.keyCode === 13 && !e.shiftKey){ // enter + !return
+				document.getElementById('id_chat_message_submit').click();
+			}
+		};
+
+	    document.getElementById('id_chat_message_submit').onclick = function(e) {
+			const messageInputDom = document.getElementById('id_chat_message_input');
+			const message = messageInputDom.value;
+			public_chat_socket.send(JSON.stringify({
+				"command": "send",
+				"message": message
+			}));
+			messageInputDom.value = '';
+		};
 	}
+
+	function appendChatMessage(data){
+		message = data['message']
+		uName = data['username']
+		user_id = data['user_id']
+		profile_image = data['profile_image']
+		
+		var msg = message + '\n';
+		var username = uName + ": "
+		createChatMessageElement(msg, username, profile_image, user_id)
+	}
+
+	function createChatMessageElement(msg, username, profile_image, user_id){
+		var chatLog = document.getElementById("id_chat_log")
+
+		var newMessageDiv = document.createElement("div")
+		newMessageDiv.classList.add("d-flex")
+		newMessageDiv.classList.add("flex-row")
+
+		var profileImage = document.createElement("img")
+		profileImage.classList.add("profile-image")
+		profileImage.classList.add("rounded-circle")
+		profileImage.classList.add("img-fluid")
+		profileImage.src = profile_image
+		newMessageDiv.appendChild(profileImage)
+
+		var div1 = document.createElement("div")
+		div1.classList.add("d-flex")
+		div1.classList.add("flex-column")
+
+		var div2 = document.createElement("div")
+		div2.classList.add("d-flex")
+		div2.classList.add("flex-row")
+
+		var usernameSpan = document.createElement("span")
+		usernameSpan.innerHTML = username
+		div2.appendChild(usernameSpan)
+
+		div1.appendChild(div2)
+
+		var msgP = document.createElement("p")
+		msgP.innerHTML = msg
+		msgP.classList.add("msg-p")
+		div1.appendChild(msgP)
+
+		newMessageDiv.appendChild(div1)
+
+		chatLog.insertBefore(newMessageDiv, chatLog.firstChild)
+	}
+
 </script>
 
 
 {% endblock content %}
+
+
+
+

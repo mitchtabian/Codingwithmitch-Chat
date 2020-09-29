@@ -15,6 +15,12 @@ class PublicChatConsumer(AsyncJsonWebsocketConsumer):
 		print("PublicChatConsumer: connect: " + str(self.scope["user"]))
 		# let everyone connect. But limit read/write to authenticated users
 		await self.accept()
+		
+		# Add them to the group so they get room messages
+		await self.channel_layer.group_add(
+			"public_chatroom_1",
+			self.channel_name,
+		)
 
 
 	async def disconnect(self, code):
@@ -34,6 +40,40 @@ class PublicChatConsumer(AsyncJsonWebsocketConsumer):
 		# Messages will have a "command" key we can switch on
 		command = content.get("command", None)
 		print("PublicChatConsumer: receive_json: " + str(command))
+		print("PublicChatConsumer: receive_json: message: " + str(content["message"]))
+		if command == "send":
+			if len(content["message"].lstrip()) == 0:
+				raise Exception("You can't send an empty message.")
+			await self.send_message(content["message"])
+
+
+	async def send_message(self,message):
+		await self.channel_layer.group_send(
+			"public_chatroom_1",
+			{
+				"type": "chat.message",
+				"profile_image": self.scope["user"].profile_image.url,
+				"username": self.scope["user"].username,
+				"user_id": self.scope["user"].id,
+				"message": message,
+			}
+		)
+
+	async def chat_message(self, event):
+		"""
+		Called when someone has messaged our chat.
+		"""
+		# Send a message down to the client
+		print("PublicChatConsumer: chat_message from user #" + str(event["user_id"]))
+		await self.send_json(
+			{
+				"profile_image": event["profile_image"],
+				"username": event["username"],
+				"user_id": event["user_id"],
+				"message": event["message"],
+			},
+		)
+
 
 
 
