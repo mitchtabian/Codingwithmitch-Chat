@@ -86,7 +86,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 
             elif command == "get_user_info":
                 room = await get_room_or_error(content['room_id'], self.scope["user"])
-                payload = await get_user_info(room, self.scope["user"])
+                payload = get_user_info(room, self.scope["user"])
                 if payload != None:
                     payload = json.loads(payload)
                     await self.send_user_info_payload(payload['user_info'])
@@ -234,7 +234,6 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             room.group_name,
             {
                 "type": "chat.message",
-                "room_id": room_id,
                 "profile_image": self.scope["user"].profile_image.url,
                 "username": self.scope["user"].username,
                 "user_id": self.scope["user"].id,
@@ -294,7 +293,6 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         await self.send_json(
             {
                 "msg_type": MSG_TYPE_MESSAGE,
-                "room": event["room_id"],
                 "username": event["username"],
                 "user_id": event["user_id"],
                 "profile_image": event["profile_image"],
@@ -438,7 +436,6 @@ def get_room_chat_messages(room, page_number):
         return None
        
 
-@database_sync_to_async
 def get_user_info(room, user):
     """
     Retrieve the user info for the user you are chatting with

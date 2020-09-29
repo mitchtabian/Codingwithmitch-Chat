@@ -105,7 +105,7 @@ class PublicChatConsumer(AsyncJsonWebsocketConsumer):
         # The logged-in user is in our scope thanks to the authentication ASGI middleware (AuthMiddlewareStack)
         
         print("PublicChatConsumer: join_room")
-        is_auth = await is_authenticated(self.scope["user"])
+        is_auth = is_authenticated(self.scope["user"])
         try:
             room = await get_room_or_error(room_id)
         except ClientError as e:
@@ -117,7 +117,7 @@ class PublicChatConsumer(AsyncJsonWebsocketConsumer):
             return
 
         # Add user to "users" list for room
-        if self.scope["user"].is_authenticated:
+        if is_auth:
             await connect_user(room, self.scope["user"])
 
         # Store that we're in the room
@@ -151,10 +151,11 @@ class PublicChatConsumer(AsyncJsonWebsocketConsumer):
         """
         # The logged-in user is in our scope thanks to the authentication ASGI middleware
         print("PublicChatConsumer: leave_room")
+        is_auth = is_authenticated(self.scope["user"])
         room = await get_room_or_error(room_id)
 
         # Remove user from "users" list
-        if self.scope["user"].is_authenticated:
+        if is_auth:
             await disconnect_user(room, self.scope["user"])
 
         # Remove that we're in the room
@@ -198,7 +199,7 @@ class PublicChatConsumer(AsyncJsonWebsocketConsumer):
         if self.room_id != None:
             if str(room_id) != str(self.room_id):
                 raise ClientError("ROOM_ACCESS_DENIED", "Room access denied")
-            if not await is_authenticated(self.scope["user"]):
+            if not is_authenticated(self.scope["user"]):
                 raise ClientError("AUTH_ERROR", "You must be authenticated to chat.")
         else:
             raise ClientError("ROOM_ACCESS_DENIED", "Room access denied")
@@ -211,7 +212,6 @@ class PublicChatConsumer(AsyncJsonWebsocketConsumer):
             room.group_name,
             {
                 "type": "chat.message",
-                "room_id": room_id,
                 "profile_image": self.scope["user"].profile_image.url,
                 "username": self.scope["user"].username,
                 "user_id": self.scope["user"].id,
@@ -335,7 +335,6 @@ def get_room_chat_messages(room, page_number):
         return None
        
 
-@database_sync_to_async
 def is_authenticated(user):
     if user.is_authenticated:
         return True
