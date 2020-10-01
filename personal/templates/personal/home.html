@@ -54,6 +54,11 @@
 }
 </style>
 
+{% if debug %}
+PUBLIC CHAT
+{% endif %}
+<span class="{% if not debug %}d-none{% endif %} page-number" id="id_page_number">1</span>
+
 <div class="container">
 	<div class="d-flex flex-column">
 		<div class="d-flex chat-log" id="id_chat_log">
@@ -97,12 +102,17 @@
 			// Handle joining (Client perspective)
 			if (data.join) {
 				console.log("Joining public room " + data.join);
-				// TODO: Query previous chatroom messages
+				getRoomChatMessages()
 			}
 
 			// Handle getting a message
 			if (data.msg_type == 0) {
 				appendChatMessage(data)
+			}
+			// new payload of messages coming in from backend
+			if(data.messages_payload){
+				console.log("PAYLOAD")
+				handleMessagesPayload(data.messages, data.new_page_number)
 			}
 		};
 
@@ -168,6 +178,53 @@
 		var username = uName + ": "
 		createChatMessageElement(msg, username, profile_image, user_id, timestamp)
 	}
+
+	function handleMessagesPayload(messages, new_page_number){
+		if(messages != null && messages != "undefined" && messages != "None"){
+			setPageNumber(new_page_number)
+			messages.forEach(function(message){
+				appendChatMessage(message, true, false)
+			})
+		}
+		else{
+			setPaginationExhausted() // no more messages
+		}
+	}
+
+	function setPageNumber(pageNumber){
+		document.getElementById("id_page_number").innerHTML = pageNumber
+	}
+
+	function setPaginationExhausted(){
+		setPageNumber("-1")
+	}
+
+	/*
+		Retrieve the chat room messages given the page number.
+	*/
+	function getRoomChatMessages(){
+		var pageNumber = document.getElementById("id_page_number").innerHTML
+		if(pageNumber != "-1"){
+			setPageNumber("-1") // Do not allow any other queries while one is in progress
+			public_chat_socket.send(JSON.stringify({
+				"command": "get_room_chat_messages",
+				"room_id": "{{room_id}}",
+				"page_number": pageNumber,
+			}));
+		}
+	}
+
+	/*
+		Get the next page of chat messages when scrolls to bottom
+	*/
+	document.getElementById("id_chat_log").addEventListener("scroll", function(e){
+		var chatLog = document.getElementById("id_chat_log")
+		chatLog.addEventListener("scroll", function(e){
+			if ((Math.abs(chatLog.scrollTop) + 2) >= (chatLog.scrollHeight - chatLog.offsetHeight)) {
+				getRoomChatMessages()
+			}
+		});
+	})
 
 	function createChatMessageElement(msg, username, profile_image, user_id, timestamp){
 		var chatLog = document.getElementById("id_chat_log")
