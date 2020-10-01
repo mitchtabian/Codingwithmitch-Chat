@@ -54,7 +54,16 @@
 }
 #id_chatroom_loading_spinner{
 		position: absolute;
-	}
+}
+.connected-users{
+	color: red;
+}
+.connected-users-icon{
+	color: red;
+}
+.connected-users-icon:hover{
+	cursor: default;
+}
 </style>
 
 {% if debug %}
@@ -63,21 +72,36 @@ PUBLIC CHAT
 <span class="{% if not debug %}d-none{% endif %} page-number" id="id_page_number">1</span>
 
 <div class="container">
-	<div class="d-flex flex-column">
-		<div class="d-flex flex-row justify-content-center" id="id_chatroom_loading_spinner_container">
-			<div class="spinner-border text-primary"  id="id_chatroom_loading_spinner" role="status"  style="display: none; ">
-				<span class="sr-only">Loading...</span>
+	<div class="card mt-3">
+
+		<div class="card-header">
+			<div class="d-flex flex-row justify-content-between">
+				<h3 class="">Public Chat</h3>
+				<div class="d-flex flex-row align-items-center">
+					<span class="material-icons m-auto pr-1 connected-users-icon">person_outline</span>
+					<span class="m-auto connected-users" id="id_connected_users"></span>
+				</div>
+				
 			</div>
 		</div>
-		<div class="d-flex chat-log" id="id_chat_log">
-			
-		</div>
-		<div class="d-flex chat-message-input-container">
-			<textarea class="flex-grow-1 chat-message-input" id="id_chat_message_input"></textarea>
-			<button class="btn btn-primary chat-message-submit-button">
-				<span id="id_chat_message_submit" class="material-icons">send
-				</span>
-			</button>
+		<div class="card-body p-1">
+			<div class="d-flex flex-column" id="id_chat_log_container">
+				<div class="d-flex flex-row justify-content-center" id="id_chatroom_loading_spinner_container">
+					<div class="spinner-border text-primary"  id="id_chatroom_loading_spinner" role="status"  style="display: none; ">
+						<span class="sr-only">Loading...</span>
+					</div>
+				</div>
+				<div class="d-flex chat-log" id="id_chat_log">
+					
+				</div>
+				<div class="d-flex chat-message-input-container">
+					<textarea class="flex-grow-1 chat-message-input" id="id_chat_message_input"></textarea>
+					<button class="btn btn-primary chat-message-submit-button">
+						<span id="id_chat_message_submit" class="material-icons">send
+						</span>
+					</button>
+				</div>
+			</div>
 		</div>
 	</div>
 </div>
@@ -116,6 +140,10 @@ PUBLIC CHAT
 		// Handle getting a message
 		if (data.msg_type == 0) {
 			appendChatMessage(data, true, true)
+		}
+		// Handle getting the connected_user count
+		if (data.msg_type == 1) {
+			setConnectedUsersCount(data['connected_user_count'])
 		}
 		// new payload of messages coming in from backend
 		if(data.messages_payload){
@@ -318,6 +346,11 @@ PUBLIC CHAT
 		else{
 			spinner.style.display = "none"
 		}
+	}
+
+	function setConnectedUsersCount(count){
+		element = document.getElementById("id_connected_users")
+		element.innerHTML = count
 	}
 </script>
 
