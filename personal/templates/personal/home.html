@@ -104,7 +104,7 @@ PUBLIC CHAT
 
 		// Handle getting a message
 		if (data.msg_type == 0) {
-			appendChatMessage(data)
+			appendChatMessage(data, true, true)
 		}
 		// new payload of messages coming in from backend
 		if(data.messages_payload){
@@ -163,7 +163,7 @@ PUBLIC CHAT
 		messageInputDom.value = '';
 	};
 
-	function appendChatMessage(data){
+	function appendChatMessage(data, maintainPosition, isNewMessage){
 		message = data['message']
 		uName = data['username']
 		user_id = data['user_id']
@@ -172,7 +172,7 @@ PUBLIC CHAT
 		
 		var msg = message + '\n';
 		var username = uName + ": "
-		createChatMessageElement(msg, username, profile_image, user_id, timestamp)
+		createChatMessageElement(msg, username, profile_image, user_id, timestamp, maintainPosition, isNewMessage)
 	}
 
 	function handleMessagesPayload(messages, new_page_number){
@@ -222,7 +222,7 @@ PUBLIC CHAT
 		});
 	})
 
-	function createChatMessageElement(msg, username, profile_image, user_id, timestamp){
+	function createChatMessageElement(msg, username, profile_image, user_id, timestamp, maintainPosition, isNewMessage){
 		var chatLog = document.getElementById("id_chat_log")
 
 		var newMessageDiv = document.createElement("div")
@@ -275,7 +275,16 @@ PUBLIC CHAT
 
 		newMessageDiv.appendChild(div1)
 
-		chatLog.insertBefore(newMessageDiv, chatLog.firstChild)
+		if(isNewMessage){
+			chatLog.insertBefore(newMessageDiv, chatLog.firstChild)
+		}
+		else{
+			chatLog.appendChild(newMessageDiv)
+		}
+		
+		if(!maintainPosition){
+			chatLog.scrollTop = chatLog.scrollHeight
+		}
 	}
 
 	function selectUser(user_id){
