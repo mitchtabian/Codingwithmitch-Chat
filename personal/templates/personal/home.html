@@ -179,7 +179,7 @@ PUBLIC CHAT
 		if(messages != null && messages != "undefined" && messages != "None"){
 			setPageNumber(new_page_number)
 			messages.forEach(function(message){
-				appendChatMessage(message, true, false)
+				appendChatMessage(message)
 			})
 		}
 		else{
