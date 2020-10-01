@@ -135,7 +135,7 @@ class PublicChatConsumer(AsyncJsonWebsocketConsumer):
         })
 
         # send the new user count to the room
-        num_connected_users = await get_num_connected_users(room)
+        num_connected_users = get_num_connected_users(room)
         await self.channel_layer.group_send(
             room.group_name,
             {
@@ -167,7 +167,7 @@ class PublicChatConsumer(AsyncJsonWebsocketConsumer):
         )
 
         # send the new user count to the room
-        num_connected_users = await get_num_connected_users(room)
+        num_connected_users = get_num_connected_users(room)
         await self.channel_layer.group_send(
             room.group_name,
             {
@@ -276,6 +276,12 @@ def get_room_id(scope):
     print("PublicChatConsumer: room_id: " + str(value['kwargs']['room_id']))
     return value['kwargs']['room_id']
 
+
+def get_num_connected_users(room):
+    if room.users:
+        return len(room.users.all())
+    return 0
+
 @database_sync_to_async
 def create_public_room_chat_message(room, user, message):
     return PublicRoomChatMessage.objects.create(user=user, room=room, content=message)
@@ -289,13 +295,6 @@ def connect_user(room, user):
 def disconnect_user(room, user):
     return room.disconnect_user(user)
     
-
-@database_sync_to_async
-def get_num_connected_users(room):
-    if room.users:
-        return len(room.users.all())
-    return 0
-
 
 # This decorator turns this function from a synchronous function into an async one
 # we can call from our async consumers, that handles Django DBs correctly.
