@@ -52,6 +52,9 @@
 .timestamp-span:hover{
 	cursor: pointer;
 }
+#id_chatroom_loading_spinner{
+		position: absolute;
+	}
 </style>
 
 {% if debug %}
@@ -61,6 +64,11 @@ PUBLIC CHAT
 
 <div class="container">
 	<div class="d-flex flex-column">
+		<div class="d-flex flex-row justify-content-center" id="id_chatroom_loading_spinner_container">
+			<div class="spinner-border text-primary"  id="id_chatroom_loading_spinner" role="status"  style="display: none; ">
+				<span class="sr-only">Loading...</span>
+			</div>
+		</div>
 		<div class="d-flex chat-log" id="id_chat_log">
 			
 		</div>
@@ -89,6 +97,9 @@ PUBLIC CHAT
 	public_chat_socket.onmessage = function(message) {
 		console.log("Got chat websocket message " + message.data);
 		var data = JSON.parse(message.data);
+
+		// display the progress bar?
+		displayChatroomLoadingSpinner(data.display_progress_bar)
 
 		// Handle errors (ClientError)
 		if (data.error) {
@@ -297,6 +308,16 @@ PUBLIC CHAT
 	function showClientErrorModal(message){
 		document.getElementById("id_client_error_modal_body").innerHTML = message
 		document.getElementById("id_trigger_client_error_modal").click()
+	}
+
+	function displayChatroomLoadingSpinner(isDisplayed){
+		var spinner = document.getElementById("id_chatroom_loading_spinner")
+		if(isDisplayed){
+			spinner.style.display = "block"
+		}
+		else{
+			spinner.style.display = "none"
+		}
 	}
 </script>
 

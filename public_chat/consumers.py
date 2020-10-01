@@ -63,6 +63,7 @@ class PublicChatConsumer(AsyncJsonWebsocketConsumer):
 				# Leave the room
 				await self.leave_room(content["room"])
 			elif command == "get_room_chat_messages":
+				await self.display_progress_bar(True)
 				room = await get_room_or_error(content['room_id'])
 				payload = await get_room_chat_messages(room, content['page_number'])
 				if payload != None:
@@ -70,7 +71,9 @@ class PublicChatConsumer(AsyncJsonWebsocketConsumer):
 					await self.send_messages_payload(payload['messages'], payload['new_page_number'])
 				else:
 					raise ClientError(204,"Something went wrong retrieving the chatroom messages.")
+				await self.display_progress_bar(False)
 		except ClientError as e:
+			await self.display_progress_bar(False)
 			await self.handle_client_error(e)
 
 
@@ -195,6 +198,20 @@ class PublicChatConsumer(AsyncJsonWebsocketConsumer):
 				"messages": messages,
 				"new_page_number": new_page_number,
 			},
+		)
+
+	async def display_progress_bar(self, is_displayed):
+		"""
+		1. is_displayed = True
+		- Display the progress bar on UI
+		2. is_displayed = False
+		- Hide the progress bar on UI
+		"""
+		print("DISPLAY PROGRESS BAR: " + str(is_displayed))
+		await self.send_json(
+			{
+				"display_progress_bar": is_displayed
+			}
 		)
 
 
