@@ -1,4 +1,6 @@
 from django.core.serializers.python import Serializer
+from django.core.paginator import Paginator
+from django.core.serializers import serialize
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from channels.db import database_sync_to_async
 import json
@@ -12,7 +14,7 @@ from public_chat.models import PublicChatRoom, PublicRoomChatMessage
 User = get_user_model()
 
 MSG_TYPE_MESSAGE = 0  # For standard messages
-DEFAULT_ROOM_CHAT_MESSAGE_PAGE_SIZE = 30
+DEFAULT_ROOM_CHAT_MESSAGE_PAGE_SIZE = 10
 
 # Example taken from:
 # https://github.com/andrewgodwin/channels-examples/blob/master/multichat/chat/consumers.py
@@ -51,9 +53,9 @@ class PublicChatConsumer(AsyncJsonWebsocketConsumer):
 		print("PublicChatConsumer: receive_json: " + str(command))
 		try:
 			if command == "send":
-				if len(content["message"].lstrip()) == 0:
-					raise ClientError(422,"You can't send an empty message.")
-				await self.send_room(content["room_id"], content["message"])
+				if len(content["message"].lstrip()) != 0:
+					await self.send_room(content["room_id"], content["message"])
+					# raise ClientError(422,"You can't send an empty message.")
 			elif command == "join":
 				# Make them join the room
 				await self.join_room(content["room"])
@@ -240,7 +242,7 @@ def get_room_chat_messages(room, page_number):
 			payload['messages'] = s.serialize(p.page(page_number).object_list)
 		else:
 			payload['messages'] = "None"
-			payload['new_page_number'] = new_page_number
+		payload['new_page_number'] = new_page_number
 		return json.dumps(payload)
 	except Exception as e:
 		print("EXCEPTION: " + str(e))
