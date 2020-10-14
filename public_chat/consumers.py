@@ -276,7 +276,8 @@ def get_room_id(scope):
     print("PublicChatConsumer: room_id: " + str(value['kwargs']['room_id']))
     return value['kwargs']['room_id']
 
-
+# I don't think this requires @database_sync_to_async since we are just accessing a model field
+# https://docs.djangoproject.com/en/3.1/ref/models/instances/#refreshing-objects-from-database
 def get_num_connected_users(room):
     if room.users:
         return len(room.users.all())

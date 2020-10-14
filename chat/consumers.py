@@ -435,7 +435,8 @@ def get_room_chat_messages(room, page_number):
         print("EXCEPTION: " + str(e))
         return None
        
-
+# I don't think this requires @database_sync_to_async since we are just accessing a model field
+# https://docs.djangoproject.com/en/3.1/ref/models/instances/#refreshing-objects-from-database
 def get_user_info(room, user):
     """
     Retrieve the user info for the user you are chatting with
