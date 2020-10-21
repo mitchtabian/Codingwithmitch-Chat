@@ -18,7 +18,9 @@ class PrivateChatRoom(models.Model):
     user2               = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="user2")
 
     # Users who are currently connected to the socket (Used to keep track of unread messages)
-    connected_users = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name="connected_users") 
+    connected_users     = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name="connected_users")
+
+    is_active           = models.BooleanField(default=True)
 
     def __str__(self):
         return f"Chat between {self.user1.username} and {self.user2.username}"

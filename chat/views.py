@@ -14,7 +14,7 @@ import pytz
 from friend.models import FriendList
 from account.models import Account
 from chat.models import PrivateChatRoom, RoomChatMessage
-
+from chat.utils import find_or_create_private_chat
 
 
 DEBUG = False
@@ -46,8 +46,8 @@ def get_recent_chatroom_messages(user):
 	sort in terms of most recent chats (users that you most recently had conversations with)
 	"""
 	# 1. Find all the rooms this user is a part of 
-	rooms1 = PrivateChatRoom.objects.filter(user1=user)
-	rooms2 = PrivateChatRoom.objects.filter(user2=user)
+	rooms1 = PrivateChatRoom.objects.filter(user1=user, is_active=True)
+	rooms2 = PrivateChatRoom.objects.filter(user2=user, is_active=True)
 
 	# 2. merge the lists
 	rooms = list(chain(rooms1, rooms2))
@@ -109,16 +109,7 @@ def create_or_return_private_chat(request, *args, **kwargs):
 	return HttpResponse(json.dumps(payload), content_type="application/json")
 
 
-def find_or_create_private_chat(user1, user2):
-	try:
-		chat = PrivateChatRoom.objects.get(user1=user1, user2=user2)
-	except PrivateChatRoom.DoesNotExist:
-		try:
-			chat = PrivateChatRoom.objects.get(user1=user2, user2=user1)
-		except PrivateChatRoom.DoesNotExist:
-			chat = PrivateChatRoom(user1=user1, user2=user2)
-			chat.save()
-	return chat
+
 
 
 # Testing
