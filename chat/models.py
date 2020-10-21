@@ -5,19 +5,21 @@ from django.conf import settings
 
 
 class PrivateChatRoom(models.Model):
-	"""
-	A private room for people to chat in.
-	"""
-	user1               = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="user1")
-	user2               = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="user2")
+    """
+    A private room for people to chat in.
+    """
+    user1               = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="user1")
+    user2               = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="user2")
 
-	@property
-	def group_name(self):
-		"""
-		Returns the Channels Group name that sockets should subscribe to to get sent
-		messages as they are generated.
-		"""
-		return f"PrivateChatRoom-{self.id}"
+    is_active           = models.BooleanField(default=True)
+
+    @property
+    def group_name(self):
+        """
+        Returns the Channels Group name that sockets should subscribe to to get sent
+        messages as they are generated.
+        """
+        return f"PrivateChatRoom-{self.id}"
 
 
 class RoomChatMessageManager(models.Manager):
