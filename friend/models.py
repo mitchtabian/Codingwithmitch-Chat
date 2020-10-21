@@ -50,6 +50,7 @@ class FriendList(models.Model):
 		return False
 
 
+
 class FriendRequest(models.Model):
 	"""
 	A friend request consists of two main parts:
