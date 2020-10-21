@@ -2,14 +2,14 @@ from django.db import models
 from django.conf import settings
 
 
-
-
 class PrivateChatRoom(models.Model):
 	"""
 	A private room for people to chat in.
 	"""
 	user1               = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="user1")
 	user2               = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="user2")
+
+	is_active 			= models.BooleanField(default=False)
 
 	@property
 	def group_name(self):

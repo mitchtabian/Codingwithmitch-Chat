@@ -26,13 +26,3 @@ def private_chat_room_room_view(request, *args, **kwargs):
 	return render(request, "chat/room.html", context)
 
 
-def find_or_create_private_chat(user1, user2):
-	try:
-		chat = PrivateChatRoom.objects.get(user1=user1, user2=user2)
-	except PrivateChatRoom.DoesNotExist:
-		try:
-			chat = PrivateChatRoom.objects.get(user1=user2, user2=user1)
-		except PrivateChatRoom.DoesNotExist:
-			chat = PrivateChatRoom(user1=user1, user2=user2)
-			chat.save()
-	return chat
