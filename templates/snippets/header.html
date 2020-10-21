@@ -1,5 +1,15 @@
 {% load static %}
 
+<style type="text/css">
+	.chat-dropdown-header:hover{
+		cursor: pointer;
+		background: var(--main-background-color);
+	}
+	.chat-dropdown-header{
+		color: var(--light-primary-text-color);
+	}
+</style>
+
 <!-- Header -->
 <div class="d-flex flex-column flex-lg-row p-3 px-md-4 mb-3 bg-white border-bottom shadow-sm">
 
@@ -23,7 +33,6 @@
 									<span id="id_chat_notifications_count" class="notify-badge"></span>
 									<span class="d-flex material-icons notifications-material-icon m-auto align-items-center">chat</span>
 									<div class="dropdown-menu scrollable-menu" aria-labelledby="id_chat_notification_dropdown_toggle" id="id_chat_notifications_container">
-											
 									</div>
 								</div>
 							</div>
@@ -32,7 +41,7 @@
 								<div class="d-flex notifications-icon-container rounded-circle align-items-center mr-3" id="id_notification_dropdown_toggle" data-toggle="dropdown" onclick="setGeneralNotificationsAsRead()">
 									<span id="id_general_notifications_count" class="notify-badge"></span>
 									<span class="d-flex material-icons notifications-material-icon m-auto align-items-center">notifications</span>
-									<div class="dropdown-menu scrollable-menu" aria-labelledby="id_notification_dropdown_toggle" id="id_general_notifications_container">										
+									<div class="dropdown-menu scrollable-menu" aria-labelledby="id_notification_dropdown_toggle" id="id_general_notifications_container">					
 									</div>
 								</div>
 							</div>
@@ -73,7 +82,6 @@
 							<img class="account-image rounded-circle m-auto d-block dropdown-toggle" id="id_profile_links" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" src="{{request.user.profile_image.url}}" alt="codingwithmitch logo" width="40" height="40">
 							<div class="dropdown-menu" aria-labelledby="id_profile_links">
 								<a class="dropdown-item" href="{% url 'account:view' user_id=request.user.id %}">Account</a>
-								<a class="dropdown-item" href="{% url 'logout' %}">Logout</a>
 							</div>
 						</div>
 					</div>
@@ -90,6 +98,8 @@
 
 
 <script type="text/javascript">
+	setupChatDropdownHeader()
+
 	function executeQuery() {
 		var query = ""
 		query = document.getElementById('id_q_small').value;
@@ -98,6 +108,38 @@
 		}
 	    window.location.replace("{% url 'search' %}?q=" + query)
 	    return false
+	}
+
+	/*
+		Add a header to the dropdown so users can visit /chat/
+	*/
+	function setupChatDropdownHeader(){
+		var notificationContainer = document.getElementById("id_chat_notifications_container")
+
+		if(notificationContainer != null){
+
+			var div = document.createElement("div")
+			div.classList.add("chat-dropdown-header", "d-flex", "flex-row", "justify-content-end", "m-auto", "align-items-end")
+			div.addEventListener("click", function(e){
+				var url = "{% url 'chat:private-chat-room' %}"
+				chatRedirect(url)
+			})
+
+			span1 = document.createElement("span")
+			span1.classList.add("mr-2")
+			span1.innerHTML = "Go to chat"
+			div.appendChild(span1)
+
+			span2 = document.createElement("span")
+			span2.classList.add("material-icons", "mr-2")
+			span2.innerHTML = "open_with"
+			div.appendChild(span2)
+			notificationContainer.appendChild(div)
+		}
+	}
+
+	function chatRedirect(url){
+		window.location.href = url
 	}
 
 </script>
