@@ -115,7 +115,7 @@
 			<div class="card" id="id_chatroom_card">
 				<div class="d-flex flex-row align-items-center card-header" id="id_room_title">
 				<a class="d-flex flex-row" target="_blank" id="id_user_info_container">
-					<img class="profile-image rounded-circle img-fluid" id="id_other_user_profile_image" src="https://open-chat-spaces.nyc3.digitaloceanspaces.com/open-chat-static/codingwithmitch/dummy_image.png">
+					<img class="profile-image rounded-circle img-fluid" id="id_other_user_profile_image" src="{% static 'codingwithmitch/dummy_image.png' %}">
 					<h3 class="ml-2" id="id_other_username"></h3>
 				</a>
 				
@@ -154,7 +154,7 @@
 					<div class="d-flex flex-column friends-list-container ">
 						{% for x in m_and_f %}
 						<div class="d-flex flex-row p-2 friend-container flex-grow-1" onclick="onSelectFriend('{{x.friend.id}}')" id="id_friend_container_{{x.friend.id}}">
-							<img class="profile-image rounded-circle img-fluid" id="id_friend_img_{{x.friend.id}}" src="https://open-chat-spaces.nyc3.digitaloceanspaces.com/open-chat-static/codingwithmitch/dummy_image.png" >
+							<img class="profile-image rounded-circle img-fluid" id="id_friend_img_{{x.friend.id}}" src="{% static 'codingwithmitch/dummy_image.png' %}" >
 							<div class="d-flex flex-column">
 								<span class="username-span">{{x.friend.username}}</span>
 								<span class="friend-message-span">{{x.message|truncatechars:20}}</span>
@@ -191,5 +191,17 @@
   </div>
 </div>
 <!-- Client Error MODAL -->
+
+
+
+<script type="text/javascript">
+	onStart()
+
+	function onStart(){
+		{% for x in m_and_f %}
+			preloadImage("{{x.friend.profile_image.url|safe}}", "id_friend_img_{{x.friend.id}}")
+		{% endfor %}
+	}
+</script>
 
 {% endblock content %}
