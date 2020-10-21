@@ -47,7 +47,6 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 		"""
 		# Leave the room
 		print("ChatConsumer: disconnect")
-		pass
 
 
 	async def join_room(self, room_id):
@@ -58,7 +57,6 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 		print("ChatConsumer: join_room: " + str(room_id))
 
 
-
 	async def leave_room(self, room_id):
 		"""
 		Called by receive_json when someone sent a leave command.
@@ -67,13 +65,11 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 		print("ChatConsumer: leave_room")
 
 
-
 	async def send_room(self, room_id, message):
 		"""
 		Called by receive_json when someone sends a message to a room.
 		"""
 		print("ChatConsumer: send_room")
-
 
 	# These helper methods are named by the types we send - so chat.join becomes chat_join
 	async def chat_join(self, event):
@@ -83,14 +79,12 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 		# Send a message down to the client
 		print("ChatConsumer: chat_join: " + str(self.scope["user"].id))
 
-
 	async def chat_leave(self, event):
 		"""
 		Called when someone has left our chat.
 		"""
 		# Send a message down to the client
 		print("ChatConsumer: chat_leave")
-
 
 	async def chat_message(self, event):
 		"""
@@ -99,13 +93,11 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 		# Send a message down to the client
 		print("ChatConsumer: chat_message")
 
-
 	async def send_messages_payload(self, messages, new_page_number):
 		"""
 		Send a payload of messages to the ui
 		"""
 		print("ChatConsumer: send_messages_payload. ")
-
 
 	async def send_user_info_payload(self, user_info):
 		"""
@@ -113,15 +105,13 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 		"""
 		print("ChatConsumer: send_user_info_payload. ")
 
-
- 	async def display_progress_bar(self, is_displayed):
+	async def display_progress_bar(self, is_displayed):
 		"""
 		1. is_displayed = True
-			- Display the progress bar on UI
+		- Display the progress bar on UI
 		2. is_displayed = False
-			- Hide the progress bar on UI
+		- Hide the progress bar on UI
 		"""
 		print("DISPLAY PROGRESS BAR: " + str(is_displayed))
-
 
 

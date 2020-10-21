@@ -195,12 +195,134 @@
 
 
 <script type="text/javascript">
+
+	var chatSocket = null;
+	var roomId = null;
+
 	onStart()
 
 	function onStart(){
+		{% if m_and_f %}
+			onSelectFriend("{{m_and_f.0.friend.id}}")
+		{% endif %}
 		{% for x in m_and_f %}
 			preloadImage("{{x.friend.profile_image.url|safe}}", "id_friend_img_{{x.friend.id}}")
 		{% endfor %}
+	}
+
+	function onSelectFriend(userId){
+		createOrReturnPrivateChat(userId)
+	}
+
+	function closeWebSocket(){
+		if(chatSocket != null){
+			chatSocket.close()
+			chatSocket = null
+		}
+	}
+
+	function setupWebSocket(room_id){
+
+		console.log("setupWebSocket: " + room_id)
+
+		roomId = room_id
+
+		// close previous socket if one is open
+		closeWebSocket()
+
+		// Correctly decide between ws:// and wss://
+		var ws_scheme = window.location.protocol == "https:" ? "wss" : "ws";
+		{% if debug_mode %}
+			var ws_path = ws_scheme + '://' + window.location.host + "/chat/" + roomId + "/"; // development
+		{% else %}
+			var ws_path = ws_scheme + '://' + window.location.host + ":8001/chat/" + roomId + "/"; // production
+		{% endif %}
+		
+		
+		// console.log("Connecting to " + ws_path);
+		chatSocket = new WebSocket(ws_path);
+
+		// Handle incoming messages
+		chatSocket.onmessage = function(message) {
+			// Decode the JSON
+			// console.log("Got chat websocket message " + message.data);
+			console.log("Got websocket message.");
+			var data = JSON.parse(message.data);
+
+			// display the progress bar?
+			displayChatroomLoadingSpinner(data.display_progress_bar)
+
+			// Handle errors (ClientError)
+			if (data.error) {
+				console.error(data.error + ": " + data.message)
+				return;
+			}
+			// Handle joining (Client perspective)
+			if (data.join) {
+				console.log("Joining room " + data.join);
+			}
+			// Handle leaving (client perspective)
+			if (data.leave) {
+				// do nothing
+				console.log("Leaving room " + data.leave);
+			}
+		};
+
+		chatSocket.addEventListener("open", function(e){
+			console.log("ChatSocket OPEN")
+			// join chat room
+			if("{{request.user.is_authenticated}}"){
+				chatSocket.send(JSON.stringify({
+					"command": "join",
+					"room": roomId
+				}));
+			}
+		})
+
+		chatSocket.onclose = function(e) {
+			console.log('Chat socket closed.');
+		};
+
+		chatSocket.onOpen = function(e){
+			console.log("ChatSocket onOpen", e)
+		}
+
+		chatSocket.onerror = function(e){
+	        console.log('ChatSocket error', e)
+	    }
+
+	    if (chatSocket.readyState == WebSocket.OPEN) {
+	    	console.log("ChatSocket OPEN")
+	    } else if (chatSocket.readyState == WebSocket.CONNECTING){
+	        console.log("ChatSocket connecting..")
+	    }
+	}
+
+	function createOrReturnPrivateChat(id){
+		payload = {
+			"csrfmiddlewaretoken": "{{ csrf_token }}",
+			"user2_id": id,
+		}
+		$.ajax({
+			type: 'POST',
+			dataType: "json",
+			url: "{% url 'chat:create-or-return-private-chat' %}", // production
+			data: payload,
+			timeout: 5000,
+			success: function(data) {
+				console.log("SUCCESS", data)
+				if(data['response'] == "Successfully got the chat."){
+					setupWebSocket(data['chatroom_id'])
+				}
+				else if(data['response'] != null){
+					alert(data['response'])
+				}
+			},
+			error: function(data) {
+				console.error("ERROR...", data)
+				alert("Something went wrong.")
+			},
+		});
 	}
 </script>
 
