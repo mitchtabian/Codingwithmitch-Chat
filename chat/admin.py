@@ -6,9 +6,9 @@ from django.core.cache import cache
 from chat.models import PrivateChatRoom, RoomChatMessage
 
 class PrivateChatRoomAdmin(admin.ModelAdmin):
-	list_display = ['id','user1', 'user2', ]
+	list_display = ['id','user1', 'user2', 'is_active']
 	search_fields = ['id', 'user1__username', 'user2__username','user1__email', 'user2__email', ]
-	readonly_fields = ['id',]
+	readonly_fields = ['id', "is_active"]
 
 	class Meta:
 		model = PrivateChatRoom
