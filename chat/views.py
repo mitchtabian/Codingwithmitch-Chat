@@ -20,7 +20,7 @@ from chat.utils import find_or_create_private_chat
 DEBUG = False
 
 
-def private_chat_room_room_view(request, *args, **kwargs):
+def private_chat_room_view(request, *args, **kwargs):
 	room_id = request.GET.get("room_id")
 	user = request.user
 	if not user.is_authenticated:
@@ -60,32 +60,39 @@ def get_recent_chatroom_messages(user):
 			friend = room.user2
 		else:
 			friend = room.user1
-		# find newest msg from that friend in the chat room
-		try:
-			message = RoomChatMessage.objects.filter(room=room, user=friend).latest("timestamp")
-		except RoomChatMessage.DoesNotExist:
-			# create a dummy message with dummy timestamp
-			today = datetime(
-				year=1950, 
-				month=1, 
-				day=1, 
-				hour=1,
-				minute=1,
-				second=1,
-				tzinfo=pytz.UTC
-			)
-			message = RoomChatMessage(
-				user=friend,
-				room=room,
-				timestamp=today,
-				content="",
-			)
-		m_and_f.append({
-			'message': message,
-			'friend': friend
-		})
 
-	date_format = '%m/%d/%Y %I:%M %p'
+		# confirm you are even friends (in case chat is left active somehow)
+		friend_list = FriendList.objects.get(user=user)
+		if not friend_list.is_mutual_friend(friend):
+			chat = find_or_create_private_chat(user, friend)
+			chat.is_active = False
+			chat.save()
+		else:	
+			# find newest msg from that friend in the chat room
+			try:
+				message = RoomChatMessage.objects.filter(room=room, user=friend).latest("timestamp")
+			except RoomChatMessage.DoesNotExist:
+				# create a dummy message with dummy timestamp
+				today = datetime(
+					year=1950, 
+					month=1, 
+					day=1, 
+					hour=1,
+					minute=1,
+					second=1,
+					tzinfo=pytz.UTC
+				)
+				message = RoomChatMessage(
+					user=friend,
+					room=room,
+					timestamp=today,
+					content="",
+				)
+			m_and_f.append({
+				'message': message,
+				'friend': friend
+			})
+
 	return sorted(m_and_f, key=lambda x: x['message'].timestamp, reverse=True)
 
 
