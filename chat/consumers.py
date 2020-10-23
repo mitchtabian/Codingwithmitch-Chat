@@ -1,6 +1,12 @@
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
+from channels.db import database_sync_to_async
+from django.core.serializers import serialize
 
+import json
 
+from chat.models import RoomChatMessage, PrivateChatRoom
+from friend.models import FriendList
+from account.utils import LazyAccountEncoder
 
 class ChatConsumer(AsyncJsonWebsocketConsumer):
 
@@ -28,7 +34,8 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 		command = content.get("command", None)
 		try:
 			if command == "join":
-				pass
+				print("joining room: " + str(content['room']))
+				await self.join_room(content["room"])
 			elif command == "leave":
 				pass
 			elif command == "send":
@@ -36,7 +43,13 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 			elif command == "get_room_chat_messages":
 				pass
 			elif command == "get_user_info":
-				pass
+				room = await get_room_or_error(content['room_id'], self.scope["user"])
+				payload = get_user_info(room, self.scope["user"])
+				if payload != None:
+					payload = json.loads(payload)
+					await self.send_user_info_payload(payload['user_info'])
+				else:
+					raise Exception("Something went wrong retrieving the other users account details.")
 		except Exception as e:
 			pass
 
@@ -55,7 +68,14 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 		"""
 		# The logged-in user is in our scope thanks to the authentication ASGI middleware (AuthMiddlewareStack)
 		print("ChatConsumer: join_room: " + str(room_id))
-
+		try:
+			room = await get_room_or_error(room_id, self.scope["user"])
+		except Exception as e:
+			return
+		# Instruct their client to finish opening the room
+		await self.send_json({
+			"join": str(room.id),
+		})
 
 	async def leave_room(self, room_id):
 		"""
@@ -104,6 +124,11 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 		Send a payload of user information to the ui
 		"""
 		print("ChatConsumer: send_user_info_payload. ")
+		await self.send_json(
+			{
+				"user_info": user_info,
+			},
+		)
 
 	async def display_progress_bar(self, is_displayed):
 		"""
@@ -113,5 +138,65 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 		- Hide the progress bar on UI
 		"""
 		print("DISPLAY PROGRESS BAR: " + str(is_displayed))
+
+
+@database_sync_to_async
+def get_room_or_error(room_id, user):
+	"""
+	Tries to fetch a room for the user, checking permissions along the way.
+	"""
+	try:
+		room = PrivateChatRoom.objects.get(pk=room_id)
+	except PrivateChatRoom.DoesNotExist:
+		raise Exception("Invalid room.")
+
+	# Is this user allowed in the room? (must be user1 or user2)
+	if user != room.user1 and user != room.user2:
+		raise Exception("You do not have permission to join this room.")
+
+	# Are the users in this room friends?
+	friend_list = FriendList.objects.get(user=user).friends.all()
+	if not room.user1 in friend_list:
+		if not room.user2 in friend_list:
+			raise Exception("You must be friends to chat.")
+	return room
+
+
+# I don't think this requires @database_sync_to_async since we are just accessing a model field
+# https://docs.djangoproject.com/en/3.1/ref/models/instances/#refreshing-objects-from-database
+def get_user_info(room, user):
+	"""
+	Retrieve the user info for the user you are chatting with
+	"""
+	try:
+		# Determine who is who
+		other_user = room.user1
+		if other_user == user:
+			other_user = room.user2
+
+		payload = {}
+		s = LazyAccountEncoder()
+		# convert to list for serializer and select first entry (there will be only 1)
+		payload['user_info'] = s.serialize([other_user])[0] 
+		return json.dumps(payload)
+	except Exception as e:
+		print("EXCEPTION: " + str(e))
+	print("none I guess?...")
+	return None   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

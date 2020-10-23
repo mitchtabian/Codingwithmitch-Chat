@@ -211,6 +211,7 @@
 	}
 
 	function onSelectFriend(userId){
+		console.log("onSelectFriend: " + userId)
 		createOrReturnPrivateChat(userId)
 	}
 
@@ -250,7 +251,7 @@
 			var data = JSON.parse(message.data);
 
 			// display the progress bar?
-			displayChatroomLoadingSpinner(data.display_progress_bar)
+			//displayChatroomLoadingSpinner(data.display_progress_bar)
 
 			// Handle errors (ClientError)
 			if (data.error) {
@@ -260,11 +261,17 @@
 			// Handle joining (Client perspective)
 			if (data.join) {
 				console.log("Joining room " + data.join);
+				getUserInfo()
 			}
 			// Handle leaving (client perspective)
 			if (data.leave) {
 				// do nothing
 				console.log("Leaving room " + data.leave);
+			}
+
+			// user info coming in from backend
+			if(data.user_info){
+				handleUserInfoPayload(data.user_info)
 			}
 		};
 
@@ -296,6 +303,26 @@
 	    } else if (chatSocket.readyState == WebSocket.CONNECTING){
 	        console.log("ChatSocket connecting..")
 	    }
+	}
+
+	/*
+		Retrieve the user information of the user other in the chat.
+		1. Profile image
+		2. username
+		3. etc...
+	*/
+	function getUserInfo(){
+		chatSocket.send(JSON.stringify({
+			"command": "get_user_info",
+			"room_id": roomId,
+		}));
+	}
+
+	function handleUserInfoPayload(user_info){
+		document.getElementById("id_other_username").innerHTML = user_info['username']
+		document.getElementById("id_other_user_profile_image").classList.remove("d-none")
+		document.getElementById("id_user_info_container").href= "{% url 'account:view' user_id=53252623623632623 %}".replace("53252623623632623", user_info['id'])
+		preloadImage(user_info['profile_image'], "id_other_user_profile_image")
 	}
 
 	function createOrReturnPrivateChat(id){
