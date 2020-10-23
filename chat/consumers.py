@@ -101,6 +101,19 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 			"join": str(room.id),
 		})
 
+		if self.scope["user"].is_authenticated:
+			# Notify the group that someone joined
+			await self.channel_layer.group_send(
+				room.group_name,
+				{
+					"type": "chat.join",
+					"room_id": room_id,
+					"profile_image": self.scope["user"].profile_image.url,
+					"username": self.scope["user"].username,
+					"user_id": self.scope["user"].id,
+				}
+			)
+
 	async def leave_room(self, room_id):
 		"""
 		Called by receive_json when someone sent a leave command.
@@ -174,6 +187,17 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 		"""
 		# Send a message down to the client
 		print("ChatConsumer: chat_join: " + str(self.scope["user"].id))
+		if event["username"]:
+			await self.send_json(
+				{
+					"msg_type": MSG_TYPE_ENTER,
+					"room": event["room_id"],
+					"profile_image": event["profile_image"],
+					"username": event["username"],
+					"user_id": event["user_id"],
+					"message": event["username"] + " connected.",
+				},
+			)
 
 	async def chat_leave(self, event):
 		"""
@@ -181,6 +205,17 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 		"""
 		# Send a message down to the client
 		print("ChatConsumer: chat_leave")
+		if event["username"]:
+			await self.send_json(
+			{
+				"msg_type": MSG_TYPE_LEAVE,
+				"room": event["room_id"],
+				"profile_image": event["profile_image"],
+				"username": event["username"],
+				"user_id": event["user_id"],
+				"message": event["username"] + " disconnected.",
+			},
+		)
 
 
 	async def chat_message(self, event):
