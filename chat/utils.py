@@ -1,4 +1,3 @@
-from django.utils import timezone
 from datetime import datetime
 from django.contrib.humanize.templatetags.humanize import naturalday
 

@@ -39,7 +39,8 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 				print("joining room: " + str(content['room']))
 				await self.join_room(content["room"])
 			elif command == "leave":
-				pass
+				# Leave the room
+				await self.leave_room(content["room"])
 			elif command == "send":
 				if len(content["message"].lstrip()) == 0:
 					raise ClientError(422,"You can't send an empty message.")
@@ -64,6 +65,12 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 		"""
 		# Leave the room
 		print("ChatConsumer: disconnect")
+		try:
+			if self.room_id != None:
+				await self.leave_room(self.room_id)
+		except Exception as e:
+			print("EXCEPTION: " + str(e))
+			pass
 
 
 	async def join_room(self, room_id):
@@ -76,6 +83,16 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 			room = await get_room_or_error(room_id, self.scope["user"])
 		except ClientError as e:
 			return await self.handle_client_error(e)
+
+		# Store that we're in the room
+		self.room_id = room.id
+
+		# Add them to the group so they get room messages
+		await self.channel_layer.group_add(
+			room.group_name,
+			self.channel_name,
+		)
+
 		# Instruct their client to finish opening the room
 		await self.send_json({
 			"join": str(room.id),
@@ -87,6 +104,34 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 		"""
 		# The logged-in user is in our scope thanks to the authentication ASGI middleware
 		print("ChatConsumer: leave_room")
+
+		room = await get_room_or_error(room_id, self.scope["user"])
+
+		# Notify the group that someone left
+		await self.channel_layer.group_send(
+			room.group_name,
+			{
+				"type": "chat.leave",
+				"room_id": room_id,
+				"profile_image": self.scope["user"].profile_image.url,
+				"username": self.scope["user"].username,
+				"user_id": self.scope["user"].id,
+			}
+		)
+
+		# Remove that we're in the room
+		self.room_id = None
+
+		# Remove them from the group so they no longer get room messages
+		await self.channel_layer.group_discard(
+			room.group_name,
+			self.channel_name,
+		)
+		# Instruct their client to finish closing the room
+		await self.send_json({
+			"leave": str(room.id),
+		})
+
 
 
 	async def send_room(self, room_id, message):
