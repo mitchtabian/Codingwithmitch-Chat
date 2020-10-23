@@ -1,6 +1,7 @@
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.core.serializers import serialize
+from django.utils import timezone
 
 import json
 
@@ -8,7 +9,9 @@ from chat.models import RoomChatMessage, PrivateChatRoom
 from friend.models import FriendList
 from account.utils import LazyAccountEncoder
 from chat.utils import calculate_timestamp
+from chat.exceptions import ClientError
 from chat.constants import *
+
 
 class ChatConsumer(AsyncJsonWebsocketConsumer):
 
@@ -76,6 +79,16 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 			room = await get_room_or_error(room_id, self.scope["user"])
 		except ClientError as e:
 			return await self.handle_client_error(e)
+
+		# Store that we're in the room
+		self.room_id = room.id
+
+		# Add them to the group so they get room messages
+		await self.channel_layer.group_add(
+			room.group_name,
+			self.channel_name,
+		)
+
 		# Instruct their client to finish opening the room
 		await self.send_json({
 			"join": str(room.id),
@@ -97,9 +110,11 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 		# Check they are in this room
 		if self.room_id != None:
 			if str(room_id) != str(self.room_id):
+				print("CLIENT ERRROR 1")
 				raise ClientError("ROOM_ACCESS_DENIED", "Room access denied")
-			else:
-				raise ClientError("ROOM_ACCESS_DENIED", "Room access denied")
+		else:
+			print("CLIENT ERRROR 2")
+			raise ClientError("ROOM_ACCESS_DENIED", "Room access denied")
 
 		# Get the room and send to the group about it
 		room = await get_room_or_error(room_id, self.scope["user"])
