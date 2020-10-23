@@ -256,6 +256,7 @@
 			// Handle errors (ClientError)
 			if (data.error) {
 				console.error(data.error + ": " + data.message)
+				showClientErrorModal(data.message)
 				return;
 			}
 			// Handle joining (Client perspective)
@@ -323,6 +324,11 @@
 		document.getElementById("id_other_user_profile_image").classList.remove("d-none")
 		document.getElementById("id_user_info_container").href= "{% url 'account:view' user_id=53252623623632623 %}".replace("53252623623632623", user_info['id'])
 		preloadImage(user_info['profile_image'], "id_other_user_profile_image")
+	}
+
+	function showClientErrorModal(message){
+		document.getElementById("id_client_error_modal_body").innerHTML = message
+		document.getElementById("id_trigger_client_error_modal").click()
 	}
 
 	function createOrReturnPrivateChat(id){

@@ -4,15 +4,13 @@ from django.core.serializers import serialize
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from channels.db import database_sync_to_async
 import json
-from django.contrib.auth import get_user_model
-from django.contrib.humanize.templatetags.humanize import naturaltime, naturalday
 from django.utils import timezone
-from datetime import datetime
 
 from public_chat.constants import *
 from public_chat.models import PublicChatRoom, PublicRoomChatMessage
+from chat.exceptions import ClientError
+from chat.utils import calculate_timestamp
 
-User = get_user_model()
 
 # Example taken from:
 # https://github.com/andrewgodwin/channels-examples/blob/master/multichat/chat/consumers.py
@@ -303,39 +301,7 @@ def get_room_chat_messages(room, page_number):
 		return None
 
 
-class ClientError(Exception):
-    """
-    Custom exception class that is caught by the websocket receive()
-    handler and translated into a send back to the client.
-    """
-    def __init__(self, code, message):
-        super().__init__(code)
-        self.code = code
-        if message:
-        	self.message = message
 
-
-
-def calculate_timestamp(timestamp):
-    """
-    1. Today or yesterday:
-        - EX: 'today at 10:56 AM'
-        - EX: 'yesterday at 5:19 PM'
-    2. other:
-        - EX: 05/06/2020
-        - EX: 12/28/2020
-    """
-    ts = ""
-    # Today or yesterday
-    if (naturalday(timestamp) == "today") or (naturalday(timestamp) == "yesterday"):
-        str_time = datetime.strftime(timestamp, "%I:%M %p")
-        str_time = str_time.strip("0")
-        ts = f"{naturalday(timestamp)} at {str_time}"
-    # other days
-    else:
-        str_time = datetime.strftime(timestamp, "%m/%d/%Y")
-        ts = f"{str_time}"
-    return str(ts)
 
 
 class LazyRoomChatMessageEncoder(Serializer):
