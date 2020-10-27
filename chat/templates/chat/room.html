@@ -253,7 +253,7 @@
 			var data = JSON.parse(message.data);
 
 			// display the progress bar?
-			//displayChatroomLoadingSpinner(data.display_progress_bar)
+			displayChatroomLoadingSpinner(data.display_progress_bar)
 
 			// Handle errors (ClientError)
 			if (data.error) {
@@ -576,6 +576,17 @@
 	*/
 	function disableChatLogScrollListener(){
 		document.getElementById("id_chat_log").removeEventListener("scroll", chatLogScrollListener)
+	}
+
+	function displayChatroomLoadingSpinner(isDisplayed){
+		console.log("displayChatroomLoadingSpinner: " + isDisplayed)
+		var spinner = document.getElementById("id_chatroom_loading_spinner")
+		if(isDisplayed){
+			spinner.style.display = "block"
+		}
+		else{
+			spinner.style.display = "none"
+		}
 	}
 
 	function createOrReturnPrivateChat(id){
