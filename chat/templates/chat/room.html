@@ -219,6 +219,8 @@
 		if(chatSocket != null){
 			chatSocket.close()
 			chatSocket = null
+			clearChatLog()
+			setPageNumber("1")
 		}
 	}
 
@@ -263,6 +265,7 @@
 			if (data.join) {
 				console.log("Joining room " + data.join);
 				getUserInfo()
+				getRoomChatMessages()
 			}
 			// Handle leaving (client perspective)
 			if (data.leave) {
@@ -278,6 +281,11 @@
 			// Handle getting a message
 			if (data.msg_type == 0 || data.msg_type == 1 || data.msg_type == 2) {
 				appendChatMessage(data, false, true)
+			}
+
+			// new payload of messages coming in from backend
+			if(data.messages_payload){
+				handleMessagesPayload(data.messages, data.new_page_number)
 			}
 		};
 
@@ -496,6 +504,54 @@
 
 		preloadImage(profile_image, profile_image_id)
  	}
+
+ 	function setPageNumber(pageNumber){
+		document.getElementById("id_page_number").innerHTML = pageNumber
+	}
+
+	function clearChatLog(){
+		document.getElementById("id_chat_log").innerHTML = ""
+	}
+
+
+	function setPaginationExhausted(){
+		setPageNumber("-1")
+	}
+
+ 	/*
+		Retrieve the chat room messages given the page number.
+	*/
+	function getRoomChatMessages(){
+		var pageNumber = document.getElementById("id_page_number").innerHTML
+		if(pageNumber != "-1"){
+			setPageNumber("-1") // loading in progress
+			chatSocket.send(JSON.stringify({
+				"command": "get_room_chat_messages",
+				"room_id": roomId,
+				"page_number": pageNumber,
+			}));
+		}
+	}
+
+
+	function handleMessagesPayload(messages, new_page_number){
+		if(messages != null && messages != "undefined" && messages != "None"){
+			setPageNumber(new_page_number)
+			messages.forEach(function(message){
+				appendChatMessage(message, true, false)
+			})
+		}
+		else{
+			setPaginationExhausted() // no more messages
+		}
+	}
+
+	function selectUser(user_id){
+		// Weird work-around for passing arg to url
+		var url = "{% url 'account:view' user_id=53252623623632623 %}".replace("53252623623632623", user_id)
+		var win = window.open(url, "_blank")
+		win.focus()
+	}
 
 
 	function createOrReturnPrivateChat(id){
