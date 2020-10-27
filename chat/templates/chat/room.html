@@ -266,6 +266,7 @@
 				console.log("Joining room " + data.join);
 				getUserInfo()
 				getRoomChatMessages()
+				enableChatLogScrollListener()
 			}
 			// Handle leaving (client perspective)
 			if (data.leave) {
@@ -553,6 +554,29 @@
 		win.focus()
 	}
 
+	/*
+		Get the next page of chat messages when scrolls to bottom
+	*/
+	function chatLogScrollListener(e) {
+		var chatLog = document.getElementById("id_chat_log")
+		if ((Math.abs(chatLog.scrollTop) + 2) >= (chatLog.scrollHeight - chatLog.offsetHeight)) {
+			getRoomChatMessages()
+		}
+	}
+
+	/*
+		Enable the function "chatLogScrollListener"
+	*/
+	function enableChatLogScrollListener(){
+		document.getElementById("id_chat_log").addEventListener("scroll", chatLogScrollListener);
+	}
+	
+	/*
+		Disable the function "chatLogScrollListener"
+	*/
+	function disableChatLogScrollListener(){
+		document.getElementById("id_chat_log").removeEventListener("scroll", chatLogScrollListener)
+	}
 
 	function createOrReturnPrivateChat(id){
 		payload = {
