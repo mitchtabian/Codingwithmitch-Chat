@@ -30,10 +30,11 @@
 
 
 	function OnGetOrCreateChatroomSuccess(chatroomId){
-		var url = "{% url 'chat:private-chat-room' %}?room_id=" + chatroomId
-		var win = window.open(url)
-		win.focus()
-	}
+			var url = "{% url 'chat:private-chat-room' %}?room_id=" + chatroomId
+			var win = window.location.replace(url)
+			// window.open(url) // for new tab
+			win.focus()
+		}
 	
 
 </script>
