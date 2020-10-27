@@ -213,6 +213,8 @@
 	function onSelectFriend(userId){
 		console.log("onSelectFriend: " + userId)
 		createOrReturnPrivateChat(userId)
+		clearHighlightedFriend()
+		highlightFriend(userId)
 	}
 
 	function closeWebSocket(){
@@ -588,6 +590,25 @@
 			spinner.style.display = "none"
 		}
 	}
+
+	function highlightFriend(userId){
+		// select new friend
+		document.getElementById("id_friend_container_" + userId).style.background = "#f2f2f2"
+	}
+
+	function clearHighlightedFriend(){
+		{% if m_and_f %}
+			{% for x in m_and_f %}
+				document.getElementById("id_friend_container_{{x.friend.id}}").style.background = ""
+			{% endfor %}
+		{% endif %}
+
+		// clear the profile image and username of current chat
+		document.getElementById("id_other_user_profile_image").classList.add("d-none")
+		document.getElementById("id_other_user_profile_image").src = "{% static 'codingwithmitch/dummy_image.png' %}"
+		document.getElementById("id_other_username").innerHTML = ""
+	}
+
 
 	function createOrReturnPrivateChat(id){
 		payload = {
