@@ -179,8 +179,13 @@
 	onStart()
 
 	function onStart(){
-		{% if room_id %}
-			setupWebSocket("{{room_id}}")
+		{% if room %}
+			if("{{room.user1}}" == "{{request.user}}"){
+				onSelectFriend("{{room.user2.id}}")
+			}
+			else{
+				onSelectFriend("{{room.user1.id}}")
+			}
 		{% else %}
 			{% if m_and_f %}
 				onSelectFriend("{{m_and_f.0.friend.id}}")

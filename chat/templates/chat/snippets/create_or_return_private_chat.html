@@ -1,4 +1,3 @@
-
 <script type="text/javascript">
 	
 	function createOrReturnPrivateChat(id){
@@ -9,7 +8,7 @@
 		$.ajax({
 			type: 'POST',
 			dataType: "json",
-			url: "{{BASE_URL}}/chat/create_or_return_private_chat/", // production
+			url: "{% url 'chat:create-or-return-private-chat' %}", // production
 			data: payload,
 			timeout: 5000,
 			success: function(data) {
@@ -31,7 +30,6 @@
 
 
 	function OnGetOrCreateChatroomSuccess(chatroomId){
-		console.log("CHATROOM ID: " + chatroomId)
 		var url = "{% url 'chat:private-chat-room' %}?room_id=" + chatroomId
 		var win = window.open(url)
 		win.focus()

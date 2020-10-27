@@ -30,12 +30,13 @@ def private_chat_room_view(request, *args, **kwargs):
 		return redirect(url)
 
 	context = {}
+	if room_id:
+		room = PrivateChatRoom.objects.get(pk=room_id)
+		context["room"] = room
 
 	context['m_and_f'] = get_recent_chatroom_messages(user)
 
 	context["BASE_URL"] = settings.BASE_URL
-	if room_id:
-		context["room_id"] = room_id
 	context['debug'] = DEBUG
 	context['debug_mode'] = settings.DEBUG
 	return render(request, "chat/room.html", context)
