@@ -2,6 +2,7 @@ from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.core.serializers import serialize
 from django.utils import timezone
+from django.core.paginator import Paginator
 
 import json
 
