@@ -5,7 +5,6 @@ from django.utils import timezone
 from django.core.paginator import Paginator
 
 import json
-import time
 
 from chat.models import RoomChatMessage, PrivateChatRoom
 from friend.models import FriendList
@@ -354,7 +353,6 @@ def create_room_chat_message(room, user, message):
 
 @database_sync_to_async
 def get_room_chat_messages(room, page_number):
-	time.sleep(1)
 	try:
 		qs = RoomChatMessage.objects.by_room(room)
 		p = Paginator(qs, DEFAULT_ROOM_CHAT_MESSAGE_PAGE_SIZE)
