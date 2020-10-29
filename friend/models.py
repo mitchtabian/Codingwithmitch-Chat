@@ -15,6 +15,7 @@ class FriendList(models.Model):
 	user 				= models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="user")
 	friends 			= models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name="friends") 
 
+	# Set up reverse relation 
 	notifications		= GenericRelation(Notification)
 
 	def __str__(self):
@@ -26,6 +27,16 @@ class FriendList(models.Model):
 			content_type = ContentType.objects.get_for_model(self)
 
 			# Create notification
+			# Can create this way if you want. Doesn't matter.
+			# Notification(
+			# 	target=self.user,
+			# 	from_user=account,
+			# 	redirect_url=f"{settings.BASE_URL}/account/{account.pk}/",
+			# 	verb=f"You are now friends with {account.username}.",
+			# 	content_type=content_type,
+			# 	object_id=self.id,
+			# ).save()
+
 			self.notifications.create(
 				target=self.user,
 				from_user=account,
@@ -63,6 +74,8 @@ class FriendList(models.Model):
 		friends_list.remove_friend(remover_friends_list.user)
 
 		content_type = ContentType.objects.get_for_model(self)
+
+
 
 		# Create notification for removee
 		friends_list.notifications.create(
