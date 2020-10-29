@@ -5,11 +5,16 @@ from django.conf import settings
 from django.utils import timezone
 
 from chat.utils import find_or_create_private_chat
+from notification.models import Notification
+
 
 class FriendList(models.Model):
 
 	user 				= models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="user")
 	friends 			= models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name="friends") 
+
+	# set up the reverse relation to GenericForeignKey
+	notifications		= GenericRelation(Notification)
 
 	def __str__(self):
 		return self.user.username
@@ -55,6 +60,13 @@ class FriendList(models.Model):
 		friends_list.remove_friend(remover_friends_list.user)
 
 
+	@property
+	def get_cname(self):
+		"""
+		For determining what kind of object is associated with a Notification
+		"""
+		return "FriendList"
+
 	def is_mutual_friend(self, friend):
 		"""
 		Is this a friend?
@@ -80,6 +92,8 @@ class FriendRequest(models.Model):
 	is_active			= models.BooleanField(blank=False, null=False, default=True)
 
 	timestamp 			= models.DateTimeField(auto_now_add=True)
+
+	notifications		= GenericRelation(Notification)
 
 	def __str__(self):
 		return self.sender.username
@@ -116,7 +130,12 @@ class FriendRequest(models.Model):
 		self.is_active = False
 		self.save()
 
-
+	@property
+	def get_cname(self):
+		"""
+		For determining what kind of object is associated with a Notification
+		"""
+		return "FriendRequest"
 
 
 
