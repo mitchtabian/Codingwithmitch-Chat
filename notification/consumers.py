@@ -10,6 +10,7 @@ import json
 from friend.models import FriendRequest, FriendList
 from notification.utils import LazyNotificationEncoder
 from notification.constants import *
+from notification.models import Notification
 
 
 class NotificationConsumer(AsyncJsonWebsocketConsumer):
