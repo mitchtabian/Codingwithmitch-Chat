@@ -20,6 +20,7 @@ class FriendRequestAdmin(admin.ModelAdmin):
     list_filter = ['sender', 'receiver']
     list_display = ['sender', 'receiver',]
     search_fields = ['sender__username', 'receiver__username']
+    readonly_fields = ['id',]
 
     class Meta:
         model = FriendRequest
