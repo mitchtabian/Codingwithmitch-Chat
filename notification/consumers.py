@@ -8,6 +8,7 @@ from django.contrib.contenttypes.models import ContentType
 import json
 
 from friend.models import FriendRequest, FriendList
+from notification.models import Notification
 from notification.utils import LazyNotificationEncoder
 from notification.constants import *
 

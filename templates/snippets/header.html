@@ -8,6 +8,12 @@
 	.chat-dropdown-header{
 		color: var(--light-primary-text-color);
 	}
+	.scrollable-menu {
+		height: auto;
+		max-height: 90vh;
+		width: 500px;
+		overflow-x: hidden;
+	}
 </style>
 
 <!-- Header -->
@@ -96,6 +102,9 @@
 	<!-- END SMALL SCREENS -->
 </div>
 
+
+{% include 'snippets/general_notifications.html' %}
+
 <!-- Setup SOCKET for NOTIFICATIONS -->
 <script type="text/javascript">
 	// Correctly decide between ws:// and wss://
@@ -110,6 +119,13 @@
 		console.log("Got notification websocket message.");
 		var data = JSON.parse(message.data);
 
+		/*
+			GENERAL NOTIFICATIONS
+		*/
+		// new 'general' notifications data payload
+		if(data.general_msg_type == 0){
+			handleGeneralNotificationsData(data['notifications'], data['new_page_number'])
+		}
 	}
 
 	notificationSocket.onclose = function(e) {
@@ -118,6 +134,8 @@
 
 	notificationSocket.onopen = function(e){
 		console.log("Notification Socket on open: " + e)
+		setupGeneralNotificationsMenu()
+		getFirstGeneralNotificationsPage()
 	}
 
 	notificationSocket.onerror = function(e){
