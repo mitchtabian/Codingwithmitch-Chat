@@ -1,7 +1,5 @@
-from django.contrib.auth import get_user_model
 from django.conf import settings
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
-from channels.db import database_sync_to_async
 from django.core.paginator import Paginator
 from django.core.serializers import serialize
 from channels.db import database_sync_to_async
@@ -20,7 +18,6 @@ from notification.models import Notification
 from notification.exceptions import NotificationClientError
 from notification.constants import *
 
-User = get_user_model()
 
 DEFAULT_NOTIFICATION_PAGE_SIZE = 15
 
@@ -537,7 +534,7 @@ def get_new_general_notifications(user, newest_timestatmp):
 @database_sync_to_async
 def refresh_general_notifications(user, oldest_timestamp, newest_timestatmp):
     """
-    Retrieve the general notifications newer than the oldest one on the screen and older than the newest on the screen.
+    Retrieve the general notifications newer than the oldest one on the screen and younger than the newest one the screen.
     The result will be: Notifications currently visible will be updated
     """
     payload = {}
