@@ -11,6 +11,7 @@ from friend.models import FriendRequest, FriendList
 from notification.models import Notification
 from notification.utils import LazyNotificationEncoder
 from notification.constants import *
+from chat.exceptions import ClientError
 
 
 class NotificationConsumer(AsyncJsonWebsocketConsumer):
@@ -107,7 +108,7 @@ def get_general_notifications(user, page_number):
 		else:
 			return None
 	else:
-		raise NotificationClientError("User must be authenticated to get notifications.")
+		raise ClientError("User must be authenticated to get notifications.")
 
 	return json.dumps(payload)
 
