@@ -56,18 +56,14 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
 					payload = json.loads(payload)
 					await self.send_general_notifications_payload(payload['notifications'], payload['new_page_number'])
 			elif command == "accept_friend_request":
-				try:
-					notification_id = content['notification_id']
-					payload = await accept_friend_request(self.scope['user'], notification_id)
-					if payload == None:
-						raise NotificationClientError("Something went wrong. Try refreshing the browser.")
-					else:
-						payload = json.loads(payload)
-						await self.send_updated_friend_request_notification(payload['notification'])
-				except Exception as e:
-					print("EXCEPTION: NotificationConsumer: " + str(e))
-					pass
-		except Exception as e:
+				notification_id = content['notification_id']
+				payload = await accept_friend_request(self.scope['user'], notification_id)
+				if payload == None:
+					raise NotificationClientError("Something went wrong. Try refreshing the browser.")
+				else:
+					payload = json.loads(payload)
+					await self.send_updated_friend_request_notification(payload['notification'])
+		except ClientError as e:
 			print("EXCEPTION: receive_json: " + str(e))
 			pass
 
