@@ -301,6 +301,16 @@
 			"notification_id": notification_id,
 		}));
 	}
+
+	/*
+		Decline a friend request
+	*/
+	function sendDeclineFriendRequestToSocket(notification_id){
+		notificationSocket.send(JSON.stringify({
+			"command": "decline_friend_request",
+			"notification_id": notification_id,
+		}));
+	}
 </script>
 
 <!-- Helpers for generating IDs -->
