@@ -59,7 +59,7 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
 				notification_id = content['notification_id']
 				payload = await accept_friend_request(self.scope['user'], notification_id)
 				if payload == None:
-					raise NotificationClientError("Something went wrong. Try refreshing the browser.")
+					raise ClientError("Something went wrong. Try refreshing the browser.")
 				else:
 					payload = json.loads(payload)
 					await self.send_updated_friend_request_notification(payload['notification'])
@@ -67,7 +67,7 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
 				notification_id = content['notification_id']
 				payload = await decline_friend_request(self.scope['user'], notification_id)
 				if payload == None:
-					raise NotificationClientError("Something went wrong. Try refreshing the browser.")
+					raise ClientError("Something went wrong. Try refreshing the browser.")
 				else:
 					payload = json.loads(payload)
 					await self.send_updated_friend_request_notification(payload['notification'])
@@ -177,7 +177,7 @@ def accept_friend_request(user, notification_id):
                 payload['notification'] = s.serialize([updated_notification])[0]
                 return json.dumps(payload)
         except Notification.DoesNotExist:
-            raise NotificationClientError("An error occurred with that notification. Try refreshing the browser.")
+            raise ClientError("An error occurred with that notification. Try refreshing the browser.")
     return None
 
 
@@ -201,7 +201,7 @@ def decline_friend_request(user, notification_id):
 				payload['notification'] = s.serialize([updated_notification])[0]
 				return json.dumps(payload)
 		except Notification.DoesNotExist:
-			raise NotificationClientError("An error occurred with that notification. Try refreshing the browser.")
+			raise ClientError("An error occurred with that notification. Try refreshing the browser.")
 	return None
 
 
