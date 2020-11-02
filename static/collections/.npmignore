@@ -1,0 +1,12 @@
+.gitignore
+.npmignore
+.travis.yml
+.tmp
+/bench
+checklist.csv
+collections.cat.js
+collections.min.js
+/coverage
+/demo
+/test
+/report
