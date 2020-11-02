@@ -117,6 +117,45 @@
 	}
 
 	/*
+		Received a payload from socket containing NEW notifications
+		Called every GENERAL_NOTIFICATION_INTERVAL
+	*/
+	function handleNewGeneralNotificationsData(notifications){
+    	if(notifications.length > 0){
+    		clearNoGeneralNotificationsCard()
+    		notifications.forEach(notification => {
+
+    			submitNewGeneralNotificationToCache(notification)
+
+				setGeneralOldestTimestamp(notification['timestamp'])
+				setGeneralNewestTimestamp(notification['timestamp'])
+			})
+	    }
+	}
+
+	/*
+		Append to top OR update a div that already exists.
+		Called by 'handleNewGeneralNotificationsData'
+	*/
+	function submitNewGeneralNotificationToCache(notification){
+		var result = generalCachedNotifList.filter(function(n){ 
+			return n['notification_id'] === notification['notification_id']
+		})
+		// This notification does not already exist in the list
+		if(result.length == 0){
+			generalCachedNotifList.push(notification)
+
+			// append to top of list
+			appendTopGeneralNotification(notification)
+		}
+		// This notification already exists in the list
+		else{
+			// find the div and update it.
+			refreshGeneralNotificationsList(notification)
+		}
+	}
+
+	/*
 		Received a payload from socket containing notifications currently in view.
 		Called every GENERAL_NOTIFICATION_INTERVAL
 	*/
@@ -132,6 +171,32 @@
 				setGeneralNewestTimestamp(notification['timestamp'])
 			})
 		}
+	}
+
+	/*
+		Append a general notification to the TOP of the list.
+	*/
+	function appendTopGeneralNotification(notification){
+
+		switch(notification['notification_type']) {
+
+			case "FriendRequest":
+				notificationContainer = document.getElementById("id_general_notifications_container")
+				card = createFriendRequestElement(notification)
+				notificationContainer.insertBefore(card, notificationContainer.childNodes[0]);
+				break;
+
+			case "FriendList":
+				notificationContainer = document.getElementById("id_general_notifications_container")
+				card = createFriendListElement(notification)
+				notificationContainer.insertBefore(card, notificationContainer.childNodes[0]);
+				break;
+
+			default:
+				// code block
+		}
+
+		preloadImage(notification['from']['image_url'], assignGeneralImgId(notification))
 	}
 
 	/*
@@ -554,10 +619,25 @@
 	function startGeneralNotificationService(){
 		if("{{request.user.is_authenticated}}" == "True"){
 			setInterval(refreshGeneralNotifications, GENERAL_NOTIFICATION_INTERVAL)
+			setInterval(getNewGeneralNotifications, GENERAL_NOTIFICATION_INTERVAL)
 		}
 	}
 
 	startGeneralNotificationService()
+
+	/*
+		Retrieve any new notifications
+		Called every GENERAL_NOTIFICATION_INTERVAL seconds
+	*/
+	function getNewGeneralNotifications(){
+		newestTimestamp = document.getElementById("id_general_newest_timestamp").innerHTML
+		if("{{request.user.is_authenticated}}"){
+			notificationSocket.send(JSON.stringify({
+				"command": "get_new_general_notifications",
+				"newest_timestamp": newestTimestamp,
+			}));
+		}
+	}
 </script>
 
 <!-- Helpers for generating IDs -->

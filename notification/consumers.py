@@ -56,6 +56,11 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
 				else:
 					payload = json.loads(payload)
 					await self.send_general_notifications_payload(payload['notifications'], payload['new_page_number'])
+			elif command == "get_new_general_notifications":
+				payload = await get_new_general_notifications(self.scope["user"], content.get("newest_timestamp", None))
+				if payload != None:
+					payload = json.loads(payload)
+					await self.send_new_general_notifications_payload(payload['notifications'])
 			elif command == "accept_friend_request":
 				notification_id = content['notification_id']
 				payload = await accept_friend_request(self.scope['user'], notification_id)
@@ -151,6 +156,17 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
 		await self.send_json(
 			{
 				"general_msg_type": GENERAL_MSG_TYPE_NOTIFICATIONS_REFRESH_PAYLOAD,
+				"notifications": notifications,
+			},
+		)
+
+	async def send_new_general_notifications_payload(self, notifications):
+		"""
+		Called by receive_json when ready to send a json array of the notifications
+		"""
+		await self.send_json(
+			{
+				"general_msg_type": GENERAL_MSG_TYPE_GET_NEW_GENERAL_NOTIFICATIONS,
 				"notifications": notifications,
 			},
 		)
@@ -259,6 +275,34 @@ def refresh_general_notifications(user, oldest_timestamp, newest_timestamp):
 		raise ClientError("User must be authenticated to get notifications.")
 
 	return json.dumps(payload) 
+
+
+@database_sync_to_async
+def get_new_general_notifications(user, newest_timestamp):
+	"""
+	Retrieve any notifications newer than the newest_timestatmp on the screen.
+	"""
+	payload = {}
+	if user.is_authenticated:
+		timestamp = newest_timestamp[0:newest_timestamp.find("+")] # remove timezone because who cares
+		timestamp = datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S.%f')
+		friend_request_ct = ContentType.objects.get_for_model(FriendRequest)
+		friend_list_ct = ContentType.objects.get_for_model(FriendList)
+		notifications = Notification.objects.filter(target=user, content_type__in=[friend_request_ct, friend_list_ct], timestamp__gt=timestamp, read=False).order_by('-timestamp')
+		s = LazyNotificationEncoder()
+		payload['notifications'] = s.serialize(notifications)
+	else:
+		raise ClientError("User must be authenticated to get notifications.")
+
+	return json.dumps(payload) 
+
+
+
+
+
+
+
+
 
 
 
