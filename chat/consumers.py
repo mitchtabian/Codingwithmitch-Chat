@@ -5,13 +5,15 @@ from django.utils import timezone
 from django.core.paginator import Paginator
 
 import json
+import asyncio
 
-from chat.models import RoomChatMessage, PrivateChatRoom
+from chat.models import RoomChatMessage, PrivateChatRoom, UnreadChatRoomMessages
 from friend.models import FriendList
 from account.utils import LazyAccountEncoder
 from chat.utils import calculate_timestamp, LazyRoomChatMessageEncoder
 from chat.exceptions import ClientError
 from chat.constants import *
+from account.models import Account
 
 
 class ChatConsumer(AsyncJsonWebsocketConsumer):
@@ -98,8 +100,13 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 		except ClientError as e:
 			return await self.handle_client_error(e)
 
+		# Add user to "users" list for room
+		await connect_user(room, self.scope["user"])
+
 		# Store that we're in the room
 		self.room_id = room.id
+
+		await on_user_connected(room, self.scope["user"])
 
 		# Add them to the group so they get room messages
 		await self.channel_layer.group_add(
@@ -133,6 +140,9 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 		print("ChatConsumer: leave_room")
 
 		room = await get_room_or_error(room_id, self.scope["user"])
+
+		# Remove user from "connected_users" list
+		await disconnect_user(room, self.scope["user"])
 
 		# Notify the group that someone left
 		await self.channel_layer.group_send(
@@ -177,7 +187,15 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 		# Get the room and send to the group about it
 		room = await get_room_or_error(room_id, self.scope["user"])
 
-		await create_room_chat_message(room, self.scope["user"], message)
+		# get list of connected_users
+		connected_users = room.connected_users.all()
+
+		# Execute these functions asychronously
+		await asyncio.gather(*[
+			append_unread_msg_if_not_connected(room, room.user1, connected_users, message), 
+			append_unread_msg_if_not_connected(room, room.user2, connected_users, message),
+			create_room_chat_message(room, self.scope["user"], message)
+		])
 
 		await self.channel_layer.group_send(
 			room.group_name,
@@ -371,6 +389,57 @@ def get_room_chat_messages(room, page_number):
 	except Exception as e:
 		print("EXCEPTION: " + str(e))
 	return None
+
+
+
+@database_sync_to_async
+def connect_user(room, user):
+	# add user to connected_users list
+	account = Account.objects.get(pk=user.id)
+	return room.connect_user(account)
+
+
+@database_sync_to_async
+def disconnect_user(room, user):
+	# remove from connected_users list
+	account = Account.objects.get(pk=user.id)
+	return room.disconnect_user(account)
+
+
+# If the user is not connected to the chat, increment "unread messages" count
+@database_sync_to_async
+def append_unread_msg_if_not_connected(room, user, connected_users, message):
+	if not user in connected_users: 
+		try:
+			unread_msgs = UnreadChatRoomMessages.objects.get(room=room, user=user)
+			unread_msgs.most_recent_message = message
+			unread_msgs.count += 1
+			unread_msgs.save()
+		except UnreadChatRoomMessages.DoesNotExist:
+			UnreadChatRoomMessages(room=room, user=user, count=1).save()
+			pass
+	return
+
+# When a user connects, reset their unread message count
+@database_sync_to_async
+def on_user_connected(room, user):
+	# confirm they are in the connected users list
+	connected_users = room.connected_users.all()
+	if user in connected_users:
+		try:
+			# reset count
+			unread_msgs = UnreadChatRoomMessages.objects.get(room=room, user=user)
+			unread_msgs.count = 0
+			unread_msgs.save()
+		except UnreadChatRoomMessages.DoesNotExist:
+			UnreadChatRoomMessages(room=room, user=user).save()
+			pass
+	return
+
+
+
+
+
 
 
 
