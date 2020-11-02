@@ -146,12 +146,12 @@ def remove_unread_msg_count_notification(sender, instance, **kwargs):
 		previous = UnreadChatRoomMessages.objects.get(id=instance.id)
 		if previous.count > instance.count: # if count is decremented
 			content_type = ContentType.objects.get_for_model(instance)
-		try:
-			notification = Notification.objects.get(target=instance.user, content_type=content_type, object_id=instance.id)
-			notification.delete()
-		except Notification.DoesNotExist:
-			pass
-			# Do nothing
+			try:
+				notification = Notification.objects.get(target=instance.user, content_type=content_type, object_id=instance.id)
+				notification.delete()
+			except Notification.DoesNotExist:
+				pass
+				# Do nothing
 
 
 
