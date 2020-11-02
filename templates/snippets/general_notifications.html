@@ -254,6 +254,27 @@
 		return timestamp
 	}
 
+	/*
+		Update a div with new notification data.
+		Called when the session user accepts/declines a friend request.
+	*/
+	function updateGeneralNotificationDiv(notification){
+		notificationContainer = document.getElementById("id_general_notifications_container")
+
+		if(notificationContainer != null){
+			divs = notificationContainer.childNodes
+
+			divs.forEach(function(element){
+				if(element.id == ("id_notification_" + notification['notification_id'])){
+					
+					// Replace current div with updated one
+					updatedDiv = createFriendRequestElement(notification)
+					element.replaceWith(updatedDiv)
+				}
+			})
+		}
+	}
+
 </script>
 
 <!-- Send to consumer -->
@@ -269,6 +290,16 @@
 				"page_number": "1",
 			}));
 		}
+	}
+
+	/*
+		Accept a Friend request
+	*/
+	function sendAcceptFriendRequestToSocket(notification_id){
+		notificationSocket.send(JSON.stringify({
+			"command": "accept_friend_request",
+			"notification_id": notification_id,
+		}));
 	}
 </script>
 
