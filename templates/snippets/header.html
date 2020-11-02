@@ -116,8 +116,8 @@
 
 	// Handle incoming messages
 	notificationSocket.onmessage = function(message) {
-		console.log("Got notification websocket message.");
 		var data = JSON.parse(message.data);
+		console.log("Got notification websocket message. " + data.general_msg_type);
 
 		/*
 			GENERAL NOTIFICATIONS
@@ -130,6 +130,11 @@
 		// "General" Pagination exhausted. No more results.
 		if(data.general_msg_type == 1){
 			setGeneralPaginationExhausted()
+		}
+
+		// Refresh [newest_timestamp >= NOTIFICATIONS >= oldest_timestamp]
+		if(data.general_msg_type == 2){
+			refreshGeneralNotificationsData(data['notifications'])
 		}
 
 		if(data.general_msg_type == 5){

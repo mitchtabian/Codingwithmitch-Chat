@@ -232,7 +232,7 @@ class FriendRequest(models.Model):
 
 		notification = Notification.objects.get(target=self.receiver, content_type=content_type, object_id=self.id)
 		notification.verb = f"{self.sender.username} cancelled the friend request sent to you."
-		notification.timestamp = timezone.now()
+		#notification.timestamp = timezone.now()
 		notification.read = False
 		notification.save()
 
