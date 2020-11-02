@@ -191,18 +191,14 @@
 			refreshGeneralNotificationsData(data['notifications'])
 		}
 
-		// Not needed??.....
 		if(data.general_msg_type == 3){
-			refreshGeneralNotifications()
+			handleNewGeneralNotificationsData(data['notifications'])
 		}
 		if(data.general_msg_type == 4){
 			setUnreadGeneralNotificationsCount(data['count'])
 		}
 		if(data.general_msg_type == 5){
 			updateGeneralNotificationDiv(data['notification'])
-		}
-		if(data.general_msg_type == 6){
-			handleNewGeneralNotificationsData(data['notifications'])
 		}
 
 
