@@ -51,7 +51,7 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
 			if command == "get_general_notifications":
 				payload = await get_general_notifications(self.scope["user"], content.get("page_number", None))
 				if payload == None:
-					pass
+					await self.general_pagination_exhausted()
 				else:
 					payload = json.loads(payload)
 					await self.send_general_notifications_payload(payload['notifications'], payload['new_page_number'])
@@ -121,6 +121,17 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
 			{
 				"general_msg_type": GENERAL_MSG_TYPE_UPDATED_NOTIFICATION,
 				"notification": notification,
+			},
+		)
+
+	async def general_pagination_exhausted(self):
+		"""
+		Called by receive_json when pagination is exhausted for general notifications
+		"""
+		#print("General Pagination DONE... No more notifications.")
+		await self.send_json(
+			{
+				"general_msg_type": GENERAL_MSG_TYPE_PAGINATION_EXHAUSTED,
 			},
 		)
 

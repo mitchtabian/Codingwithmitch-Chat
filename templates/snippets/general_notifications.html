@@ -25,6 +25,8 @@
 
 
 <script src="{% static 'collections/collections.min.js' %}"></script>
+<p class="d-none" id="id_general_page_number">1</p>
+
 
 <script type="text/javascript">
 	
@@ -42,6 +44,7 @@
 				appendBottomGeneralNotification(notification)
 
 			})
+			setGeneralPageNumber(new_page_number)
 		}
 	}
 
@@ -275,6 +278,40 @@
 		}
 	}
 
+	/*
+		Sets the scroll listener for when user scrolls to bottom of notification menu.
+		It will retrieve the next page of results.
+	*/
+	function setOnGeneralNotificationScrollListener(){
+		var menu = document.getElementById("id_general_notifications_container")
+		if(menu != null ){
+			menu.addEventListener("scroll", function(e){
+
+				if ((menu.scrollTop) >= (menu.scrollHeight - menu.offsetHeight)) {
+					getNextGeneralNotificationsPage()
+				}
+			});
+		}
+		
+	}
+
+	setOnGeneralNotificationScrollListener()
+
+	/*
+		Called when pagination is exhausted and there is no more notifications.
+	*/
+	function setGeneralPaginationExhausted(){
+		console.log("general pagination exhausted.")
+		setGeneralPageNumber("-1")
+	}
+
+	/*
+		Sets the pagination page number.
+	*/
+	function setGeneralPageNumber(pageNumber){
+		document.getElementById("id_general_page_number").innerHTML = pageNumber
+	}
+
 </script>
 
 <!-- Send to consumer -->
@@ -310,6 +347,21 @@
 			"command": "decline_friend_request",
 			"notification_id": notification_id,
 		}));
+	}
+
+	/*
+		Retrieve the next page of notifications
+		Called when the user scrolls to the bottom of the popup menu.
+	*/
+	function getNextGeneralNotificationsPage(){
+		var pageNumber = document.getElementById("id_general_page_number").innerHTML
+		// -1 means exhausted or a query is currently in progress
+		if("{{request.user.is_authenticated}}" && pageNumber != "-1"){
+			notificationSocket.send(JSON.stringify({
+				"command": "get_general_notifications",
+				"page_number": pageNumber,
+			}));
+		}
 	}
 </script>
 
