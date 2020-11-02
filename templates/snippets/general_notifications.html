@@ -546,10 +546,51 @@
 		}
 	}
 
+	/*
+		Set the number of unread notifications.
+	*/
+	function setUnreadGeneralNotificationsCount(count){
+		var countElement = document.getElementById("id_general_notifications_count")
+		if(count > 0){
+			countElement.style.background = "red"
+			countElement.style.display = "block"
+			countElement.innerHTML = count
+		}
+		else{
+			countElement.style.background = "transparent"
+			countElement.style.display = "none"
+		}
+	}
 </script>
 
 <!-- Send to consumer -->
 <script type="text/javascript">
+
+	/*
+		Retrieve the number of unread notifications. (This is the red dot in the notifications icon)
+		Called every GENERAL_NOTIFICATION_INTERVAL
+	*/
+	function getUnreadGeneralNotificationsCount(){
+		if("{{request.user.is_authenticated}}"){
+			notificationSocket.send(JSON.stringify({
+				"command": "get_unread_general_notifications_count",
+			}));
+		}
+	}
+
+	/*
+		Sets all the notifications currently visible as "read"
+	*/
+	function setGeneralNotificationsAsRead(){
+		if("{{request.user.is_authenticated}}"){
+			oldestTimestamp = document.getElementById("id_general_oldest_timestamp").innerHTML
+			notificationSocket.send(JSON.stringify({
+				"command": "mark_notifications_read",
+			}));
+			getUnreadGeneralNotificationsCount()
+		}
+	}
+
 	/*
 		Retrieve the first page of notifications.
 		Called when page loads.
@@ -620,6 +661,7 @@
 		if("{{request.user.is_authenticated}}" == "True"){
 			setInterval(refreshGeneralNotifications, GENERAL_NOTIFICATION_INTERVAL)
 			setInterval(getNewGeneralNotifications, GENERAL_NOTIFICATION_INTERVAL)
+			setInterval(getUnreadGeneralNotificationsCount, GENERAL_NOTIFICATION_INTERVAL)
 		}
 	}
 
