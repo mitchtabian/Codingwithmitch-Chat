@@ -31,7 +31,88 @@
 	}
 </style>
 
+<p class="d-none" id="id_chat_oldest_timestamp"></p>
+<p class="d-none" id="id_chat_newest_timestamp"></p>
+
+<script src="{% static 'collections/collections.min.js' %}"></script>
+
 <script type="text/javascript">
+
+	const CHAT_NOTIFICATION_INTERVAL = 4000
+
+	// Keep track of what notifications are currently visible to the user.
+	var chatCachedNotifList = new List([])
+
+	/*
+		Append to bottom. 
+		Used for
+			1. Page load
+			2. pagination
+			3. Refresh
+		Called by 'handleChatNotificationsData' &  'refreshChatNotificationsData'
+	*/
+	function submitChatNotificationToCache(notification){
+		var result = chatCachedNotifList.filter(function(n){ 
+			return n['notification_id'] === notification['notification_id']
+		})
+		// This notification does not already exist in the list
+		if(result.length == 0){
+			chatCachedNotifList.push(notification)
+
+			// append to bottom of list
+			appendBottomChatNotification(notification)
+		}
+		// This notification already exists in the list
+		else{
+			// find the div and update it.
+			refreshChatNotificationsList(notification)
+		}
+	}
+
+	/*
+		Received a payload from socket containing notifications currently in view.
+		Called every CHAT_NOTIFICATION_INTERVAL
+	*/
+	function refreshChatNotificationsData(notifications){
+		if(notifications.length > 0){
+			clearNoChatNotificationsCard()
+			
+			notifications.forEach(notification => {
+
+				submitChatNotificationToCache(notification)
+
+				setChatOldestTimestamp(notification['timestamp'])
+				setChatNewestTimestamp(notification['timestamp'])
+			})
+		}
+	}
+
+	/*
+		Keep track of the 'chat' oldest notification in view. 
+		When 'refreshChatNotifications' is called, it refreshes all the notifications newer than this date but newer than 'id_chat_newest_timestamp.
+	*/
+	function setChatOldestTimestamp(timestamp){
+		element = document.getElementById("id_chat_oldest_timestamp")
+		current = element.innerHTML
+		if(Date.parse(timestamp) < Date.parse(current)){
+			element.innerHTML = timestamp
+		}
+	}
+
+	/*
+		Keep track of the 'chat' newest notification in view. 
+		When 'getNewChatNotifications' is called, it retrieves all the notifications newer than this date.
+	*/
+	function setChatNewestTimestamp(timestamp){
+		element = document.getElementById("id_chat_newest_timestamp")
+		current = element.innerHTML
+		if(Date.parse(timestamp) > Date.parse(current)){
+			element.innerHTML = timestamp
+		}
+		else if(current == "" || current == null || current == "undefined"){
+			element.innerHTML = timestamp
+		}
+	}
 
 	/*
 		Add a header to the dropdown so users can visit /chat/
@@ -207,10 +288,91 @@
 
 			notifications.forEach(notification => {
 
-				appendBottomChatNotification(notification)
-
+				submitChatNotificationToCache(notification)
+				setChatOldestTimestamp(notification['timestamp'])
+				setChatNewestTimestamp(notification['timestamp'])
 			})
-			setChatPageNumber(new_page_number)
+		}
+	}
+
+	/*
+		Search for the notification in the list using it's id. Then update its properties.
+		I do not update the image_url since that makes the notifications "flicker".
+	*/
+	function refreshChatNotificationsList(notification){
+		notificationContainer = document.getElementById("id_chat_notifications_container")
+
+		if(notificationContainer != null){
+			divs = notificationContainer.childNodes
+
+			divs.forEach(function(card){
+				// card
+				if(card.id == ("id_notification_" + notification['notification_id'])){
+					
+					if(notification['notification_type'] == "UnreadChatRoomMessages"){
+						refreshUnreadChatRoomMessagesCard(card, notification)
+					}
+				}
+			})
+		}
+	}
+
+	/*
+		Refresh a refreshUnreadChatRoomMessagesCard card with current data
+	*/
+	function refreshUnreadChatRoomMessagesCard(card, notification){
+
+		card.childNodes.forEach(function(element){
+
+			// DIV1
+			if(element.id == ("id_chat_div1_" + notification['notification_id'])){
+				element.childNodes.forEach(function(child){
+
+					// DIV2
+					if(child.id == ("id_chat_div2_" + notification['notification_id'])){
+						child.childNodes.forEach(function(nextChild){
+							if(nextChild.id == ("id_chat_title_" + notification['notification_id'])){
+								// found title
+								nextChild.innerHTML = notification['from']['title']
+							}
+							if(nextChild.id == ("id_chat_message_" + notification['notification_id'])){
+								// found chat message
+								if(notification['verb'].length > 50){
+									nextChild.innerHTML = notification['verb'].slice(0, 50) + "..."
+								}
+								else{
+									nextChild.innerHTML = notification['verb']
+								}
+							}
+						})
+					}
+				})
+			}
+
+			// TIMESTAMP
+			if (element.id == ("id_timestamp_" + notification['notification_id'])){
+				element.innerHTML = notification['natural_timestamp']
+			}
+		})
+	}
+
+</script>
+
+<!-- Payloads sent to consumer -->
+<script type="text/javascript">
+	
+	/*
+		Refresh the chat notifications that are currently visible
+	*/
+	function refreshChatNotifications(){
+		oldestTimestamp = document.getElementById("id_chat_oldest_timestamp").innerHTML
+		newestTimestamp = document.getElementById("id_chat_newest_timestamp").innerHTML
+		if("{{request.user.is_authenticated}}"){
+			notificationSocket.send(JSON.stringify({
+				"command": "refresh_chat_notifications",
+				"oldest_timestamp": oldestTimestamp,
+				"newest_timestamp": newestTimestamp,
+			}));
 		}
 	}
 
@@ -227,8 +389,17 @@
 		}
 	}
 
-</script>
+	/*
+		Start the functions that will be executed constantly
+	*/
+	function startChatNotificationService(){
+		if("{{request.user.is_authenticated}}" == "True"){
+			setInterval(refreshChatNotifications, CHAT_NOTIFICATION_INTERVAL)
+		}
+	}
 
+	startChatNotificationService()
+</script>
 
 
 

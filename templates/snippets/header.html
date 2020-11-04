@@ -153,6 +153,7 @@
 	notificationSocket.onmessage = function(message) {
 		var data = JSON.parse(message.data);
 		console.log("Got notification websocket message. " + data.general_msg_type);
+		console.log("Got notification websocket message. " + data.chat_msg_type);
 
 		/*
 			GENERAL NOTIFICATIONS
@@ -190,6 +191,10 @@
 		// new 'chat' notifications data payload
 		if(data.chat_msg_type == 10){
 			handleChatNotificationsData(data['notifications'], data['new_page_number'])
+		}
+		// refreshed chat notifications
+		if(data.chat_msg_type == 12){
+			refreshChatNotificationsData(data['notifications'])
 		}
 	}
 
@@ -232,7 +237,40 @@
 	    return false
 	}
 
-	
+	/*
+		Set the inital timestamp value for id_general_oldest_timestamp.
+		This timestamp is used to determine what constitutes a "NEW" notification or an "OLD" notification.
+	*/
+	function setInitialTimestamp(){
+		// ('%Y-%m-%d %H:%M:%S.%f')
+		var today = new Date();
+		var month = today.getMonth()+1
+		if(month.toString().length == 1){
+			month = "0" + month
+		}
+		var day = today.getDate()
+		if(day.toString().length == 1){
+			day = "0" + day
+		}
+		var hours = today.getHours()
+		if(hours.toString().length == 1){
+			hours = "0" + hours
+		}
+		var minutes = today.getMinutes()
+		if(minutes.toString().length == 1){
+			minutes = "0" + minutes
+		}
+		var seconds = today.getSeconds()
+		if(seconds.toString().length == 1){
+			seconds = "0" + seconds
+		}
+		var ms = "000000"
+		var date = today.getFullYear()+'-'+month+'-'+day + " " + hours + ":" + minutes + ":" + seconds + "." + ms
+		document.getElementById("id_general_oldest_timestamp").innerHTML = date
+		document.getElementById("id_chat_oldest_timestamp").innerHTML = date
+	}
+
+	setInitialTimestamp()
 
 </script>
 

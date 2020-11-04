@@ -100,6 +100,14 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
 				else:
 					payload = json.loads(payload)
 					await self.send_chat_notifications_payload(payload['notifications'], payload['new_page_number'])
+		
+			elif command == "refresh_chat_notifications":
+				payload = await refresh_chat_notifications(self.scope["user"], content['oldest_timestamp'], content['newest_timestamp'])
+				if payload == None:
+					raise ClientError("Something went wrong. Try refreshing the browser.")
+				else:
+					payload = json.loads(payload)
+					await self.send_chat_refreshed_notifications_payload(payload['notifications'])
 		except ClientError as e:
 			print("EXCEPTION: receive_json: " + str(e))
 			pass
@@ -208,6 +216,18 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
 				"chat_msg_type": CHAT_MSG_TYPE_NOTIFICATIONS_PAYLOAD,
 				"notifications": notifications,
 				"new_page_number": new_page_number,
+			},
+		)
+
+	async def send_chat_refreshed_notifications_payload(self, notifications):
+		"""
+		Called by receive_json when ready to send a json array of the chat notifications
+		"""
+		print("NotificationConsumer: send_chat_refreshed_notifications_payload: " + str(notifications))
+		await self.send_json(
+			{
+				"chat_msg_type": CHAT_MSG_TYPE_NOTIFICATIONS_REFRESH_PAYLOAD,
+				"notifications": notifications,
 			},
 		)
 
@@ -400,12 +420,34 @@ def get_chat_notifications(user, page_number):
 		else:
 			return None
 	else:
-		raise NotificationClientError("User must be authenticated to get notifications.")
+		raise ClientError("User must be authenticated to get notifications.")
 
 	return json.dumps(payload)
 
 
+@database_sync_to_async
+def refresh_chat_notifications(user, oldest_timestamp, newest_timestatmp):
+	"""
+	Retrieve the chat notifications newer than the oldest one on the screen and older than the newest on the screen.
+	The result will be: Notifications currently visible will be updated
+	"""
+	payload = {}
+	if user.is_authenticated:
+		oldest_ts = oldest_timestamp[0:oldest_timestamp.find("+")] # remove timezone because who cares
+		oldest_ts = datetime.strptime(oldest_ts, '%Y-%m-%d %H:%M:%S.%f')
+		newest_ts = newest_timestatmp[0:newest_timestatmp.find("+")] # remove timezone because who cares
+		newest_ts = datetime.strptime(newest_ts, '%Y-%m-%d %H:%M:%S.%f')
+		print(str(oldest_ts))
+		print(str(newest_ts))
+		chatmessage_ct = ContentType.objects.get_for_model(UnreadChatRoomMessages)
+		notifications = Notification.objects.filter(target=user, content_type__in=[chatmessage_ct], timestamp__gte=oldest_ts, timestamp__lte=newest_ts).order_by('-timestamp')
 
+		s = LazyNotificationEncoder()
+		payload['notifications'] = s.serialize(notifications)
+	else:
+		raise ClientError("User must be authenticated to get notifications.")
+
+	return json.dumps(payload) 
 
 
 
