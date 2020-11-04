@@ -400,7 +400,7 @@ def get_chat_notifications(user, page_number):
 		else:
 			return None
 	else:
-		raise NotificationClientError("User must be authenticated to get notifications.")
+		raise ClientError("User must be authenticated to get notifications.")
 
 	return json.dumps(payload)
 
