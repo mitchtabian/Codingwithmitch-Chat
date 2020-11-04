@@ -266,6 +266,32 @@
 	}
 
 	/*
+		Append a chat notification to the TOP of the list.
+	*/
+	function appendTopChatNotification(notification){
+		switch(notification['notification_type']) {
+
+			case "UnreadChatRoomMessages":
+				chatNotificationContainer = document.getElementById("id_chat_notifications_container")
+				card = createUnreadChatRoomMessagesElement(notification)
+
+				if(chatNotificationContainer.childNodes.length > 2){
+					// Append as the SECOND child. First child is the "go to chatroom" button
+					var index = chatNotificationContainer.childNodes.length - 1
+					chatNotificationContainer.insertBefore(card, chatNotificationContainer.childNodes[index]);
+				}
+				else {
+					chatNotificationContainer.appendChild(card)
+				}
+				
+				break;
+
+			default:
+				// code block
+		}
+	}
+
+	/*
 		Append a chat notification to the BOTTOM of the list.
 	*/
 	function appendBottomChatNotification(notification){
