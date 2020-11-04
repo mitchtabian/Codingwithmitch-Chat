@@ -1,0 +1,271 @@
+{% load static %}
+
+<style type="text/css">
+	.notification-thumbnail-image{
+		height: 50px;
+		width: 50px;
+	}
+	.chat-card:hover{
+		cursor: pointer;
+		background: #f2f2f2;
+	}
+	.chat-card{
+		border-bottom: 1px solid var(--main-background-color);
+	}
+	.timestamp-text{
+		color: var(--secondary-text-color);
+	}
+	.notification-chatroom-msg{
+		color: var(--light-primary-text-color);
+	}
+	#id_notifications_loading_spinner{
+		position: absolute;
+		margin-top: 40px;
+	}
+	.chat-dropdown-header:hover{
+		cursor: pointer;
+		background: var(--main-background-color);
+	}
+	.chat-dropdown-header{
+		color: var(--light-primary-text-color);
+	}
+</style>
+
+<script type="text/javascript">
+
+	/*
+		Add a header to the dropdown so users can visit /chat/
+	*/
+	function setupChatDropdownHeader(){
+		var notificationContainer = document.getElementById("id_chat_notifications_container")
+
+		if(notificationContainer != null){
+
+			var div = document.createElement("div")
+			div.classList.add("chat-dropdown-header", "d-flex", "flex-row", "justify-content-end", "m-auto", "align-items-end")
+			div.addEventListener("click", function(e){
+				var url = "{% url 'chat:private-chat-room' %}"
+				chatRedirect(url)
+			})
+
+			span1 = document.createElement("span")
+			span1.classList.add("mr-2")
+			span1.innerHTML = "Go to chat"
+			div.appendChild(span1)
+
+			span2 = document.createElement("span")
+			span2.classList.add("material-icons", "mr-2")
+			span2.innerHTML = "open_with"
+			div.appendChild(span2)
+			notificationContainer.appendChild(div)
+		}
+	}
+
+	function chatRedirect(url){
+		window.location.href = url
+	}
+
+	/*
+		Display a card that says "You have no notifications"
+	*/
+	function setupChatNotificationsMenu(){
+		var notificationContainer = document.getElementById("id_chat_notifications_container")
+
+		if(notificationContainer != null){
+			setupChatDropdownHeader()
+
+			card = createChatNotificationCard("id_no_chat_notifications")
+
+			var div = document.createElement("div")
+			div.classList.add("d-flex", "flex-row", "align-items-start")
+
+			span = document.createElement("span")
+			span.classList.add("align-items-start", "pt-1", "m-auto")
+			span.innerHTML = "You have no notifications."
+			div.appendChild(span)
+			card.appendChild(div)
+			notificationContainer.appendChild(card)
+		}
+	}
+
+	/*
+		Remove the element that says "There are no notifications".
+	*/
+	function clearNoChatNotificationsCard(){
+		var element = document.getElementById("id_no_chat_notifications")
+		if(element != null && element != "undefined"){
+			document.getElementById("id_chat_notifications_container").removeChild(element)
+		}
+	}
+
+	/*
+		The card that each notification sits in
+	*/
+	function createChatNotificationCard(cardId){
+		var card = document.createElement("div")
+		if(cardId != "undefined"){
+			card.id = cardId
+		}
+		card.classList.add("d-flex", "flex-column", "align-items-start", "chat-card","p-4")
+		return card
+	}
+
+	/*
+		Circular image icon that can be in a notification card
+	*/
+	function createChatProfileImageThumbnail(notification){
+		img = document.createElement("img")
+		img.classList.add("notification-thumbnail-image", "img-fluid", "rounded-circle", "mr-2")
+		img.src = notification['from']['image_url']
+		img.id = assignChatImgId(notification['notification_id'])
+		return img
+	}
+
+	/*
+		Timestamp at the bottom of each notification card
+	*/
+	function createChatTimestampElement(notification){
+		var timestamp = document.createElement("p")
+		timestamp.classList.add("small", "pt-2", "timestamp-text")
+		timestamp.innerHTML = notification['natural_timestamp']
+		timestamp.id = assignChatTimestampId(notification)
+		return timestamp
+	}
+
+	/*
+		Ex: "Hey what's up?"
+		Ex: "This is a message from John. How are you..."
+	*/
+	function createUnreadChatRoomMessagesElement(notification){
+		card = createChatNotificationCard()
+		card.id = assignChatCardId(notification)
+		card.addEventListener("click", function(){
+			chatRedirect(notification['actions']['redirect_url'])
+		})
+
+		var div1 = document.createElement("div")
+		div1.classList.add("d-flex", "flex-row", "align-items-start")
+		div1.id = assignChatDiv1Id(notification)
+
+		img = createChatProfileImageThumbnail(notification)
+		img.id = assignChatImgId(notification)
+		div1.appendChild(img)
+
+		var div2 = document.createElement("div")
+		div2.classList.add("d-flex", "flex-column")
+		div2.id = assignChatDiv2Id(notification)
+		
+		var title = document.createElement("span")
+		title.classList.add("align-items-start")
+		title.innerHTML = notification['from']['title']
+		title.id = assignChatTitleId(notification)
+		div2.appendChild(title)
+
+		var chatRoomMessage = document.createElement("span")
+		chatRoomMessage.id = assignChatroomMessageId(notification)
+		chatRoomMessage.classList.add("align-items-start", "pt-1", "small", "notification-chatroom-msg")
+		if(notification['verb'].length > 50){
+			chatRoomMessage.innerHTML = notification['verb'].slice(0, 50) + "..."
+		}
+		else{
+			chatRoomMessage.innerHTML = notification['verb']
+		}
+		div2.appendChild(chatRoomMessage)
+		div1.appendChild(div2)
+		card.appendChild(div1)
+		card.appendChild(createChatTimestampElement(notification))
+		return card
+	}
+
+	/*
+		Append a chat notification to the BOTTOM of the list.
+	*/
+	function appendBottomChatNotification(notification){
+
+		switch(notification['notification_type']) {
+
+			case "UnreadChatRoomMessages":
+				chatNotificationContainer = document.getElementById("id_chat_notifications_container")
+				card = createUnreadChatRoomMessagesElement(notification)
+				chatNotificationContainer.appendChild(card)
+				break;
+
+			default:
+				// code block
+		}
+	}
+
+	/*
+		Received a payload from socket containing chat notifications.
+		Called:
+		1. When page loads
+		2. pagination
+	*/
+	function handleChatNotificationsData(notifications, new_page_number){
+		if(notifications.length > 0){
+			clearNoChatNotificationsCard()
+
+			notifications.forEach(notification => {
+
+				appendBottomChatNotification(notification)
+
+			})
+			setChatPageNumber(new_page_number)
+		}
+	}
+
+	/*
+		Retrieve the number of unread chat notifications. (This is the red dot in the notifications icon)
+		Called every CHAT_NOTIFICATION_INTERVAL
+	*/
+	function getFirstChatNotificationsPage(){
+		if("{{request.user.is_authenticated}}"){
+			notificationSocket.send(JSON.stringify({
+				"command": "get_chat_notifications",
+				"page_number": "1",
+			}));
+		}
+	}
+
+</script>
+
+
+
+
+<script type="text/javascript">
+	/**
+		Helpers for assigning ids to important elements.
+	**/
+	function assignChatDiv1Id(notification){
+		return "id_chat_div1_" + notification['notification_id']
+	}
+
+	function assignChatImgId(notification){
+		return "id_chat_img_" + notification['notification_id']
+	}
+
+	function assignChatTitleId(notification){
+		return "id_chat_title_" + notification['notification_id']
+	}
+
+	function assignChatroomMessageId(notification){
+		return "id_chat_message_" + notification['notification_id']
+	}
+
+	function assignChatDiv2Id(notification){
+		return "id_chat_div2_" + notification['notification_id']
+	}
+
+	function assignChatTimestampId(notification){
+		return "id_timestamp_" + notification['notification_id']
+	}
+
+	function assignChatCardId(notification){
+		return "id_notification_" + notification['notification_id']
+	}
+
+</script>
+
+
+
+

@@ -138,6 +138,7 @@
 
 
 {% include 'snippets/general_notifications.html' %}
+{% include 'snippets/chat_notifications.html' %}
 
 <!-- Setup SOCKET for NOTIFICATIONS -->
 <script type="text/javascript">
@@ -183,6 +184,13 @@
 			updateGeneralNotificationDiv(data['notification'])
 		}
 
+		/*
+			CHAT NOTIFICATIONS
+		*/
+		// new 'chat' notifications data payload
+		if(data.chat_msg_type == 10){
+			handleChatNotificationsData(data['notifications'], data['new_page_number'])
+		}
 	}
 
 	notificationSocket.onclose = function(e) {
@@ -194,6 +202,9 @@
 		setupGeneralNotificationsMenu()
 		getFirstGeneralNotificationsPage()
 		getUnreadGeneralNotificationsCount()
+
+		setupChatNotificationsMenu()
+		getFirstChatNotificationsPage()
 	}
 
 	notificationSocket.onerror = function(e){
@@ -209,7 +220,7 @@
 </script>
 
 <script type="text/javascript">
-	setupChatDropdownHeader()
+	
 
 	function executeQuery() {
 		var query = ""
@@ -221,37 +232,7 @@
 	    return false
 	}
 
-	/*
-		Add a header to the dropdown so users can visit /chat/
-	*/
-	function setupChatDropdownHeader(){
-		var notificationContainer = document.getElementById("id_chat_notifications_container")
-
-		if(notificationContainer != null){
-
-			var div = document.createElement("div")
-			div.classList.add("chat-dropdown-header", "d-flex", "flex-row", "justify-content-end", "m-auto", "align-items-end")
-			div.addEventListener("click", function(e){
-				var url = "{% url 'chat:private-chat-room' %}"
-				chatRedirect(url)
-			})
-
-			span1 = document.createElement("span")
-			span1.classList.add("mr-2")
-			span1.innerHTML = "Go to chat"
-			div.appendChild(span1)
-
-			span2 = document.createElement("span")
-			span2.classList.add("material-icons", "mr-2")
-			span2.innerHTML = "open_with"
-			div.appendChild(span2)
-			notificationContainer.appendChild(div)
-		}
-	}
-
-	function chatRedirect(url){
-		window.location.href = url
-	}
+	
 
 </script>
 
