@@ -200,6 +200,9 @@
 		if(data.chat_msg_type == 13){
 			handleNewChatNotificationsData(data['notifications'])
 		}
+		if(data.chat_msg_type == 14){
+			setChatNotificationsCount(data['count'])
+		}
 	}
 
 	notificationSocket.onclose = function(e) {

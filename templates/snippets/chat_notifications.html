@@ -178,6 +178,8 @@
 			div.appendChild(span)
 			card.appendChild(div)
 			notificationContainer.appendChild(card)
+
+			setChatNotificationsCount([])
 		}
 	}
 
@@ -436,10 +438,35 @@
 		
 	}
 
+	function setChatNotificationsCount(count){
+		var countElement = document.getElementById("id_chat_notifications_count")
+		if(count > 0){
+			countElement.style.background = "red"
+			countElement.style.display = "block"
+			countElement.innerHTML = count
+		}
+		else{
+			countElement.style.background = "transparent"
+			countElement.style.display = "none"
+		}
+	}
+
 </script>
 
 <!-- Payloads sent to consumer -->
 <script type="text/javascript">
+
+	/*
+		Retrieve the number of unread chat notifications. (This is the red dot in the notifications icon)
+		Called every CHAT_NOTIFICATION_INTERVAL
+	*/
+	function getUnreadChatNotificationsCount(){
+		if("{{request.user.is_authenticated}}"){
+			notificationSocket.send(JSON.stringify({
+				"command": "get_unread_chat_notifications_count",
+			}));
+		}
+	}
 
 	/*
 		Retrieve the next page of chat notifications
@@ -481,6 +508,7 @@
 				"command": "get_chat_notifications",
 				"page_number": "1",
 			}));
+			getUnreadChatNotificationsCount()
 		}
 	}
 
@@ -490,6 +518,7 @@
 	function startChatNotificationService(){
 		if("{{request.user.is_authenticated}}" == "True"){
 			setInterval(getNewChatNotifications, CHAT_NOTIFICATION_INTERVAL)
+			setInterval(getUnreadChatNotificationsCount, CHAT_NOTIFICATION_INTERVAL)
 		}
 	}
 
