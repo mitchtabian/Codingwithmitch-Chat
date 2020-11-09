@@ -192,6 +192,10 @@
 		if(data.chat_msg_type == 10){
 			handleChatNotificationsData(data['notifications'], data['new_page_number'])
 		}
+		// "Chat" Pagination exhausted. No more results.
+		if(data.chat_msg_type == 11){
+			setChatPaginationExhausted()
+		}
 		// refreshed chat notifications
 		if(data.chat_msg_type == 13){
 			handleNewChatNotificationsData(data['notifications'])

@@ -32,10 +32,14 @@
 </style>
 
 <p class="d-none" id="id_chat_newest_timestamp"></p>
+<p class="d-none" id="id_chat_page_number">1</p>
 
 <script src="{% static 'collections/collections.min.js' %}"></script>
 
 <script type="text/javascript">
+
+	setOnChatNotificationScrollListener()
+	onChatNotificationsPaginationTriggerListener()
 
 	const CHAT_NOTIFICATION_INTERVAL = 4000
 
@@ -325,6 +329,7 @@
 
 				setChatNewestTimestamp(notification['timestamp'])
 			})
+			setChatPageNumber(new_page_number)
 	    }
 	}
 
@@ -389,10 +394,65 @@
 		})
 	}
 
+	/*
+		Called when pagination is exhausted and there is no more notifications.
+	*/
+	function setChatPaginationExhausted(){
+		setChatPageNumber("-1")
+	}
+
+	/*
+		Sets the pagination page number.
+	*/
+	function setChatPageNumber(pageNumber){
+		document.getElementById("id_chat_page_number").innerHTML = pageNumber
+	}
+
+	function onChatNotificationsPaginationTriggerListener(){
+		window.onscroll = function(ev) {
+			// because of rounding we need to add 2. 1 might be OK but I'm using 2.
+			if ((window.innerHeight + window.scrollY + 2) >= document.body.scrollHeight) {
+				getNextChatNotificationsPage()
+			}
+		};
+	}
+
+	/*
+		Sets the scroll listener for when user scrolls to bottom of notification menu.
+		It will retrieve the next page of results.
+	*/
+	function setOnChatNotificationScrollListener(){
+		var menu = document.getElementById("id_chat_notifications_container")
+		if(menu != null ){
+			menu.addEventListener("scroll", function(e){
+
+				if ((menu.scrollTop) >= (menu.scrollHeight - menu.offsetHeight)) {
+					getNextChatNotificationsPage()
+				}
+			});
+		}
+		
+	}
+
 </script>
 
 <!-- Payloads sent to consumer -->
 <script type="text/javascript">
+
+	/*
+		Retrieve the next page of chat notifications
+		Called when the user scrolls to the bottom of the popup menu.
+	*/
+	function getNextChatNotificationsPage(){
+		var pageNumber = document.getElementById("id_chat_page_number").innerHTML
+		// -1 means exhausted or a query is currently in progress
+		if("{{request.user.is_authenticated}}" && pageNumber != "-1"){
+			notificationSocket.send(JSON.stringify({
+				"command": "get_chat_notifications",
+				"page_number": pageNumber,
+			}));
+		}
+	}
 	
 	/*
 		Retrieve any new chat notifications
