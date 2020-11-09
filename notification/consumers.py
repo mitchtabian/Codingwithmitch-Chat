@@ -417,6 +417,7 @@ def get_chat_notifications(user, page_number):
 
 		# sleep 1s for testing
 		# sleep(1)  
+		print("PAGES: " + str(p.num_pages))
 		payload = {}
 		if len(notifications) > 0:
 			if int(page_number) <= p.num_pages:
@@ -425,12 +426,13 @@ def get_chat_notifications(user, page_number):
 				payload['notifications'] = serialized_notifications
 				new_page_number = int(page_number) + 1
 				payload['new_page_number'] = new_page_number
+				return json.dumps(payload)
 		else:
 			return None
 	else:
 		raise ClientError("AUTH_ERROR", "User must be authenticated to get notifications.")
-
-	return json.dumps(payload)
+	return None
+	
 
 
 @database_sync_to_async
@@ -446,10 +448,11 @@ def get_new_chat_notifications(user, newest_timestatmp):
 		notifications = Notification.objects.filter(target=user, content_type__in=[chatmessage_ct], timestamp__gt=timestamp).order_by('-timestamp')
 		s = LazyNotificationEncoder()
 		payload['notifications'] = s.serialize(notifications)
+		return json.dumps(payload) 
 	else:
 		raise ClientError("AUTH_ERROR", "User must be authenticated to get notifications.")
 
-	return json.dumps(payload) 
+	return None
 
 
 
