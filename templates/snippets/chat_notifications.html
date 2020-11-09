@@ -123,6 +123,7 @@
 		else if(current == "" || current == null || current == "undefined"){
 			element.innerHTML = timestamp
 		}
+		console.log("setChatNewestTimestamp: " + element.innerHTML)
 	}
 
 	/*
@@ -460,6 +461,7 @@
 	*/
 	function getNewChatNotifications(){
 		newestTimestamp = document.getElementById("id_chat_newest_timestamp").innerHTML
+		console.log("NEWEST TS: " + newestTimestamp)
 		if("{{request.user.is_authenticated}}"){
 			notificationSocket.send(JSON.stringify({
 				"command": "get_new_chat_notifications",
@@ -527,6 +529,14 @@
 		return "id_notification_" + notification['notification_id']
 	}
 
+	function setChatInitialTimestamp(){
+		// ('%Y-%m-%d %H:%M:%S.%f')
+		var today = new Date();
+		var date = today.getFullYear() + "-01-01 01:00:00.000000"
+		document.getElementById("id_chat_newest_timestamp").innerHTML = date
+	}
+
+	setChatInitialTimestamp()
 </script>
 
 
