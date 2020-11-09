@@ -74,7 +74,7 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
 				notification_id = content['notification_id']
 				payload = await decline_friend_request(self.scope['user'], notification_id)
 				if payload == None:
-					raise ClientError("UNKNOWN_ERROR", , "Something went wrong. Try refreshing the browser.")
+					raise ClientError("UNKNOWN_ERROR", "Something went wrong. Try refreshing the browser.")
 				else:
 					payload = json.loads(payload)
 					await self.send_updated_friend_request_notification(payload['notification'])
