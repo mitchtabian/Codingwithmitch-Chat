@@ -66,7 +66,7 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
 				notification_id = content['notification_id']
 				payload = await accept_friend_request(self.scope['user'], notification_id)
 				if payload == None:
-					raise ClientError("Something went wrong. Try refreshing the browser.")
+					raise ClientError("UNKNOWN_ERROR", "Something went wrong. Try refreshing the browser.")
 				else:
 					payload = json.loads(payload)
 					await self.send_updated_friend_request_notification(payload['notification'])
@@ -74,14 +74,14 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
 				notification_id = content['notification_id']
 				payload = await decline_friend_request(self.scope['user'], notification_id)
 				if payload == None:
-					raise ClientError("Something went wrong. Try refreshing the browser.")
+					raise ClientError("UNKNOWN_ERROR", "Something went wrong. Try refreshing the browser.")
 				else:
 					payload = json.loads(payload)
 					await self.send_updated_friend_request_notification(payload['notification'])
 			elif command == "refresh_general_notifications":
 				payload = await refresh_general_notifications(self.scope["user"], content['oldest_timestamp'], content['newest_timestamp'])
 				if payload == None:
-					raise ClientError("Something went wrong. Try refreshing the browser.")
+					raise ClientError("UNKNOWN_ERROR", "Something went wrong. Try refreshing the browser.")
 				else:
 					payload = json.loads(payload)
 					await self.send_general_refreshed_notifications_payload(payload['notifications'])
@@ -239,7 +239,7 @@ def get_general_notifications(user, page_number):
 		else:
 			return None
 	else:
-		raise ClientError("User must be authenticated to get notifications.")
+		raise ClientError("AUTH_ERROR", "User must be authenticated to get notifications.")
 
 	return json.dumps(payload)
 
@@ -264,7 +264,7 @@ def accept_friend_request(user, notification_id):
                 payload['notification'] = s.serialize([updated_notification])[0]
                 return json.dumps(payload)
         except Notification.DoesNotExist:
-            raise ClientError("An error occurred with that notification. Try refreshing the browser.")
+            raise ClientError("AUTH_ERROR", "An error occurred with that notification. Try refreshing the browser.")
     return None
 
 
@@ -288,7 +288,7 @@ def decline_friend_request(user, notification_id):
 				payload['notification'] = s.serialize([updated_notification])[0]
 				return json.dumps(payload)
 		except Notification.DoesNotExist:
-			raise ClientError("An error occurred with that notification. Try refreshing the browser.")
+			raise ClientError("AUTH_ERROR", "An error occurred with that notification. Try refreshing the browser.")
 	return None
 
 
@@ -312,7 +312,7 @@ def refresh_general_notifications(user, oldest_timestamp, newest_timestamp):
 		s = LazyNotificationEncoder()
 		payload['notifications'] = s.serialize(notifications)
 	else:
-		raise ClientError("User must be authenticated to get notifications.")
+		raise ClientError("AUTH_ERROR", "User must be authenticated to get notifications.")
 
 	return json.dumps(payload) 
 
@@ -332,7 +332,7 @@ def get_new_general_notifications(user, newest_timestamp):
 		s = LazyNotificationEncoder()
 		payload['notifications'] = s.serialize(notifications)
 	else:
-		raise ClientError("User must be authenticated to get notifications.")
+		raise ClientError("AUTH_ERROR", "User must be authenticated to get notifications.")
 
 	return json.dumps(payload) 
 
@@ -354,7 +354,7 @@ def get_unread_general_notification_count(user):
 		payload['count'] = unread_count
 		return json.dumps(payload)
 	else:
-		raise ClientError("User must be authenticated to get notifications.")
+		raise ClientError("AUTH_ERROR", "User must be authenticated to get notifications.")
 	return None
 
 
@@ -397,12 +397,13 @@ def get_chat_notifications(user, page_number):
 				payload['notifications'] = serialized_notifications
 				new_page_number = int(page_number) + 1
 				payload['new_page_number'] = new_page_number
+				return json.dumps(payload)
 		else:
 			return None
 	else:
-		raise NotificationClientError("User must be authenticated to get notifications.")
-
-	return json.dumps(payload)
+		raise ClientError("AUTH_ERROR", "User must be authenticated to get notifications.")
+	return None
+	
 
 
 
