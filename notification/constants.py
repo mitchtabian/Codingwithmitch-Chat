@@ -1,4 +1,4 @@
-DEFAULT_NOTIFICATION_PAGE_SIZE = 3
+DEFAULT_NOTIFICATION_PAGE_SIZE = 10
 
 """
 "General" notifications include:
