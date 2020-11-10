@@ -103,7 +103,7 @@ CHANNEL_LAYERS = {
 # Database
 # https://docs.djangoproject.com/en/2.2/ref/settings/#databases
 
-DB_NAME = "django"
+DB_NAME = "django_db"
 DB_USER = "django"
 DB_PASSWORD = "password"
 DATABASES = {
