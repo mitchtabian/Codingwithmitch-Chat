@@ -69,7 +69,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'ChatServerPlayground.urls'
+ROOT_URLCONF = f'{config('PROJECT_NAME')}.urls'
 
 TEMPLATES = [
     {
@@ -87,9 +87,9 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'ChatServerPlayground.wsgi.application'
+WSGI_APPLICATION = f'{config('PROJECT_NAME')}.wsgi.application'
 
-ASGI_APPLICATION = 'ChatServerPlayground.routing.application'
+ASGI_APPLICATION = f'{config('PROJECT_NAME')}.routing.application'
 
 CHANNEL_LAYERS = {
     'default': {
