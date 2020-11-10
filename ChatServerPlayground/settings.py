@@ -73,9 +73,9 @@ WSGI_APPLICATION = 'ChatServerPlayground.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/2.2/ref/settings/#databases
 
-DB_NAME = "codingwithmitch_chat_dev"
-DB_USER = "django"
-DB_PASSWORD = "password"
+DB_NAME = "defaultdb"
+DB_USER = "doadmin"
+DB_PASSWORD = "e9ob9uo5s8dtl8sj"
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
@@ -83,7 +83,7 @@ DATABASES = {
         'USER': DB_USER,
         'PASSWORD': DB_PASSWORD,
         'HOST': 'localhost',
-        'PORT': '5432',
+        'PORT': '25060',
     }
 }
 
