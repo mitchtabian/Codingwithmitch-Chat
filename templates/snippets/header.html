@@ -144,8 +144,8 @@
 <script type="text/javascript">
 	// Correctly decide between ws:// and wss://
 	var ws_scheme = window.location.protocol == "https:" ? "wss" : "ws";
-	// var ws_path = ws_scheme + '://' + window.location.host + ":8001/"; // PRODUCTION
-	var ws_path = ws_scheme + '://' + window.location.host + "/";
+	var ws_path = ws_scheme + '://' + window.location.host + ":8001/"; // PRODUCTION
+	//var ws_path = ws_scheme + '://' + window.location.host + "/"; // DEVELOPMENT
 	// console.log("Connecting to " + ws_path);
 	var notificationSocket = new WebSocket(ws_path);
 
