@@ -1,5 +1,9 @@
 # Getting Started Guide 
-A guide to creating a new django project that uses:
+```
+For a guide on pushing a project like this to production check out this repo: [https://github.com/mitchtabian/HOWTO-django-channels-daphne](https://github.com/mitchtabian/HOWTO-django-channels-daphne). 
+```
+
+This document is a guide to creating a new django project that uses:
 1. windows
 1. python3.8.2
 1. pip
