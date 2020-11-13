@@ -23,6 +23,8 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 DEBUG = config('DEBUG', default=False, cast=bool)
 
+SECRET_KEY = config("SECRET_KEY")
+
 ALLOWED_HOSTS = ["134.209.116.22",]
 
 ROOT_URLCONF = f'{config("PROJECT_NAME")}.urls'
