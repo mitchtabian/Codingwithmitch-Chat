@@ -1,7 +1,6 @@
 # Getting Started Guide 
-```
 For a guide on pushing a project like this to production check out this repo: [https://github.com/mitchtabian/HOWTO-django-channels-daphne](https://github.com/mitchtabian/HOWTO-django-channels-daphne). 
-```
+
 
 This document is a guide to creating a new django project that uses:
 1. windows
