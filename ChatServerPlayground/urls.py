@@ -43,6 +43,9 @@ urlpatterns = [
     path('register/', register_view, name="register"),
     path('search/', account_search_view, name="search"),
 
+    # REST FRAMEWORK
+    path('api/account/', include('account.api.urls', 'account-api')),
+
     # Password reset links (ref: https://github.com/django/django/blob/master/django/contrib/auth/views.py)
     path('password_change/done/', auth_views.PasswordChangeDoneView.as_view(template_name='password_reset/password_change_done.html'), 
         name='password_change_done'),
