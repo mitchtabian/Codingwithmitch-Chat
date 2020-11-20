@@ -1,6 +1,6 @@
 # Login
 
-## Request
+### Request
 **POST** `https://open-chat.xyz/api/account/login`
 
 **form-data**
@@ -10,9 +10,9 @@
 | `password`	| `<your password>`	|
 
 
-## Responses
+### Responses
 
-### Success
+#### Success
 ```
 {
 	"response_code": "Success",
@@ -20,9 +20,9 @@
 }
 ```
 
-### Error
+#### Error
 
-#### Invalid credentials
+##### Invalid credentials
 ```
 {
 	"response_code": "Error",
@@ -30,7 +30,7 @@
 }
 ```
 
-#### Email does not exist on servers
+##### Email does not exist on servers
 ```
 {
 	"response_code": "Error",
@@ -38,7 +38,7 @@
 }
 ```
 
-#### Incorrect password
+##### Incorrect password
 ```
 {		
 	"response_code": "Error",
