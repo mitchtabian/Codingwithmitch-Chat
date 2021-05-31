@@ -38,6 +38,7 @@ def login_view(request):
 			token = generate_new_token(account)
 			context[ApiResponseCode.KEY.value] = ApiResponseCode.SUCCESS.value
 			context["token"] = token.key
+			context["account_id"] = account.id
 		else:
 			context[ApiResponseCode.KEY.value] = ApiResponseCode.ERROR.value
 			context[ApiLoginResponse.KEY.value] = ApiLoginResponse.INCORRECT_PASSWORD.value
